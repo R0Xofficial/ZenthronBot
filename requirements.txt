@@ -1,0 +1,6 @@
+# requirements.txt for ZenthronBot
+
+python-telegram-bot>=20.0
+requests>=2.20
+speedtest-cli
+python-telegram-bot[job-queue]
