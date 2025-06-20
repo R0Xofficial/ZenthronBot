@@ -662,7 +662,7 @@ OWNER_COMMANDS_TEXT = """
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     
-    welcome_message = f"Welcome, {user.mention_html()}! I am a moderation bot.\nUse /help to see available commands."
+    welcome_message = f"Welcome, {user.mention_html()}! I am a Zenthro. Your Telegram group assistant.\nUse /help to see available commands."
     
     if context.args:
         if context.args[0] == 'help':
