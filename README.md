@@ -16,7 +16,7 @@ Meet **ZenthronBot**, a powerful and feature-rich Telegram bot designed for adva
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/R0Xofficial/MyCatBot zenthron
+    git clone https://github.com/R0Xofficial/ZenthronBot zenthron
     ```
 
 2.  **Install requirements:**
