@@ -73,7 +73,7 @@ Meet **ZenthronBot**, a powerful and feature-rich Telegram bot designed for adva
 ### Security<br>
 - **/enforcegban <yes/no>**: Enable/disable Global Ban enforcement in this chat (Chat Creator only).<br>
 
-### Action Commands
+### 4FUN Commands
 - **/kill <@user/reply>**: Metaphorically eliminate someone.<br>
 - **/punch <@user/reply>**: Deliver a textual punch.<br>
 - **/slap <@user/reply>**: Administer a swift slap.<br>
