@@ -27,7 +27,7 @@ from telegram.error import TelegramError
 from telegram.request import HTTPXRequest
 from datetime import datetime, timezone, timedelta
 from texts import (
-    KILL_TEXTS, SLAP_TEXTS,
+    KILL_TEXTS, SLAP_TEXTS, PUNCH_TEXTS,
     OWNER_WELCOME_TEXTS, LEAVE_TEXTS,
     CANT_TARGET_OWNER_TEXTS, CANT_TARGET_SELF_TEXTS
 )
