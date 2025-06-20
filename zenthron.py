@@ -633,6 +633,7 @@ HELP_TEXT = """
 
 <b>4FUN Commands:</b>
 /kill &lt;@user/reply&gt; - Metaphorically eliminate someone.
+/punch &lt;user/reply&gt; - Deliver a textual punch.
 /slap &lt;@user/reply&gt; - Administer a swift slap.
 """
 
