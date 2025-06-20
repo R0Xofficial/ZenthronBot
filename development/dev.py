@@ -706,7 +706,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await send_safe_reply(update, context, text=message_text, reply_markup=keyboard)
 
 async def github(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    github_link = "https://github.com/R0Xofficial/MyCatbot"
+    github_link = "https://github.com/R0Xofficial/ZenthronBot"
     await update.message.reply_text(f"This bot is open source. You can find the code here: {github_link}", disable_web_page_preview=True)
 
 async def owner_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
