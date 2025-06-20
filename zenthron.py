@@ -2021,8 +2021,8 @@ async def _handle_action_command(update: Update, context: ContextTypes.DEFAULT_T
              except Exception as e_plain_fallback: logger.error(f"Fallback plain text also failed for {command_name} after unexpected error: {e_plain_fallback}")
 
 # Simulation Command Definitions
-async def kill(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, KILL_TEXTS, ["explosion", "boom", "rekt"], "kill", True, "Who to 'kill'? Reply or use /kill @username.")
-async def punch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, PUNCH_TEXTS, ["punch", "fight"], "punch", True, "Who to 'punch'? Reply or use /punch @username.")
+async def kill(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, KILL_TEXTS, ["rampage", "kill", "fatality"], "kill", True, "Who to 'kill'? Reply or use /kill @username.")
+async def punch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, PUNCH_TEXTS, ["punch", "bonk"], "punch", True, "Who to 'punch'? Reply or use /punch @username.")
 async def slap(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, SLAP_TEXTS, ["slap"], "slap", True, "Who to slap? Reply or use /slap @username.")
 
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
