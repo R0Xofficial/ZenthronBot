@@ -575,8 +575,20 @@ async def check_username_protection(target_mention: str, context: ContextTypes.D
 async def get_themed_gif(context: ContextTypes.DEFAULT_TYPE, search_terms: list[str]) -> str | None:
     if not TENOR_API_KEY: return None
     if not search_terms: logger.warning("No search terms for get_themed_gif."); return None
-    search_term = random.choice(search_terms); logger.info(f"Searching Tenor: '{search_term}'")
-    url = "https://tenor.googleapis.com/v2/search"; params = { "q": search_term, "key": TENOR_API_KEY, "client_key": "zenthron_py", "limit": 15, "media_filter": "gif", "contentfilter": "medium", "random": "true" }
+    
+    search_term = random.choice(search_terms)
+    logger.info(f"Searching Tenor for BEST results: '{search_term}'")
+    
+    url = "https://tenor.googleapis.com/v2/search"
+    params = { 
+        "q": search_term, 
+        "key": TENOR_API_KEY, 
+        "client_key": "my_cat_bot_project_py", 
+        "limit": 15, 
+        "media_filter": "gif", 
+        "contentfilter": "medium" 
+    }
+    
     try:
         response = requests.get(url, params=params, timeout=7)
         if response.status_code != 200:
@@ -584,16 +596,30 @@ async def get_themed_gif(context: ContextTypes.DEFAULT_TYPE, search_terms: list[
             try: error_content = response.json(); logger.error(f"Tenor error content: {error_content}")
             except requests.exceptions.JSONDecodeError: logger.error(f"Tenor error response (non-JSON): {response.text[:500]}")
             return None
-        data = response.json(); results = data.get("results")
+        
+        data = response.json()
+        results = data.get("results")
+        
         if results:
-            selected_gif = random.choice(results); gif_url = selected_gif.get("media_formats", {}).get("gif", {}).get("url")
+            top_gifs = results[:5] 
+            selected_gif = random.choice(top_gifs)
+            
+            gif_url = selected_gif.get("media_formats", {}).get("gif", {}).get("url")
             if not gif_url: gif_url = selected_gif.get("media_formats", {}).get("tinygif", {}).get("url")
-            if gif_url: logger.info(f"Found GIF URL: {gif_url}"); return gif_url
-            else: logger.warning(f"Could not extract GIF URL from Tenor item for '{search_term}'.")
-        else: logger.warning(f"No results on Tenor for '{search_term}'."); logger.debug(f"Tenor response (no results): {data}")
+            
+            if gif_url: 
+                logger.info(f"Found high-quality GIF URL: {gif_url}")
+                return gif_url
+            else: 
+                logger.warning(f"Could not extract GIF URL from Tenor item for '{search_term}'.")
+        else: 
+            logger.warning(f"No results on Tenor for '{search_term}'.")
+            logger.debug(f"Tenor response (no results): {data}")
+            
     except requests.exceptions.Timeout: logger.error(f"Timeout fetching GIF from Tenor for '{search_term}'.")
     except requests.exceptions.RequestException as e: logger.error(f"Network/Request error fetching GIF from Tenor: {e}")
     except Exception as e: logger.error(f"Unexpected error in get_themed_gif for '{search_term}': {e}", exc_info=True)
+    
     return None
 
 # --- Command Handlers ---
@@ -2020,7 +2046,6 @@ async def _handle_action_command(update: Update, context: ContextTypes.DEFAULT_T
              try: await update.message.reply_text(message_text); logger.info(f"Sent fallback plain text for {command_name} after unexpected error.")
              except Exception as e_plain_fallback: logger.error(f"Fallback plain text also failed for {command_name} after unexpected error: {e_plain_fallback}")
 
-# Simulation Command Definitions
 async def kill(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, KILL_TEXTS, ["gun", "gun shoting"], "kill", True, "Who to 'kill'? Reply or use /kill @username/reply.")
 async def punch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, PUNCH_TEXTS, ["punch", "hit"], "punch", True, "Who to 'punch'? Reply or use /punch @username/reply.")
 async def slap(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, SLAP_TEXTS, ["huge slap", "smack"], "slap", True, "Who to slap? Reply or use /slap @username/reply.")
