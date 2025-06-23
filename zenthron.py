@@ -2750,7 +2750,7 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
 
         gban_reason = get_gban_reason(member.id)
         if gban_reason:
-            logger.info(f"G-banned user {member.id} tried to join {chat.id}. Removing.")
+            logger.info(f"Gbanned user {member.id} tried to join {chat.id}. Removing.")
             try:
                 await context.bot.ban_chat_member(chat_id=chat.id, user_id=member.id)
                 await update.message.reply_text(
