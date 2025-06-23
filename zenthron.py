@@ -2754,7 +2754,7 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
             try:
                 await context.bot.ban_chat_member(chat_id=chat.id, user_id=member.id)
                 await update.message.reply_text(
-                    f"⚠️ <b>Alert:</b> This user is globally banned.\n"
+                    f"⚠️ <b>Alert!</b> This user is globally banned.\n"
                     f"<i>Enforcing ban in this chat.</i>\n\n"
                     f"<b>User ID:</b> <code>{member.id}</code>\n"
                     f"<b>Reason:</b> {html.escape(gban_reason)}",
@@ -3026,7 +3026,7 @@ async def check_gban_on_message(update: Update, context: ContextTypes.DEFAULT_TY
                     except Exception: pass
                 
                 message_text = (
-                    f"⚠️ <b>Alert:</b> This user is globally banned.\n"
+                    f"⚠️ <b>Alert!</b> This user is globally banned.\n"
                     f"<i>Enforcing ban in this chat.</i>\n\n"
                     f"<b>User ID:</b> <code>{user.id}</code>\n"
                     f"<b>Reason:</b> {html.escape(gban_reason)}"
