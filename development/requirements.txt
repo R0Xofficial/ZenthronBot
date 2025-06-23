@@ -1,6 +1,7 @@
 # requirements.txt for ZenthronBot
 
 python-telegram-bot>=20.0
-requests>=2.20
-speedtest-cli
-python-telegram-bot[job-queue]
+python-telegram-bot[job-queue]==21.0.1
+telethon==1.34.0
+requests==2.31.0
+speedtest-cli==2.1.3
