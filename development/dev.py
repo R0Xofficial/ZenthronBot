@@ -1072,14 +1072,6 @@ async def list_admins_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:
         await update.message.reply_html(message_text, disable_web_page_preview=True)
 
-async def _resolve_mod_target(update: Update, context: ContextTypes.DEFAULT_TYPE) -> tuple[User | None, list[str]]:
-    target_user, args = None, context.args or []
-    if update.message.reply_to_message:
-        target_user = update.message.reply_to_message.from_user
-    elif args:
-        target_user = await resolve_user_with_telethon(context, args[0]); args = args[1:]
-    return target_user, args
-
 async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     user_who_bans = update.effective_user
