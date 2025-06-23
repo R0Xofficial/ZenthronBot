@@ -6,7 +6,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# --- ZenthronBot ---
+# --- MyCatBot [Development] ---
+# This is the development environment where the bot code is created.
+# This code is in active development.
+# It may contain bugs, unfinished features, or not work at all.
+# Use for testing and development only!
 
 import logging
 import random
