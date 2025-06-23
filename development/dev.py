@@ -96,173 +96,389 @@ def init_db():
     try:
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
+
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
-                user_id INTEGER PRIMARY KEY, username TEXT, first_name TEXT, last_name TEXT,
-                language_code TEXT, is_bot INTEGER, last_seen TEXT)""")
+                user_id INTEGER PRIMARY KEY,
+                username TEXT,
+                first_name TEXT,
+                last_name TEXT,
+                language_code TEXT,
+                is_bot INTEGER,
+                last_seen TEXT 
+            )
+        """)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_username ON users (username)")
+
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS blacklist (
-                user_id INTEGER PRIMARY KEY, reason TEXT, banned_by_id INTEGER, timestamp TEXT)""")
+                user_id INTEGER PRIMARY KEY,
+                reason TEXT,
+                banned_by_id INTEGER,
+                timestamp TEXT 
+            )
+        """)
+
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS sudo_users (
-                user_id INTEGER PRIMARY KEY, added_by_id INTEGER NOT NULL, timestamp TEXT NOT NULL)""")
+                user_id INTEGER PRIMARY KEY,
+                added_by_id INTEGER NOT NULL,
+                timestamp TEXT NOT NULL
+            )
+        """)
+
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS global_bans (
-                user_id INTEGER PRIMARY KEY, reason TEXT, banned_by_id INTEGER NOT NULL, timestamp TEXT NOT NULL)""")
+                user_id INTEGER PRIMARY KEY,
+                reason TEXT,
+                banned_by_id INTEGER NOT NULL,
+                timestamp TEXT NOT NULL
+            )
+        """)
+
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS bot_chats (
-                chat_id INTEGER PRIMARY KEY, chat_title TEXT, added_at TEXT NOT NULL,
-                enforce_gban INTEGER DEFAULT 1 NOT NULL)""")
+                chat_id INTEGER PRIMARY KEY,
+                chat_title TEXT,
+                added_at TEXT NOT NULL,
+                enforce_gban INTEGER DEFAULT 1 NOT NULL 
+            )
+        """)
+        
         conn.commit()
-        logger.info(f"Database '{DB_NAME}' initialized successfully.")
-    except sqlite3.Error as e: logger.error(f"SQLite error during DB initialization: {e}", exc_info=True)
+        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, sudo_users, global_bans, bot_chats ensured).")
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error during DB initialization: {e}", exc_info=True)
     finally:
-        if conn: conn.close()
+        if conn:
+            conn.close()
 
 # --- Blacklist Helper Functions ---
 def add_to_blacklist(user_id: int, banned_by_id: int, reason: str | None = "No reason provided.") -> bool:
+    conn = None
     try:
-        with sqlite3.connect(DB_NAME) as conn:
-            cursor = conn.cursor()
-            current_timestamp_iso = datetime.now(timezone.utc).isoformat()
-            cursor.execute(
-                "INSERT OR IGNORE INTO blacklist (user_id, reason, banned_by_id, timestamp) VALUES (?, ?, ?, ?)",
-                (user_id, reason, banned_by_id, current_timestamp_iso))
-            conn.commit(); return cursor.rowcount > 0
-    except sqlite3.Error as e: logger.error(f"SQLite error adding user {user_id} to blacklist: {e}", exc_info=True); return False
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        current_timestamp_iso = datetime.now(timezone.utc).isoformat()
+        cursor.execute(
+            "INSERT OR IGNORE INTO blacklist (user_id, reason, banned_by_id, timestamp) VALUES (?, ?, ?, ?)",
+            (user_id, reason, banned_by_id, current_timestamp_iso)
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error adding user {user_id} to blacklist: {e}", exc_info=True)
+        return False
+    finally:
+        if conn:
+            conn.close()
 
 def remove_from_blacklist(user_id: int) -> bool:
+    conn = None
     try:
-        with sqlite3.connect(DB_NAME) as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM blacklist WHERE user_id = ?", (user_id,))
-            conn.commit(); return cursor.rowcount > 0
-    except sqlite3.Error as e: logger.error(f"SQLite error removing user {user_id} from blacklist: {e}", exc_info=True); return False
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM blacklist WHERE user_id = ?", (user_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error removing user {user_id} from blacklist: {e}", exc_info=True)
+        return False
+    finally:
+        if conn:
+            conn.close()
 
 def get_blacklist_reason(user_id: int) -> str | None:
+    conn = None
     try:
-        with sqlite3.connect(DB_NAME) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT reason FROM blacklist WHERE user_id = ?", (user_id,)); row = cursor.fetchone()
-            return row[0] if row else None
-    except sqlite3.Error as e: logger.error(f"SQLite error checking blacklist for user {user_id}: {e}", exc_info=True); return None
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("SELECT reason FROM blacklist WHERE user_id = ?", (user_id,))
+        row = cursor.fetchone()
+        if row:
+            return row[0]
+        return None
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error checking blacklist reason for user {user_id}: {e}", exc_info=True)
+        return None
+    finally:
+        if conn:
+            conn.close()
 
-def is_user_blacklisted(user_id: int) -> bool: return get_blacklist_reason(user_id) is not None
+def is_user_blacklisted(user_id: int) -> bool:
+    return get_blacklist_reason(user_id) is not None
 
 # --- Blacklist Check Handler ---
 async def check_blacklist_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not update.message or not update.effective_user or update.effective_user.id == OWNER_ID: return
-    if is_user_blacklisted(update.effective_user.id):
-        logger.info(f"Blacklisted user {update.effective_user.id} tried to interact. Silently ignoring."); raise ApplicationHandlerStop
+    if not update.message or not update.effective_user:
+        return
+
+    user = update.effective_user
+
+    if user.id == OWNER_ID:
+        return
+
+    if is_user_blacklisted(user.id):
+        user_mention_log = f"@{user.username}" if user.username else str(user.id)
+        message_text_preview = update.message.text[:50] if update.message.text else "[No text content]"
+        
+        logger.info(f"User {user.id} ({user_mention_log}) is blacklisted. Silently ignoring and blocking interaction: '{message_text_preview}'")
+        
+        raise ApplicationHandlerStop
 
 # --- Sudo ---
 def add_sudo_user(user_id: int, added_by_id: int) -> bool:
+    """Adds a user to the sudo list."""
+    conn = None
     try:
-        with sqlite3.connect(DB_NAME) as conn:
-            cursor = conn.cursor()
-            current_timestamp_iso = datetime.now(timezone.utc).isoformat()
-            cursor.execute("INSERT OR IGNORE INTO sudo_users (user_id, added_by_id, timestamp) VALUES (?, ?, ?)",
-                           (user_id, added_by_id, current_timestamp_iso)); conn.commit(); return cursor.rowcount > 0 
-    except sqlite3.Error as e: logger.error(f"SQLite error adding sudo user {user_id}: {e}", exc_info=True); return False
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        current_timestamp_iso = datetime.now(timezone.utc).isoformat()
+        cursor.execute(
+            "INSERT OR IGNORE INTO sudo_users (user_id, added_by_id, timestamp) VALUES (?, ?, ?)",
+            (user_id, added_by_id, current_timestamp_iso)
+        )
+        conn.commit()
+        return cursor.rowcount > 0 
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error adding sudo user {user_id}: {e}", exc_info=True)
+        return False
+    finally:
+        if conn:
+            conn.close()
 
 def remove_sudo_user(user_id: int) -> bool:
+    """Removes a user from the sudo list."""
+    conn = None
     try:
-        with sqlite3.connect(DB_NAME) as conn:
-            cursor = conn.cursor(); cursor.execute("DELETE FROM sudo_users WHERE user_id = ?", (user_id,)); conn.commit(); return cursor.rowcount > 0
-    except sqlite3.Error as e: logger.error(f"SQLite error removing sudo user {user_id}: {e}", exc_info=True); return False
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM sudo_users WHERE user_id = ?", (user_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error removing sudo user {user_id}: {e}", exc_info=True)
+        return False
+    finally:
+        if conn:
+            conn.close()
 
 def is_sudo_user(user_id: int) -> bool:
+    """Checks if a user is on the sudo list (specifically, not checking if they are THE owner)."""
+    conn = None
     try:
-        with sqlite3.connect(DB_NAME) as conn:
-            cursor = conn.cursor(); cursor.execute("SELECT 1 FROM sudo_users WHERE user_id = ?", (user_id,)); return cursor.fetchone() is not None
-    except sqlite3.Error as e: logger.error(f"SQLite error checking sudo for user {user_id}: {e}", exc_info=True); return False 
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM sudo_users WHERE user_id = ?", (user_id,))
+        return cursor.fetchone() is not None
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error checking sudo for user {user_id}: {e}", exc_info=True)
+        return False 
+    finally:
+        if conn:
+            conn.close()
 
-def is_privileged_user(user_id: int) -> bool: return user_id == OWNER_ID or is_sudo_user(user_id)
+def is_privileged_user(user_id: int) -> bool:
+    """Checks if the user is the Owner or a Sudo user."""
+    if user_id == OWNER_ID:
+        return True
+    return is_sudo_user(user_id)
 
 # --- User logger ---
 def update_user_in_db(user: User | None):
-    if not user: return
+    if not user:
+        return
+    conn = None
     try:
-        with sqlite3.connect(DB_NAME) as conn:
-            cursor = conn.cursor()
-            current_timestamp_iso = datetime.now(timezone.utc).isoformat()
-            cursor.execute("""
-                INSERT INTO users (user_id, username, first_name, last_name, language_code, is_bot, last_seen)
-                VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET
-                    username=excluded.username, first_name=excluded.first_name, last_name=excluded.last_name,
-                    language_code=excluded.language_code, is_bot=excluded.is_bot, last_seen=excluded.last_seen """,
-                (user.id, user.username, user.first_name, user.last_name, user.language_code, 1 if user.is_bot else 0, current_timestamp_iso))
-    except sqlite3.Error as e: logger.error(f"SQLite error updating user {user.id}: {e}", exc_info=True)
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        current_timestamp_iso = datetime.now(timezone.utc).isoformat()
+        cursor.execute("""
+            INSERT INTO users (user_id, username, first_name, last_name, language_code, is_bot, last_seen)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                username = excluded.username,
+                first_name = excluded.first_name,
+                last_name = excluded.last_name,
+                language_code = excluded.language_code,
+                is_bot = excluded.is_bot,
+                last_seen = excluded.last_seen 
+        """, (
+            user.id, user.username, user.first_name, user.last_name,
+            user.language_code, 1 if user.is_bot else 0, current_timestamp_iso
+        ))
+        conn.commit()
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error updating user {user.id} in users table: {e}", exc_info=True)
+    finally:
+        if conn:
+            conn.close()
 
 def get_user_from_db_by_username(username_query: str) -> User | None:
-    if not username_query: return None
+    if not username_query:
+        return None
+    conn = None
+    user_obj: User | None = None
     try:
-        with sqlite3.connect(DB_NAME) as conn:
-            cursor = conn.cursor()
-            normalized_username = username_query.lstrip('@').lower()
-            cursor.execute("SELECT user_id, username, first_name, last_name, language_code, is_bot FROM users WHERE LOWER(username) = ?", (normalized_username,))
-            row = cursor.fetchone()
-            if row:
-                return User(id=row[0], username=row[1], first_name=row[2] or "", last_name=row[3], language_code=row[4], is_bot=bool(row[5]))
-    except sqlite3.Error as e: logger.error(f"SQLite error fetching user by username '{username_query}': {e}", exc_info=True)
-    return None
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        normalized_username = username_query.lstrip('@').lower()
+        cursor.execute(
+            "SELECT user_id, username, first_name, last_name, language_code, is_bot FROM users WHERE LOWER(username) = ?",
+            (normalized_username,)
+        )
+        row = cursor.fetchone()
+        if row:
+            user_obj = User(
+                id=row[0], username=row[1], first_name=row[2] or "",
+                last_name=row[3], language_code=row[4], is_bot=bool(row[5])
+            )
+            logger.info(f"User {username_query} found in DB with ID {row[0]}.")
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error fetching user by username '{username_query}': {e}", exc_info=True)
+    finally:
+        if conn:
+            conn.close()
+    return user_obj
 
 async def log_user_from_interaction(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.effective_user: update_user_in_db(update.effective_user)
+    if update.effective_user:
+        update_user_in_db(update.effective_user)
+    
     if update.message and update.message.reply_to_message and update.message.reply_to_message.from_user:
         update_user_in_db(update.message.reply_to_message.from_user)
+
     chat = update.effective_chat
     if chat and chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
         if 'known_chats' not in context.bot_data:
             context.bot_data['known_chats'] = set()
             try:
                 with sqlite3.connect(DB_NAME) as conn:
-                    context.bot_data['known_chats'] = {row[0] for row in conn.cursor().execute("SELECT chat_id FROM bot_chats")}
-            except sqlite3.Error as e: logger.error(f"Could not preload known chats into cache: {e}")
-        if chat.id not in context.bot_data.get('known_chats', set()):
+                    cursor = conn.cursor()
+                    known_ids = {row[0] for row in cursor.execute("SELECT chat_id FROM bot_chats")}
+                    context.bot_data['known_chats'] = known_ids
+                    logger.info(f"Loaded {len(known_ids)} known chats into cache.")
+            except sqlite3.Error as e:
+                logger.error(f"Could not preload known chats into cache: {e}")
+
+        if chat.id not in context.bot_data['known_chats']:
+            logger.info(f"Passively discovered and adding new chat to DB: {chat.title} ({chat.id})")
             add_chat_to_db(chat.id, chat.title or f"Untitled Chat {chat.id}")
-            context.bot_data.setdefault('known_chats', set()).add(chat.id)
+            context.bot_data['known_chats'].add(chat.id)
 
 def get_all_sudo_users_from_db() -> List[Tuple[int, str]]:
+    conn = None
+    sudo_list = []
     try:
-        with sqlite3.connect(DB_NAME) as conn:
-            return conn.cursor().execute("SELECT user_id, timestamp FROM sudo_users ORDER BY timestamp DESC").fetchall()
-    except sqlite3.Error as e: logger.error(f"SQLite error fetching all sudo users: {e}", exc_info=True); return []
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("SELECT user_id, timestamp FROM sudo_users ORDER BY timestamp DESC")
+        rows = cursor.fetchall()
+        for row in rows:
+            sudo_list.append((row[0], row[1]))
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error fetching all sudo users: {e}", exc_info=True)
+    finally:
+        if conn:
+            conn.close()
+    return sudo_list
 
 def parse_duration_to_timedelta(duration_str: str | None) -> timedelta | None:
-    if not duration_str: return None
-    match = re.match(r"(\d+)([smhdw])", duration_str.lower())
-    if match: value, unit = int(match.group(1)), match.group(2)
-    else: return None
+    if not duration_str:
+        return None
+    duration_str = duration_str.lower()
+    value = 0
+    unit = None
+    match = re.match(r"(\d+)([smhdw])", duration_str)
+    if match:
+        value = int(match.group(1))
+        unit = match.group(2)
+    else:
+        try:
+            value = int(duration_str)
+            unit = 'm' 
+        except ValueError:
+            return None
     if unit == 's': return timedelta(seconds=value)
-    if unit == 'm': return timedelta(minutes=value)
-    if unit == 'h': return timedelta(hours=value)
-    if unit == 'd': return timedelta(days=value)
-    if unit == 'w': return timedelta(weeks=value)
+    elif unit == 'm': return timedelta(minutes=value)
+    elif unit == 'h': return timedelta(hours=value)
+    elif unit == 'd': return timedelta(days=value)
+    elif unit == 'w': return timedelta(weeks=value)
     return None
 
-def parse_promote_args(args: list[str]) -> tuple[str | None, str | None]:
-    if not args: return None, None
+async def _parse_mod_command_args(args: list[str]) -> tuple[str | None, str | None, str | None]:
+    target_arg: str | None = None
+    duration_arg: str | None = None
+    reason_list: list[str] = []
+    if not args: return None, None, None
     target_arg = args[0]
-    custom_title_full = " ".join(args[1:]) if len(args) > 1 else None
-    return target_arg, custom_title_full
+    remaining_args = args[1:]
+    if remaining_args:
+        potential_duration_td = parse_duration_to_timedelta(remaining_args[0])
+        if potential_duration_td is not None:
+            duration_arg = remaining_args[0]
+            reason_list = remaining_args[1:]
+        else:
+            reason_list = remaining_args
+    reason_str = " ".join(reason_list) if reason_list else None
+    return target_arg, duration_arg, reason_str
 
+def parse_promote_args(args: list[str]) -> tuple[str | None, str | None]:
+    target_arg: str | None = None
+    custom_title_full: str | None = None
+
+    if not args:
+        return None, None
+    
+    target_arg = args[0]
+    if len(args) > 1:
+        custom_title_full = " ".join(args[1:])
+        
+    return target_arg, custom_title_full
+    
 async def send_safe_reply(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str, **kwargs):
-    try: await update.message.reply_text(text=text, **kwargs)
+    """
+    Tries to reply to the message. If the original message is deleted,
+    it sends a new message to the chat instead of crashing.
+    """
+    try:
+        await update.message.reply_text(text=text, **kwargs)
     except telegram.error.BadRequest as e:
         if "Message to be replied not found" in str(e):
             logger.warning("Original message not found for reply. Sending as a new message.")
             await context.bot.send_message(chat_id=update.effective_chat.id, text=text, **kwargs)
-        else: raise e
+        else:
+            raise e
 
-async def _can_user_perform_action(update: Update, context: ContextTypes.DEFAULT_TYPE, perm: str, msg: str, priv_override: bool=True) -> bool:
-    if priv_override and is_privileged_user(update.effective_user.id): return True
+async def _can_user_perform_action(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    permission: str,
+    failure_message: str,
+    allow_bot_privileged_override: bool = True
+) -> bool:
+    user = update.effective_user
+    chat = update.effective_chat
+
+    if allow_bot_privileged_override and is_privileged_user(user.id):
+        return True
+
     try:
-        member = await context.bot.get_chat_member(update.effective_chat.id, update.effective_user.id)
-        if member.status == "creator" or (member.status == "administrator" and getattr(member, perm, False)): return True
-    except TelegramError as e: logger.error(f"Permission check error: {e}"); await send_safe_reply(update, context, text="API error verifying permissions."); return False
-    await send_safe_reply(update, context, text=msg); return False
+        actor_chat_member = await context.bot.get_chat_member(chat.id, user.id)
+        
+        if actor_chat_member.status == "creator":
+            return True
+
+        if actor_chat_member.status == "administrator" and getattr(actor_chat_member, permission, False):
+            return True
+            
+    except TelegramError as e:
+        logger.error(f"Error checking permissions for {user.id} in chat {chat.id}: {e}")
+        await send_safe_reply(update, context, text="Error: Couldn't verify your permissions due to an API error.")
+        return False
+
+    await send_safe_reply(update, context, text=failure_message)
+    return False
 
 # --- Utility Functions ---
 def telethon_entity_to_ptb_user(entity: 'TelethonUser') -> User | None:
@@ -293,79 +509,159 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
 
 def get_readable_time_delta(delta: timedelta) -> str:
     total_seconds = int(delta.total_seconds())
-    if total_seconds < 0: return "0s"
-    days, rem = divmod(total_seconds, 86400); hours, rem = divmod(rem, 3600); minutes, seconds = divmod(rem, 60)
-    parts = [f"{d}d" for d in [days] if d>0] + [f"{h}h" for h in [hours] if h>0] + [f"{m}m" for m in [minutes] if m>0]
-    if not parts or seconds > 0: parts.append(f"{seconds}s")
+    if total_seconds < 0: 
+        return "0s"
+    days, rem = divmod(total_seconds, 86400)
+    hours, rem = divmod(rem, 3600)
+    minutes, seconds = divmod(rem, 60)
+    parts = []
+    if days > 0: 
+        parts.append(f"{days}d")
+    if hours > 0: 
+        parts.append(f"{hours}h")
+    if minutes > 0: 
+        parts.append(f"{minutes}m")
+    if not parts and seconds >= 0 : 
+        parts.append(f"{seconds}s")
+    elif seconds > 0: 
+        parts.append(f"{seconds}s")
     return ", ".join(parts) if parts else "0s"
 
 def add_to_gban(user_id: int, banned_by_id: int, reason: str | None) -> bool:
     reason = reason or "No reason provided."
     try:
         with sqlite3.connect(DB_NAME) as conn:
-            cursor = conn.cursor(); timestamp = datetime.now(timezone.utc).isoformat()
-            cursor.execute("INSERT OR REPLACE INTO global_bans (user_id, reason, banned_by_id, timestamp) VALUES (?, ?, ?, ?)",
-                           (user_id, reason, banned_by_id, timestamp)); return cursor.rowcount > 0
-    except sqlite3.Error as e: logger.error(f"SQLite error adding gban for {user_id}: {e}"); return False
+            cursor = conn.cursor()
+            timestamp = datetime.now(timezone.utc).isoformat()
+            cursor.execute(
+                "INSERT OR REPLACE INTO global_bans (user_id, reason, banned_by_id, timestamp) VALUES (?, ?, ?, ?)",
+                (user_id, reason, banned_by_id, timestamp)
+            )
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error adding user {user_id} to gban list: {e}")
+        return False
 
 def remove_from_gban(user_id: int) -> bool:
     try:
         with sqlite3.connect(DB_NAME) as conn:
-            cursor = conn.cursor(); cursor.execute("DELETE FROM global_bans WHERE user_id = ?", (user_id,)); return cursor.rowcount > 0
-    except sqlite3.Error as e: logger.error(f"SQLite error removing gban for {user_id}: {e}"); return False
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM global_bans WHERE user_id = ?", (user_id,))
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error removing user {user_id} from gban list: {e}")
+        return False
 
 def get_gban_reason(user_id: int) -> str | None:
     try:
         with sqlite3.connect(DB_NAME) as conn:
-            row = conn.cursor().execute("SELECT reason FROM global_bans WHERE user_id = ?", (user_id,)).fetchone()
+            cursor = conn.cursor()
+            cursor.execute("SELECT reason FROM global_bans WHERE user_id = ?", (user_id,))
+            row = cursor.fetchone()
             return row[0] if row else None
-    except sqlite3.Error as e: logger.error(f"SQLite error checking gban for {user_id}: {e}"); return None
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error checking gban status for user {user_id}: {e}")
+        return None
 
 def add_chat_to_db(chat_id: int, chat_title: str):
     try:
         with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
             timestamp = datetime.now(timezone.utc).isoformat()
-            conn.cursor().execute("INSERT OR REPLACE INTO bot_chats (chat_id, chat_title, added_at) VALUES (?, ?, ?)",
-                                  (chat_id, chat_title, timestamp))
-    except sqlite3.Error as e: logger.error(f"Failed to add chat {chat_id} to DB: {e}")
+            cursor.execute(
+                "INSERT OR REPLACE INTO bot_chats (chat_id, chat_title, added_at) VALUES (?, ?, ?)",
+                (chat_id, chat_title, timestamp)
+            )
+    except sqlite3.Error as e:
+        logger.error(f"Failed to add chat {chat_id} to DB: {e}")
 
 def remove_chat_from_db(chat_id: int):
     try:
-        with sqlite3.connect(DB_NAME) as conn: conn.cursor().execute("DELETE FROM bot_chats WHERE chat_id = ?", (chat_id,))
-    except sqlite3.Error as e: logger.error(f"Failed to remove chat {chat_id} from DB: {e}")
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM bot_chats WHERE chat_id = ?", (chat_id,))
+    except sqlite3.Error as e:
+        logger.error(f"Failed to remove chat {chat_id} from DB: {e}")
 
 def is_gban_enforced(chat_id: int) -> bool:
+    """Checks if gban enforcement is enabled for a specific chat."""
     try:
         with sqlite3.connect(DB_NAME) as conn:
-            res = conn.cursor().execute("SELECT enforce_gban FROM bot_chats WHERE chat_id = ?", (chat_id,)).fetchone()
-            return bool(res[0]) if res is not None else True
-    except sqlite3.Error as e: logger.error(f"Could not check gban enforcement for {chat_id}: {e}"); return True
-
+            cursor = conn.cursor()
+            res = cursor.execute(
+                "SELECT enforce_gban FROM bot_chats WHERE chat_id = ?", (chat_id,)
+            ).fetchone()
+            if res is None:
+                return True 
+            return bool(res[0])
+    except sqlite3.Error as e:
+        logger.error(f"Could not check gban enforcement status for chat {chat_id}: {e}")
+        return True
+        
+# --- Helper Functions (Check Targets, Get GIF) ---
 async def check_target_protection(target_user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    return target_user_id == OWNER_ID or target_user_id == context.bot.id
+    if target_user_id == OWNER_ID: return True
+    if target_user_id == context.bot.id: return True
+    return False
 
 async def check_username_protection(target_mention: str, context: ContextTypes.DEFAULT_TYPE) -> tuple[bool, bool]:
-    bot_username = context.bot.username
-    if bot_username and target_mention.lower() == f"@{bot_username.lower()}": return True, False
-    if OWNER_ID:
-        try:
-            owner_chat = await context.bot.get_chat(OWNER_ID)
-            if owner_chat.username and target_mention.lower() == f"@{owner_chat.username.lower()}": return True, True
+    is_protected = False; is_owner_match = False; bot_username = context.bot.username
+    if bot_username and target_mention.lower() == f"@{bot_username.lower()}": is_protected = True
+    elif OWNER_ID:
+        owner_username = None
+        try: owner_chat = await context.bot.get_chat(OWNER_ID); owner_username = owner_chat.username
         except Exception as e: logger.warning(f"Could not fetch owner username for protection check: {e}")
-    return False, False
+        if owner_username and target_mention.lower() == f"@{owner_username.lower()}": is_protected = True; is_owner_match = True
+    return is_protected, is_owner_match
 
 async def get_themed_gif(context: ContextTypes.DEFAULT_TYPE, search_terms: list[str]) -> str | None:
-    if not TENOR_API_KEY or not search_terms: return None
+    if not TENOR_API_KEY: return None
+    if not search_terms: logger.warning("No search terms for get_themed_gif."); return None
+    
     search_term = random.choice(search_terms)
-    params = {"q": search_term, "key": TENOR_API_KEY, "client_key": "zenthron", "limit": 15, "media_filter": "gif", "contentfilter": "medium"}
+    logger.info(f"Searching Tenor for BEST results: '{search_term}'")
+    
+    url = "https://tenor.googleapis.com/v2/search"
+    params = { 
+        "q": search_term, 
+        "key": TENOR_API_KEY, 
+        "client_key": "my_cat_bot_project_py", 
+        "limit": 15, 
+        "media_filter": "gif", 
+        "contentfilter": "medium" 
+    }
+    
     try:
-        response = requests.get("https://tenor.googleapis.com/v2/search", params=params, timeout=7)
-        response.raise_for_status()
-        results = response.json().get("results")
+        response = requests.get(url, params=params, timeout=7)
+        if response.status_code != 200:
+            logger.error(f"Tenor API failed for '{search_term}', status: {response.status_code}")
+            try: error_content = response.json(); logger.error(f"Tenor error content: {error_content}")
+            except requests.exceptions.JSONDecodeError: logger.error(f"Tenor error response (non-JSON): {response.text[:500]}")
+            return None
+        
+        data = response.json()
+        results = data.get("results")
+        
         if results:
-            selected_gif = random.choice(results[:5])
-            return selected_gif.get("media_formats", {}).get("gif", {}).get("url")
-    except requests.RequestException as e: logger.error(f"Tenor API error for '{search_term}': {e}")
+            top_gifs = results[:5] 
+            selected_gif = random.choice(top_gifs)
+            
+            gif_url = selected_gif.get("media_formats", {}).get("gif", {}).get("url")
+            if not gif_url: gif_url = selected_gif.get("media_formats", {}).get("tinygif", {}).get("url")
+            
+            if gif_url: 
+                logger.info(f"Found high-quality GIF URL: {gif_url}")
+                return gif_url
+            else: 
+                logger.warning(f"Could not extract GIF URL from Tenor item for '{search_term}'.")
+        else: 
+            logger.warning(f"No results on Tenor for '{search_term}'.")
+            logger.debug(f"Tenor response (no results): {data}")
+            
+    except requests.exceptions.Timeout: logger.error(f"Timeout fetching GIF from Tenor for '{search_term}'.")
+    except requests.exceptions.RequestException as e: logger.error(f"Network/Request error fetching GIF from Tenor: {e}")
+    except Exception as e: logger.error(f"Unexpected error in get_themed_gif for '{search_term}': {e}", exc_info=True)
+    
     return None
 
 # --- Command Handlers ---
