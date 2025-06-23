@@ -6,11 +6,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# --- ZenthronBot [Development] ---
-# This is the development environment where the bot code is created.
-# This code is in active development.
-# It may contain bugs, unfinished features, or not work at all.
-# Use for testing and development only!
+# --- ZenthronBot ---
 
 import logging
 import random
@@ -24,6 +20,8 @@ import re
 import io
 import telegram
 from typing import List, Tuple
+from telethon import TelegramClient
+from telethon.tl.types import User as TelethonUser, Channel as TelethonChannel
 from telegram import Update, User, Chat, constants, ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ChatType, ParseMode, ChatMemberStatus
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ApplicationHandlerStop, JobQueue
@@ -43,6 +41,7 @@ logging.basicConfig(
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("telegram.vendor.ptb_urllib3.urllib3").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger('telethon').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 # --- Owner ID Configuration & Bot Start Time ---
@@ -51,6 +50,9 @@ BOT_START_TIME = datetime.now()
 TENOR_API_KEY = None
 DB_NAME = "zenthron_data.db"
 LOG_CHAT_ID = None
+API_ID = None
+API_HASH = None
+SESSION_NAME = "zenthron_user_session"
 
 # --- Load configuration from environment variables ---
 try:
@@ -58,10 +60,20 @@ try:
     if owner_id_str: OWNER_ID = int(owner_id_str); logger.info(f"Owner ID loaded: {OWNER_ID}")
     else: raise ValueError("TELEGRAM_OWNER_ID environment variable not set or empty")
 except (ValueError, TypeError) as e: logger.critical(f"CRITICAL: Invalid or missing TELEGRAM_OWNER_ID: {e}"); print(f"\n--- FATAL ERROR --- \nInvalid or missing TELEGRAM_OWNER_ID."); exit(1)
-except Exception as e: logger.critical(f"CRITICAL: Unexpected error loading OWNER_ID: {e}"); print(f"\n--- FATAL ERROR --- \nUnexpected error loading OWNER_ID: {e}"); exit(1)
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 if not BOT_TOKEN: logger.critical("CRITICAL: TELEGRAM_BOT_TOKEN not set!"); print("\n--- FATAL ERROR --- \nTELEGRAM_BOT_TOKEN is not set."); exit(1)
+
+try:
+    api_id_str = os.getenv("TELEGRAM_API_ID")
+    if api_id_str: API_ID = int(api_id_str); logger.info("API ID loaded.")
+    else: raise ValueError("TELEGRAM_API_ID environment variable not set or empty")
+    API_HASH = os.getenv("TELEGRAM_API_HASH")
+    if not API_HASH: raise ValueError("TELEGRAM_API_HASH environment variable not set or empty")
+    logger.info("Telethon API credentials loaded successfully.")
+except (ValueError, TypeError) as e: 
+    logger.critical(f"CRITICAL: Invalid or missing Telethon API credentials: {e}")
+    print(f"\n--- FATAL ERROR --- \nInvalid or missing TELEGRAM_API_ID or TELEGRAM_API_HASH."); exit(1)
 
 TENOR_API_KEY = os.getenv("TENOR_API_KEY")
 if not TENOR_API_KEY: logger.warning("WARNING: TENOR_API_KEY not set. Themed GIFs disabled.")
@@ -76,7 +88,7 @@ if log_chat_id_str:
         logger.error(f"Invalid LOG_CHAT_ID: '{log_chat_id_str}' is not a valid integer. Will fallback to OWNER_ID for logs.")
         LOG_CHAT_ID = None
 else:
-    logger.info("LOG_CHAT_ID not set. Operational logs (globalbans/blacklist/sudo) will be sent to OWNER_ID if available.")
+    logger.info("LOG_CHAT_ID not set. Operational logs will be sent to OWNER_ID if available.")
 
 # --- Database Initialization ---
 def init_db():
@@ -84,546 +96,276 @@ def init_db():
     try:
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
-
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
-                user_id INTEGER PRIMARY KEY,
-                username TEXT,
-                first_name TEXT,
-                last_name TEXT,
-                language_code TEXT,
-                is_bot INTEGER,
-                last_seen TEXT 
-            )
-        """)
+                user_id INTEGER PRIMARY KEY, username TEXT, first_name TEXT, last_name TEXT,
+                language_code TEXT, is_bot INTEGER, last_seen TEXT)""")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_username ON users (username)")
-
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS blacklist (
-                user_id INTEGER PRIMARY KEY,
-                reason TEXT,
-                banned_by_id INTEGER,
-                timestamp TEXT 
-            )
-        """)
-
+                user_id INTEGER PRIMARY KEY, reason TEXT, banned_by_id INTEGER, timestamp TEXT)""")
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS sudo_users (
-                user_id INTEGER PRIMARY KEY,
-                added_by_id INTEGER NOT NULL,
-                timestamp TEXT NOT NULL
-            )
-        """)
-
+                user_id INTEGER PRIMARY KEY, added_by_id INTEGER NOT NULL, timestamp TEXT NOT NULL)""")
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS global_bans (
-                user_id INTEGER PRIMARY KEY,
-                reason TEXT,
-                banned_by_id INTEGER NOT NULL,
-                timestamp TEXT NOT NULL
-            )
-        """)
-
+                user_id INTEGER PRIMARY KEY, reason TEXT, banned_by_id INTEGER NOT NULL, timestamp TEXT NOT NULL)""")
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS bot_chats (
-                chat_id INTEGER PRIMARY KEY,
-                chat_title TEXT,
-                added_at TEXT NOT NULL,
-                enforce_gban INTEGER DEFAULT 1 NOT NULL 
-            )
-        """)
-        
+                chat_id INTEGER PRIMARY KEY, chat_title TEXT, added_at TEXT NOT NULL,
+                enforce_gban INTEGER DEFAULT 1 NOT NULL)""")
         conn.commit()
-        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, sudo_users, global_bans, bot_chats ensured).")
-    except sqlite3.Error as e:
-        logger.error(f"SQLite error during DB initialization: {e}", exc_info=True)
+        logger.info(f"Database '{DB_NAME}' initialized successfully.")
+    except sqlite3.Error as e: logger.error(f"SQLite error during DB initialization: {e}", exc_info=True)
     finally:
-        if conn:
-            conn.close()
+        if conn: conn.close()
 
 # --- Blacklist Helper Functions ---
 def add_to_blacklist(user_id: int, banned_by_id: int, reason: str | None = "No reason provided.") -> bool:
-    conn = None
     try:
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        current_timestamp_iso = datetime.now(timezone.utc).isoformat()
-        cursor.execute(
-            "INSERT OR IGNORE INTO blacklist (user_id, reason, banned_by_id, timestamp) VALUES (?, ?, ?, ?)",
-            (user_id, reason, banned_by_id, current_timestamp_iso)
-        )
-        conn.commit()
-        return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logger.error(f"SQLite error adding user {user_id} to blacklist: {e}", exc_info=True)
-        return False
-    finally:
-        if conn:
-            conn.close()
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            current_timestamp_iso = datetime.now(timezone.utc).isoformat()
+            cursor.execute(
+                "INSERT OR IGNORE INTO blacklist (user_id, reason, banned_by_id, timestamp) VALUES (?, ?, ?, ?)",
+                (user_id, reason, banned_by_id, current_timestamp_iso))
+            conn.commit(); return cursor.rowcount > 0
+    except sqlite3.Error as e: logger.error(f"SQLite error adding user {user_id} to blacklist: {e}", exc_info=True); return False
 
 def remove_from_blacklist(user_id: int) -> bool:
-    conn = None
     try:
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM blacklist WHERE user_id = ?", (user_id,))
-        conn.commit()
-        return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logger.error(f"SQLite error removing user {user_id} from blacklist: {e}", exc_info=True)
-        return False
-    finally:
-        if conn:
-            conn.close()
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM blacklist WHERE user_id = ?", (user_id,))
+            conn.commit(); return cursor.rowcount > 0
+    except sqlite3.Error as e: logger.error(f"SQLite error removing user {user_id} from blacklist: {e}", exc_info=True); return False
 
 def get_blacklist_reason(user_id: int) -> str | None:
-    conn = None
     try:
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        cursor.execute("SELECT reason FROM blacklist WHERE user_id = ?", (user_id,))
-        row = cursor.fetchone()
-        if row:
-            return row[0]
-        return None
-    except sqlite3.Error as e:
-        logger.error(f"SQLite error checking blacklist reason for user {user_id}: {e}", exc_info=True)
-        return None
-    finally:
-        if conn:
-            conn.close()
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT reason FROM blacklist WHERE user_id = ?", (user_id,)); row = cursor.fetchone()
+            return row[0] if row else None
+    except sqlite3.Error as e: logger.error(f"SQLite error checking blacklist for user {user_id}: {e}", exc_info=True); return None
 
-def is_user_blacklisted(user_id: int) -> bool:
-    return get_blacklist_reason(user_id) is not None
+def is_user_blacklisted(user_id: int) -> bool: return get_blacklist_reason(user_id) is not None
 
 # --- Blacklist Check Handler ---
 async def check_blacklist_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not update.message or not update.effective_user:
-        return
-
-    user = update.effective_user
-
-    if user.id == OWNER_ID:
-        return
-
-    if is_user_blacklisted(user.id):
-        user_mention_log = f"@{user.username}" if user.username else str(user.id)
-        message_text_preview = update.message.text[:50] if update.message.text else "[No text content]"
-        
-        logger.info(f"User {user.id} ({user_mention_log}) is blacklisted. Silently ignoring and blocking interaction: '{message_text_preview}'")
-        
-        raise ApplicationHandlerStop
+    if not update.message or not update.effective_user or update.effective_user.id == OWNER_ID: return
+    if is_user_blacklisted(update.effective_user.id):
+        logger.info(f"Blacklisted user {update.effective_user.id} tried to interact. Silently ignoring."); raise ApplicationHandlerStop
 
 # --- Sudo ---
 def add_sudo_user(user_id: int, added_by_id: int) -> bool:
-    """Adds a user to the sudo list."""
-    conn = None
     try:
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        current_timestamp_iso = datetime.now(timezone.utc).isoformat()
-        cursor.execute(
-            "INSERT OR IGNORE INTO sudo_users (user_id, added_by_id, timestamp) VALUES (?, ?, ?)",
-            (user_id, added_by_id, current_timestamp_iso)
-        )
-        conn.commit()
-        return cursor.rowcount > 0 
-    except sqlite3.Error as e:
-        logger.error(f"SQLite error adding sudo user {user_id}: {e}", exc_info=True)
-        return False
-    finally:
-        if conn:
-            conn.close()
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            current_timestamp_iso = datetime.now(timezone.utc).isoformat()
+            cursor.execute("INSERT OR IGNORE INTO sudo_users (user_id, added_by_id, timestamp) VALUES (?, ?, ?)",
+                           (user_id, added_by_id, current_timestamp_iso)); conn.commit(); return cursor.rowcount > 0 
+    except sqlite3.Error as e: logger.error(f"SQLite error adding sudo user {user_id}: {e}", exc_info=True); return False
 
 def remove_sudo_user(user_id: int) -> bool:
-    """Removes a user from the sudo list."""
-    conn = None
     try:
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM sudo_users WHERE user_id = ?", (user_id,))
-        conn.commit()
-        return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logger.error(f"SQLite error removing sudo user {user_id}: {e}", exc_info=True)
-        return False
-    finally:
-        if conn:
-            conn.close()
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor(); cursor.execute("DELETE FROM sudo_users WHERE user_id = ?", (user_id,)); conn.commit(); return cursor.rowcount > 0
+    except sqlite3.Error as e: logger.error(f"SQLite error removing sudo user {user_id}: {e}", exc_info=True); return False
 
 def is_sudo_user(user_id: int) -> bool:
-    """Checks if a user is on the sudo list (specifically, not checking if they are THE owner)."""
-    conn = None
     try:
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        cursor.execute("SELECT 1 FROM sudo_users WHERE user_id = ?", (user_id,))
-        return cursor.fetchone() is not None
-    except sqlite3.Error as e:
-        logger.error(f"SQLite error checking sudo for user {user_id}: {e}", exc_info=True)
-        return False 
-    finally:
-        if conn:
-            conn.close()
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor(); cursor.execute("SELECT 1 FROM sudo_users WHERE user_id = ?", (user_id,)); return cursor.fetchone() is not None
+    except sqlite3.Error as e: logger.error(f"SQLite error checking sudo for user {user_id}: {e}", exc_info=True); return False 
 
-def is_privileged_user(user_id: int) -> bool:
-    """Checks if the user is the Owner or a Sudo user."""
-    if user_id == OWNER_ID:
-        return True
-    return is_sudo_user(user_id)
+def is_privileged_user(user_id: int) -> bool: return user_id == OWNER_ID or is_sudo_user(user_id)
 
 # --- User logger ---
 def update_user_in_db(user: User | None):
-    if not user:
-        return
-    conn = None
+    if not user: return
     try:
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        current_timestamp_iso = datetime.now(timezone.utc).isoformat()
-        cursor.execute("""
-            INSERT INTO users (user_id, username, first_name, last_name, language_code, is_bot, last_seen)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(user_id) DO UPDATE SET
-                username = excluded.username,
-                first_name = excluded.first_name,
-                last_name = excluded.last_name,
-                language_code = excluded.language_code,
-                is_bot = excluded.is_bot,
-                last_seen = excluded.last_seen 
-        """, (
-            user.id, user.username, user.first_name, user.last_name,
-            user.language_code, 1 if user.is_bot else 0, current_timestamp_iso
-        ))
-        conn.commit()
-    except sqlite3.Error as e:
-        logger.error(f"SQLite error updating user {user.id} in users table: {e}", exc_info=True)
-    finally:
-        if conn:
-            conn.close()
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            current_timestamp_iso = datetime.now(timezone.utc).isoformat()
+            cursor.execute("""
+                INSERT INTO users (user_id, username, first_name, last_name, language_code, is_bot, last_seen)
+                VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET
+                    username=excluded.username, first_name=excluded.first_name, last_name=excluded.last_name,
+                    language_code=excluded.language_code, is_bot=excluded.is_bot, last_seen=excluded.last_seen """,
+                (user.id, user.username, user.first_name, user.last_name, user.language_code, 1 if user.is_bot else 0, current_timestamp_iso))
+    except sqlite3.Error as e: logger.error(f"SQLite error updating user {user.id}: {e}", exc_info=True)
 
 def get_user_from_db_by_username(username_query: str) -> User | None:
-    if not username_query:
-        return None
-    conn = None
-    user_obj: User | None = None
+    if not username_query: return None
     try:
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        normalized_username = username_query.lstrip('@').lower()
-        cursor.execute(
-            "SELECT user_id, username, first_name, last_name, language_code, is_bot FROM users WHERE LOWER(username) = ?",
-            (normalized_username,)
-        )
-        row = cursor.fetchone()
-        if row:
-            user_obj = User(
-                id=row[0], username=row[1], first_name=row[2] or "",
-                last_name=row[3], language_code=row[4], is_bot=bool(row[5])
-            )
-            logger.info(f"User {username_query} found in DB with ID {row[0]}.")
-    except sqlite3.Error as e:
-        logger.error(f"SQLite error fetching user by username '{username_query}': {e}", exc_info=True)
-    finally:
-        if conn:
-            conn.close()
-    return user_obj
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            normalized_username = username_query.lstrip('@').lower()
+            cursor.execute("SELECT user_id, username, first_name, last_name, language_code, is_bot FROM users WHERE LOWER(username) = ?", (normalized_username,))
+            row = cursor.fetchone()
+            if row:
+                return User(id=row[0], username=row[1], first_name=row[2] or "", last_name=row[3], language_code=row[4], is_bot=bool(row[5]))
+    except sqlite3.Error as e: logger.error(f"SQLite error fetching user by username '{username_query}': {e}", exc_info=True)
+    return None
 
 async def log_user_from_interaction(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.effective_user:
-        update_user_in_db(update.effective_user)
-    
+    if update.effective_user: update_user_in_db(update.effective_user)
     if update.message and update.message.reply_to_message and update.message.reply_to_message.from_user:
         update_user_in_db(update.message.reply_to_message.from_user)
-
     chat = update.effective_chat
     if chat and chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
         if 'known_chats' not in context.bot_data:
             context.bot_data['known_chats'] = set()
             try:
                 with sqlite3.connect(DB_NAME) as conn:
-                    cursor = conn.cursor()
-                    known_ids = {row[0] for row in cursor.execute("SELECT chat_id FROM bot_chats")}
-                    context.bot_data['known_chats'] = known_ids
-                    logger.info(f"Loaded {len(known_ids)} known chats into cache.")
-            except sqlite3.Error as e:
-                logger.error(f"Could not preload known chats into cache: {e}")
-
-        if chat.id not in context.bot_data['known_chats']:
-            logger.info(f"Passively discovered and adding new chat to DB: {chat.title} ({chat.id})")
+                    context.bot_data['known_chats'] = {row[0] for row in conn.cursor().execute("SELECT chat_id FROM bot_chats")}
+            except sqlite3.Error as e: logger.error(f"Could not preload known chats into cache: {e}")
+        if chat.id not in context.bot_data.get('known_chats', set()):
             add_chat_to_db(chat.id, chat.title or f"Untitled Chat {chat.id}")
-            context.bot_data['known_chats'].add(chat.id)
+            context.bot_data.setdefault('known_chats', set()).add(chat.id)
 
 def get_all_sudo_users_from_db() -> List[Tuple[int, str]]:
-    conn = None
-    sudo_list = []
     try:
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        cursor.execute("SELECT user_id, timestamp FROM sudo_users ORDER BY timestamp DESC")
-        rows = cursor.fetchall()
-        for row in rows:
-            sudo_list.append((row[0], row[1]))
-    except sqlite3.Error as e:
-        logger.error(f"SQLite error fetching all sudo users: {e}", exc_info=True)
-    finally:
-        if conn:
-            conn.close()
-    return sudo_list
+        with sqlite3.connect(DB_NAME) as conn:
+            return conn.cursor().execute("SELECT user_id, timestamp FROM sudo_users ORDER BY timestamp DESC").fetchall()
+    except sqlite3.Error as e: logger.error(f"SQLite error fetching all sudo users: {e}", exc_info=True); return []
 
 def parse_duration_to_timedelta(duration_str: str | None) -> timedelta | None:
-    if not duration_str:
-        return None
-    duration_str = duration_str.lower()
-    value = 0
-    unit = None
-    match = re.match(r"(\d+)([smhdw])", duration_str)
-    if match:
-        value = int(match.group(1))
-        unit = match.group(2)
-    else:
-        try:
-            value = int(duration_str)
-            unit = 'm' 
-        except ValueError:
-            return None
+    if not duration_str: return None
+    match = re.match(r"(\d+)([smhdw])", duration_str.lower())
+    if match: value, unit = int(match.group(1)), match.group(2)
+    else: return None
     if unit == 's': return timedelta(seconds=value)
-    elif unit == 'm': return timedelta(minutes=value)
-    elif unit == 'h': return timedelta(hours=value)
-    elif unit == 'd': return timedelta(days=value)
-    elif unit == 'w': return timedelta(weeks=value)
+    if unit == 'm': return timedelta(minutes=value)
+    if unit == 'h': return timedelta(hours=value)
+    if unit == 'd': return timedelta(days=value)
+    if unit == 'w': return timedelta(weeks=value)
     return None
 
-async def _parse_mod_command_args(args: list[str]) -> tuple[str | None, str | None, str | None]:
-    target_arg: str | None = None
-    duration_arg: str | None = None
-    reason_list: list[str] = []
-    if not args: return None, None, None
-    target_arg = args[0]
-    remaining_args = args[1:]
-    if remaining_args:
-        potential_duration_td = parse_duration_to_timedelta(remaining_args[0])
-        if potential_duration_td is not None:
-            duration_arg = remaining_args[0]
-            reason_list = remaining_args[1:]
-        else:
-            reason_list = remaining_args
-    reason_str = " ".join(reason_list) if reason_list else None
-    return target_arg, duration_arg, reason_str
-
 def parse_promote_args(args: list[str]) -> tuple[str | None, str | None]:
-    target_arg: str | None = None
-    custom_title_full: str | None = None
-
-    if not args:
-        return None, None
-    
+    if not args: return None, None
     target_arg = args[0]
-    if len(args) > 1:
-        custom_title_full = " ".join(args[1:])
-        
+    custom_title_full = " ".join(args[1:]) if len(args) > 1 else None
     return target_arg, custom_title_full
 
 async def send_safe_reply(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str, **kwargs):
-    """
-    Tries to reply to the message. If the original message is deleted,
-    it sends a new message to the chat instead of crashing.
-    """
-    try:
-        await update.message.reply_text(text=text, **kwargs)
+    try: await update.message.reply_text(text=text, **kwargs)
     except telegram.error.BadRequest as e:
         if "Message to be replied not found" in str(e):
             logger.warning("Original message not found for reply. Sending as a new message.")
             await context.bot.send_message(chat_id=update.effective_chat.id, text=text, **kwargs)
-        else:
-            raise e
+        else: raise e
 
-async def _can_user_perform_action(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-    permission: str,
-    failure_message: str,
-    allow_bot_privileged_override: bool = True
-) -> bool:
-    user = update.effective_user
-    chat = update.effective_chat
-
-    if allow_bot_privileged_override and is_privileged_user(user.id):
-        return True
-
+async def _can_user_perform_action(update: Update, context: ContextTypes.DEFAULT_TYPE, perm: str, msg: str, priv_override: bool=True) -> bool:
+    if priv_override and is_privileged_user(update.effective_user.id): return True
     try:
-        actor_chat_member = await context.bot.get_chat_member(chat.id, user.id)
-        
-        if actor_chat_member.status == "creator":
-            return True
-
-        if actor_chat_member.status == "administrator" and getattr(actor_chat_member, permission, False):
-            return True
-            
-    except TelegramError as e:
-        logger.error(f"Error checking permissions for {user.id} in chat {chat.id}: {e}")
-        await send_safe_reply(update, context, text="Error: Couldn't verify your permissions due to an API error.")
-        return False
-
-    await send_safe_reply(update, context, text=failure_message)
-    return False
+        member = await context.bot.get_chat_member(update.effective_chat.id, update.effective_user.id)
+        if member.status == "creator" or (member.status == "administrator" and getattr(member, perm, False)): return True
+    except TelegramError as e: logger.error(f"Permission check error: {e}"); await send_safe_reply(update, context, text="API error verifying permissions."); return False
+    await send_safe_reply(update, context, text=msg); return False
 
 # --- Utility Functions ---
+def telethon_entity_to_ptb_user(entity: 'TelethonUser') -> User | None:
+    if not isinstance(entity, TelethonUser): return None
+    return User(id=entity.id, first_name=entity.first_name or "", is_bot=entity.bot or False,
+                last_name=entity.last_name, username=entity.username, language_code=getattr(entity, 'lang_code', None))
+
+async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_input: str) -> User | None:
+    if 'telethon_client' not in context.bot_data:
+        logger.error("Telethon client not available. Using fallback PTB resolver.")
+        try:
+            chat_info = await context.bot.get_chat(target_input)
+            if chat_info.type == 'private':
+                return User(id=chat_info.id, first_name=chat_info.first_name or "", is_bot=getattr(chat_info, 'is_bot', False),
+                            username=chat_info.username, last_name=chat_info.last_name)
+        except Exception: return None
+        return None
+    
+    telethon_client: 'TelegramClient' = context.bot_data['telethon_client']
+    try:
+        entity = await telethon_client.get_entity(target_input)
+        if entity and isinstance(entity, TelethonUser):
+            ptb_user = telethon_entity_to_ptb_user(entity)
+            if ptb_user: update_user_in_db(ptb_user); return ptb_user
+    except Exception as e:
+        logger.warning(f"Telethon resolver failed for '{target_input}': {e}.")
+    return None
+
 def get_readable_time_delta(delta: timedelta) -> str:
     total_seconds = int(delta.total_seconds())
-    if total_seconds < 0: 
-        return "0s"
-    days, rem = divmod(total_seconds, 86400)
-    hours, rem = divmod(rem, 3600)
-    minutes, seconds = divmod(rem, 60)
-    parts = []
-    if days > 0: 
-        parts.append(f"{days}d")
-    if hours > 0: 
-        parts.append(f"{hours}h")
-    if minutes > 0: 
-        parts.append(f"{minutes}m")
-    if not parts and seconds >= 0 : 
-        parts.append(f"{seconds}s")
-    elif seconds > 0: 
-        parts.append(f"{seconds}s")
+    if total_seconds < 0: return "0s"
+    days, rem = divmod(total_seconds, 86400); hours, rem = divmod(rem, 3600); minutes, seconds = divmod(rem, 60)
+    parts = [f"{d}d" for d in [days] if d>0] + [f"{h}h" for h in [hours] if h>0] + [f"{m}m" for m in [minutes] if m>0]
+    if not parts or seconds > 0: parts.append(f"{seconds}s")
     return ", ".join(parts) if parts else "0s"
 
 def add_to_gban(user_id: int, banned_by_id: int, reason: str | None) -> bool:
     reason = reason or "No reason provided."
     try:
         with sqlite3.connect(DB_NAME) as conn:
-            cursor = conn.cursor()
-            timestamp = datetime.now(timezone.utc).isoformat()
-            cursor.execute(
-                "INSERT OR REPLACE INTO global_bans (user_id, reason, banned_by_id, timestamp) VALUES (?, ?, ?, ?)",
-                (user_id, reason, banned_by_id, timestamp)
-            )
-            return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logger.error(f"SQLite error adding user {user_id} to gban list: {e}")
-        return False
+            cursor = conn.cursor(); timestamp = datetime.now(timezone.utc).isoformat()
+            cursor.execute("INSERT OR REPLACE INTO global_bans (user_id, reason, banned_by_id, timestamp) VALUES (?, ?, ?, ?)",
+                           (user_id, reason, banned_by_id, timestamp)); return cursor.rowcount > 0
+    except sqlite3.Error as e: logger.error(f"SQLite error adding gban for {user_id}: {e}"); return False
 
 def remove_from_gban(user_id: int) -> bool:
     try:
         with sqlite3.connect(DB_NAME) as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM global_bans WHERE user_id = ?", (user_id,))
-            return cursor.rowcount > 0
-    except sqlite3.Error as e:
-        logger.error(f"SQLite error removing user {user_id} from gban list: {e}")
-        return False
+            cursor = conn.cursor(); cursor.execute("DELETE FROM global_bans WHERE user_id = ?", (user_id,)); return cursor.rowcount > 0
+    except sqlite3.Error as e: logger.error(f"SQLite error removing gban for {user_id}: {e}"); return False
 
 def get_gban_reason(user_id: int) -> str | None:
     try:
         with sqlite3.connect(DB_NAME) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT reason FROM global_bans WHERE user_id = ?", (user_id,))
-            row = cursor.fetchone()
+            row = conn.cursor().execute("SELECT reason FROM global_bans WHERE user_id = ?", (user_id,)).fetchone()
             return row[0] if row else None
-    except sqlite3.Error as e:
-        logger.error(f"SQLite error checking gban status for user {user_id}: {e}")
-        return None
+    except sqlite3.Error as e: logger.error(f"SQLite error checking gban for {user_id}: {e}"); return None
 
 def add_chat_to_db(chat_id: int, chat_title: str):
     try:
         with sqlite3.connect(DB_NAME) as conn:
-            cursor = conn.cursor()
             timestamp = datetime.now(timezone.utc).isoformat()
-            cursor.execute(
-                "INSERT OR REPLACE INTO bot_chats (chat_id, chat_title, added_at) VALUES (?, ?, ?)",
-                (chat_id, chat_title, timestamp)
-            )
-    except sqlite3.Error as e:
-        logger.error(f"Failed to add chat {chat_id} to DB: {e}")
+            conn.cursor().execute("INSERT OR REPLACE INTO bot_chats (chat_id, chat_title, added_at) VALUES (?, ?, ?)",
+                                  (chat_id, chat_title, timestamp))
+    except sqlite3.Error as e: logger.error(f"Failed to add chat {chat_id} to DB: {e}")
 
 def remove_chat_from_db(chat_id: int):
     try:
-        with sqlite3.connect(DB_NAME) as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM bot_chats WHERE chat_id = ?", (chat_id,))
-    except sqlite3.Error as e:
-        logger.error(f"Failed to remove chat {chat_id} from DB: {e}")
+        with sqlite3.connect(DB_NAME) as conn: conn.cursor().execute("DELETE FROM bot_chats WHERE chat_id = ?", (chat_id,))
+    except sqlite3.Error as e: logger.error(f"Failed to remove chat {chat_id} from DB: {e}")
 
 def is_gban_enforced(chat_id: int) -> bool:
-    """Checks if gban enforcement is enabled for a specific chat."""
     try:
         with sqlite3.connect(DB_NAME) as conn:
-            cursor = conn.cursor()
-            res = cursor.execute(
-                "SELECT enforce_gban FROM bot_chats WHERE chat_id = ?", (chat_id,)
-            ).fetchone()
-            if res is None:
-                return True 
-            return bool(res[0])
-    except sqlite3.Error as e:
-        logger.error(f"Could not check gban enforcement status for chat {chat_id}: {e}")
-        return True
+            res = conn.cursor().execute("SELECT enforce_gban FROM bot_chats WHERE chat_id = ?", (chat_id,)).fetchone()
+            return bool(res[0]) if res is not None else True
+    except sqlite3.Error as e: logger.error(f"Could not check gban enforcement for {chat_id}: {e}"); return True
 
-# --- Helper Functions (Check Targets, Get GIF) ---
 async def check_target_protection(target_user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    if target_user_id == OWNER_ID: return True
-    if target_user_id == context.bot.id: return True
-    return False
+    return target_user_id == OWNER_ID or target_user_id == context.bot.id
 
 async def check_username_protection(target_mention: str, context: ContextTypes.DEFAULT_TYPE) -> tuple[bool, bool]:
-    is_protected = False; is_owner_match = False; bot_username = context.bot.username
-    if bot_username and target_mention.lower() == f"@{bot_username.lower()}": is_protected = True
-    elif OWNER_ID:
-        owner_username = None
-        try: owner_chat = await context.bot.get_chat(OWNER_ID); owner_username = owner_chat.username
+    bot_username = context.bot.username
+    if bot_username and target_mention.lower() == f"@{bot_username.lower()}": return True, False
+    if OWNER_ID:
+        try:
+            owner_chat = await context.bot.get_chat(OWNER_ID)
+            if owner_chat.username and target_mention.lower() == f"@{owner_chat.username.lower()}": return True, True
         except Exception as e: logger.warning(f"Could not fetch owner username for protection check: {e}")
-        if owner_username and target_mention.lower() == f"@{owner_username.lower()}": is_protected = True; is_owner_match = True
-    return is_protected, is_owner_match
+    return False, False
 
 async def get_themed_gif(context: ContextTypes.DEFAULT_TYPE, search_terms: list[str]) -> str | None:
-    if not TENOR_API_KEY: return None
-    if not search_terms: logger.warning("No search terms for get_themed_gif."); return None
-    
+    if not TENOR_API_KEY or not search_terms: return None
     search_term = random.choice(search_terms)
-    logger.info(f"Searching Tenor for BEST results: '{search_term}'")
-    
-    url = "https://tenor.googleapis.com/v2/search"
-    params = { 
-        "q": search_term, 
-        "key": TENOR_API_KEY, 
-        "client_key": "my_cat_bot_project_py", 
-        "limit": 15, 
-        "media_filter": "gif", 
-        "contentfilter": "medium" 
-    }
-    
+    params = {"q": search_term, "key": TENOR_API_KEY, "client_key": "zenthron", "limit": 15, "media_filter": "gif", "contentfilter": "medium"}
     try:
-        response = requests.get(url, params=params, timeout=7)
-        if response.status_code != 200:
-            logger.error(f"Tenor API failed for '{search_term}', status: {response.status_code}")
-            try: error_content = response.json(); logger.error(f"Tenor error content: {error_content}")
-            except requests.exceptions.JSONDecodeError: logger.error(f"Tenor error response (non-JSON): {response.text[:500]}")
-            return None
-        
-        data = response.json()
-        results = data.get("results")
-        
+        response = requests.get("https://tenor.googleapis.com/v2/search", params=params, timeout=7)
+        response.raise_for_status()
+        results = response.json().get("results")
         if results:
-            top_gifs = results[:5] 
-            selected_gif = random.choice(top_gifs)
-            
-            gif_url = selected_gif.get("media_formats", {}).get("gif", {}).get("url")
-            if not gif_url: gif_url = selected_gif.get("media_formats", {}).get("tinygif", {}).get("url")
-            
-            if gif_url: 
-                logger.info(f"Found high-quality GIF URL: {gif_url}")
-                return gif_url
-            else: 
-                logger.warning(f"Could not extract GIF URL from Tenor item for '{search_term}'.")
-        else: 
-            logger.warning(f"No results on Tenor for '{search_term}'.")
-            logger.debug(f"Tenor response (no results): {data}")
-            
-    except requests.exceptions.Timeout: logger.error(f"Timeout fetching GIF from Tenor for '{search_term}'.")
-    except requests.exceptions.RequestException as e: logger.error(f"Network/Request error fetching GIF from Tenor: {e}")
-    except Exception as e: logger.error(f"Unexpected error in get_themed_gif for '{search_term}': {e}", exc_info=True)
-    
+            selected_gif = random.choice(results[:5])
+            return selected_gif.get("media_formats", {}).get("gif", {}).get("url")
+    except requests.RequestException as e: logger.error(f"Tenor API error for '{search_term}': {e}")
     return None
 
 # --- Command Handlers ---
@@ -746,7 +488,6 @@ async def owner_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         await update.message.reply_html(message)
     else: await update.message.reply_text("Error: Owner information is not configured.")
 
-# --- User Info Command ---
 def format_entity_info(entity: Chat | User,
                        chat_member_status_str: str | None = None,
                        is_target_owner: bool = False,
@@ -849,159 +590,112 @@ def format_entity_info(entity: Chat | User,
 
 async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     target_entity_obj: Chat | User | None = None
-    initial_user_obj_from_update: User | None = None
-    target_chat_obj_from_api: Chat | None = None
     initial_entity_id_for_refresh: int | None = None
     
     current_chat_id = update.effective_chat.id
-    command_caller_id = update.effective_user.id
 
     if update.effective_user:
         update_user_in_db(update.effective_user)
 
     if update.message.reply_to_message:
         if update.message.reply_to_message.sender_chat:
-            target_chat_obj_from_api = update.message.reply_to_message.sender_chat
-            initial_entity_id_for_refresh = target_chat_obj_from_api.id
-            logger.info(f"/info target is replied sender_chat: ID={target_chat_obj_from_api.id}")
+            target_entity_obj = update.message.reply_to_message.sender_chat
         else:
-            initial_user_obj_from_update = update.message.reply_to_message.from_user
-            if initial_user_obj_from_update:
-                update_user_in_db(initial_user_obj_from_update)
-                initial_entity_id_for_refresh = initial_user_obj_from_update.id
-                logger.info(f"/info target is replied user: {initial_user_obj_from_update.id}")
+            target_entity_obj = update.message.reply_to_message.from_user
+            if target_entity_obj:
+                update_user_in_db(target_entity_obj)
     elif context.args:
         target_input_str = context.args[0]
-        logger.info(f"/info target is argument: {target_input_str}")
+        entity_from_telethon = None
         
-        resolved_user_from_db: User | None = None
-        if target_input_str.startswith("@"):
-            username_to_find = target_input_str[1:]
-            resolved_user_from_db = get_user_from_db_by_username(username_to_find)
-            if resolved_user_from_db:
-                initial_user_obj_from_update = resolved_user_from_db
-                initial_entity_id_for_refresh = resolved_user_from_db.id
-            else:
-                logger.info(f"Trying find entity @{username_to_find} by using Telegram API.")
-                try:
-                    target_chat_obj_from_api = await context.bot.get_chat(target_input_str)
-                    initial_entity_id_for_refresh = target_chat_obj_from_api.id
-                    if target_chat_obj_from_api.type == ChatType.PRIVATE:
-                         user_to_save = User(id=target_chat_obj_from_api.id, first_name=target_chat_obj_from_api.first_name or "", is_bot=getattr(target_chat_obj_from_api, 'is_bot', False), username=target_chat_obj_from_api.username, last_name=target_chat_obj_from_api.last_name, language_code=getattr(target_chat_obj_from_api, 'language_code', None))
-                         update_user_in_db(user_to_save)
-                         initial_user_obj_from_update = user_to_save
-                except TelegramError as e:
-                    logger.error(f"Telegram API error for @ '{target_input_str}': {e}")
-                    await update.message.reply_text(f"Error: I couldn't find '{html.escape(target_input_str)}'.")
-                    return
-                except Exception as e:
-                    logger.error(f"Unexpected error processing @ '{target_input_str}': {e}", exc_info=True)
-                    await update.message.reply_text(f"An unexpected error occurred with '{html.escape(target_input_str)}'.")
-                    return
-        else:
+        if 'telethon_client' in context.bot_data:
+            telethon_client: 'TelegramClient' = context.bot_data['telethon_client']
             try:
-                target_id = int(target_input_str)
-                initial_entity_id_for_refresh = target_id
-                target_chat_obj_from_api = await context.bot.get_chat(target_id)
-                if target_chat_obj_from_api.type == ChatType.PRIVATE:
-                    user_to_save = User(id=target_chat_obj_from_api.id, first_name=target_chat_obj_from_api.first_name or "", is_bot=getattr(target_chat_obj_from_api, 'is_bot', False), username=target_chat_obj_from_api.username, last_name=target_chat_obj_from_api.last_name, language_code=getattr(target_chat_obj_from_api, 'language_code', None))
-                    update_user_in_db(user_to_save)
-                    initial_user_obj_from_update = user_to_save
-            except ValueError:
-                await update.message.reply_text(f"Error: Invalid format: '{html.escape(target_input_str)}'.")
-                return
-            except TelegramError as e:
-                logger.error(f"Error fetching chat/user info for ID '{target_input_str}': {e}")
-                await update.message.reply_text(f"Error: Couldn't find or access info for ID '{html.escape(target_input_str)}': {e}")
-                return
+                entity_from_telethon = await telethon_client.get_entity(target_input_str)
             except Exception as e:
-                logger.error(f"Unexpected error processing ID '{target_input_str}': {e}", exc_info=True)
-                await update.message.reply_text(f"An unexpected error occurred processing ID '{html.escape(target_input_str)}'.")
-                return
-    else:
-        initial_user_obj_from_update = update.effective_user
-        if initial_user_obj_from_update:
-            update_user_in_db(initial_user_obj_from_update)
-            initial_entity_id_for_refresh = initial_user_obj_from_update.id
-            logger.info(f"/info target is command sender: {initial_user_obj_from_update.id}")
-
-    final_entity_to_display: Chat | User | None = None
-    if initial_user_obj_from_update:
-        final_entity_to_display = initial_user_obj_from_update
-    elif target_chat_obj_from_api:
-        final_entity_to_display = target_chat_obj_from_api
-
-    if final_entity_to_display and initial_entity_id_for_refresh is not None:
-        is_target_owner_flag = False
-        is_target_sudo_flag = False
-        member_status_in_current_chat_str: str | None = None
-        blacklist_reason_str: str | None = None
-        gban_reason_str: str | None = None
-
-        try:
-            fresh_data_chat_obj = await context.bot.get_chat(chat_id=initial_entity_id_for_refresh)
-            
-            if isinstance(final_entity_to_display, User) or fresh_data_chat_obj.type == ChatType.PRIVATE:
-                current_is_bot = getattr(final_entity_to_display, 'is_bot', False)
-                current_lang_code = getattr(final_entity_to_display, 'language_code', None)
-
-                refreshed_user = User(
-                    id=fresh_data_chat_obj.id,
-                    first_name=fresh_data_chat_obj.first_name or getattr(final_entity_to_display, 'first_name', None) or "",
-                    last_name=fresh_data_chat_obj.last_name or getattr(final_entity_to_display, 'last_name', None),
-                    username=fresh_data_chat_obj.username or getattr(final_entity_to_display, 'username', None),
-                    is_bot=getattr(fresh_data_chat_obj, 'is_bot', current_is_bot),
-                    language_code=getattr(fresh_data_chat_obj, 'language_code', current_lang_code)
-                )
-                update_user_in_db(refreshed_user)
-                final_entity_to_display = refreshed_user
-                
-                is_target_owner_flag = (OWNER_ID is not None and final_entity_to_display.id == OWNER_ID)
-                if not is_target_owner_flag:
-                     is_target_sudo_flag = is_sudo_user(final_entity_to_display.id)
-                
-                blacklist_reason_str = get_blacklist_reason(final_entity_to_display.id)
-                gban_reason_str = get_gban_reason(final_entity_to_display.id)
-
-                if current_chat_id != final_entity_to_display.id and update.effective_chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
-                    try:
-                        chat_member = await context.bot.get_chat_member(chat_id=current_chat_id, user_id=final_entity_to_display.id)
-                        member_status_in_current_chat_str = chat_member.status
-                    except TelegramError as e:
-                        if "user not found" in str(e).lower(): member_status_in_current_chat_str = "not_a_member"
-                        else: logger.warning(f"Could not get status for {final_entity_to_display.id}: {e}")
-                    except Exception as e: logger.error(f"Unexpected error getting status: {e}", exc_info=True)
-            else:
-                final_entity_to_display = fresh_data_chat_obj
-
-            logger.info(f"Loaded entity data for {final_entity_to_display.id} from API.")
-        except TelegramError as e:
-            logger.warning(f"Could not load entity data for {initial_entity_id_for_refresh} from API: {e}. Using initially identified data.")
-        except Exception as e:
-            logger.error(f"Unexpected error loading entity data for {initial_entity_id_for_refresh}: {e}", exc_info=True)
-
-        if final_entity_to_display:
-            info_message = format_entity_info(
-                final_entity_to_display, 
-                member_status_in_current_chat_str, 
-                is_target_owner_flag, 
-                is_target_sudo_flag, 
-                blacklist_reason_str, 
-                gban_reason_str,
-                current_chat_id, 
-                context
-            )
+                logger.warning(f"Telethon couldn't resolve '{target_input_str}' for /info: {e}")
+        
+        if entity_from_telethon:
             try:
-                await update.message.reply_html(info_message)
-                logger.info(f"Sent /info response for entity {final_entity_to_display.id} in chat {update.effective_chat.id}")
-            except TelegramError as e_reply:
-                logger.error(f"Failed to send /info reply in chat {update.effective_chat.id}: {e_reply}")
-            except Exception as e_reply_other:
-                logger.error(f"Unexpected error sending /info reply: {e_reply_other}", exc_info=True)
+                target_entity_obj = await context.bot.get_chat(entity_from_telethon.id)
+            except Exception as e:
+                 logger.error(f"Could not get_chat for entity found by Telethon {entity_from_telethon.id}: {e}")
+                 await update.message.reply_text(f"Error: Found entity for '{html.escape(target_input_str)}' but couldn't fetch its full details.")
+                 return
         else:
-            await update.message.reply_text("Error: Could not obtain entity details to display.")
+            await update.message.reply_text(f"Error: Couldn't find any user or channel for '{html.escape(target_input_str)}'.")
+            return
     else:
+        target_entity_obj = update.effective_user
+        if target_entity_obj:
+            update_user_in_db(target_entity_obj)
+
+    if not target_entity_obj:
         await update.message.reply_text("Error: Couldn't determine what to get info for.")
+        return
+    
+    initial_entity_id_for_refresh = target_entity_obj.id
+    final_entity_to_display: Chat | User | None = target_entity_obj
+    
+    is_target_owner_flag = False
+    is_target_sudo_flag = False
+    member_status_in_current_chat_str: str | None = None
+    blacklist_reason_str: str | None = None
+    gban_reason_str: str | None = None
+
+    try:
+        fresh_data_chat_obj = await context.bot.get_chat(chat_id=initial_entity_id_for_refresh)
+        
+        is_user_like = isinstance(final_entity_to_display, User) or (hasattr(fresh_data_chat_obj, 'type') and fresh_data_chat_obj.type == ChatType.PRIVATE)
+
+        if is_user_like:
+            refreshed_user = User(
+                id=fresh_data_chat_obj.id,
+                first_name=fresh_data_chat_obj.first_name or "",
+                last_name=fresh_data_chat_obj.last_name,
+                username=fresh_data_chat_obj.username,
+                is_bot=getattr(fresh_data_chat_obj, 'is_bot', False),
+                language_code=getattr(fresh_data_chat_obj, 'language_code', None)
+            )
+            update_user_in_db(refreshed_user)
+            final_entity_to_display = refreshed_user
+            
+            is_target_owner_flag = (OWNER_ID is not None and final_entity_to_display.id == OWNER_ID)
+            if not is_target_owner_flag:
+                 is_target_sudo_flag = is_sudo_user(final_entity_to_display.id)
+            
+            blacklist_reason_str = get_blacklist_reason(final_entity_to_display.id)
+            gban_reason_str = get_gban_reason(final_entity_to_display.id)
+
+            if current_chat_id != final_entity_to_display.id and update.effective_chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
+                try:
+                    chat_member = await context.bot.get_chat_member(chat_id=current_chat_id, user_id=final_entity_to_display.id)
+                    member_status_in_current_chat_str = chat_member.status
+                except TelegramError as e:
+                    if "user not found" in str(e).lower(): member_status_in_current_chat_str = "not_a_member"
+                    else: logger.warning(f"Could not get status for {final_entity_to_display.id}: {e}")
+        else:
+            final_entity_to_display = fresh_data_chat_obj
+    except TelegramError as e:
+        logger.warning(f"Could not refresh entity data for {initial_entity_id_for_refresh} from API: {e}. Using initial data.")
+
+    if final_entity_to_display:
+        info_message = format_entity_info(
+            final_entity_to_display, 
+            member_status_in_current_chat_str, 
+            is_target_owner_flag, 
+            is_target_sudo_flag, 
+            blacklist_reason_str, 
+            gban_reason_str,
+            current_chat_id, 
+            context
+        )
+        try:
+            await update.message.reply_html(info_message)
+        except Exception as e_reply:
+            logger.error(f"Failed to send /info reply in chat {update.effective_chat.id}: {e_reply}")
+    else:
+        await update.message.reply_text("Error: Could not obtain entity details to display.")
 
 async def list_admins_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
@@ -1082,6 +776,14 @@ async def list_admins_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:
         await update.message.reply_html(message_text, disable_web_page_preview=True)
 
+async def _resolve_mod_target(update: Update, context: ContextTypes.DEFAULT_TYPE) -> tuple[User | None, list[str]]:
+    target_user, args = None, context.args or []
+    if update.message.reply_to_message:
+        target_user = update.message.reply_to_message.from_user
+    elif args:
+        target_user = await resolve_user_with_telethon(context, args[0]); args = args[1:]
+    return target_user, args
+
 async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     user_who_bans = update.effective_user
@@ -1104,45 +806,32 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     target_user: User | None = None
-    duration_str: str | None = None
-    reason_list: list[str] = []
-    reason: str = "No reason provided."
-    args_to_parse_for_duration_reason = list(context.args)
+    args_for_reason_and_time = list(context.args)
 
     if update.message.reply_to_message:
         target_user = update.message.reply_to_message.from_user
     elif context.args:
         target_arg = context.args[0]
-        args_to_parse_for_duration_reason = list(context.args[1:])
-        if target_arg.startswith("@"):
-            username_to_find = target_arg[1:]
-            target_user = get_user_from_db_by_username(username_to_find)
-            if not target_user:
-                try:
-                    chat_info = await context.bot.get_chat(target_arg)
-                    if chat_info.type == ChatType.PRIVATE: target_user = User(id=chat_info.id, first_name=chat_info.first_name or "",is_bot=getattr(chat_info, 'is_bot', False),username=chat_info.username, last_name=chat_info.last_name)
-                except: pass
-            if not target_user: await send_safe_reply(update, context, text=f"User @{html.escape(username_to_find)} not found."); return
-        else:
-            try:
-                target_id = int(target_arg)
-                try:
-                    chat_info = await context.bot.get_chat(target_id)
-                    if chat_info.type == ChatType.PRIVATE: target_user = User(id=chat_info.id, first_name=chat_info.first_name or f"User {target_id}", is_bot=getattr(chat_info, 'is_bot',False), username=chat_info.username, last_name=chat_info.last_name)
-                    else: await send_safe_reply(update, context, text="Target ID does not seem to be a user."); return
-                except: target_user = User(id=target_id, first_name=f"User {target_id}", is_bot=False)
-            except ValueError: await send_safe_reply(update, context, text="Invalid user ID."); return
+        args_for_reason_and_time = list(context.args[1:])
+        target_user = await resolve_user_with_telethon(context, target_arg)
+        if not target_user:
+            await send_safe_reply(update, context, text=f"User {html.escape(target_arg)} not found.")
+            return
     else:
         await send_safe_reply(update, context, text="Usage: /ban <ID/@username/reply> [duration (e.g., 1h, 30m)] [reason]")
         return
+        
+    duration_str: str | None = None
+    reason_list: list[str] = []
+    reason: str = "No reason provided."
 
-    if args_to_parse_for_duration_reason:
-        potential_duration_td = parse_duration_to_timedelta(args_to_parse_for_duration_reason[0])
+    if args_for_reason_and_time:
+        potential_duration_td = parse_duration_to_timedelta(args_for_reason_and_time[0])
         if potential_duration_td:
-            duration_str = args_to_parse_for_duration_reason[0]
-            if len(args_to_parse_for_duration_reason) > 1: reason_list = args_to_parse_for_duration_reason[1:]
+            duration_str = args_for_reason_and_time[0]
+            if len(args_for_reason_and_time) > 1: reason_list = args_for_reason_and_time[1:]
         else:
-            reason_list = args_to_parse_for_duration_reason
+            reason_list = args_for_reason_and_time
         if reason_list: reason = " ".join(reason_list)
 
     if not target_user: await send_safe_reply(update, context, text="Could not identify user to ban."); return
@@ -1166,27 +855,24 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     duration_td = parse_duration_to_timedelta(duration_str)
     until_date_for_api: datetime | int | None = None
-    time_str_display = "permanently"
 
     if duration_td:
-        until_date_dt_aware_utc = datetime.now(timezone.utc) + duration_td
-        until_date_for_api = until_date_dt_aware_utc
-        time_str_display = f"for {duration_str}"
+        until_date_for_api = datetime.now(timezone.utc) + duration_td
 
     try:
         await context.bot.ban_chat_member(chat_id=chat.id, user_id=target_user.id, until_date=until_date_for_api)
-        user_display_name = target_user.mention_html() if target_user.username else html.escape(target_user.first_name or str(target_user.id))
+        user_display_name = target_user.mention_html() or html.escape(target_user.full_name or str(target_user.id))
         response_lines = ["Success: User Banned"]
         response_lines.append(f"<b>• User:</b> {user_display_name} (<code>{target_user.id}</code>)")
         response_lines.append(f"<b>• Reason:</b> {html.escape(reason)}")
         if duration_str and until_date_for_api and isinstance(until_date_for_api, datetime):
-            response_lines.append(f"<b>• Duration:</b> <code>{time_str_display.replace('for ', '')}</code> (until <code>{until_date_for_api.strftime('%Y-%m-%d %H:%M:%S %Z')}</code>)")
+            response_lines.append(f"<b>• Duration:</b> <code>{duration_str}</code> (until <code>{until_date_for_api.strftime('%Y-%m-%d %H:%M:%S %Z')}</code>)")
         else:
             response_lines.append(f"<b>• Duration:</b> <code>Permanent</code>")
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
     except TelegramError as e: await send_safe_reply(update, context, text=f"Failed to ban user: {html.escape(str(e))}")
     except Exception as e: logger.error(f"Unexpected error in /ban: {e}", exc_info=True); await send_safe_reply(update, context, text="An unexpected error occurred.")
-
+        
 async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -1212,24 +898,14 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         target_user = update.message.reply_to_message.from_user
     elif context.args:
         target_arg = context.args[0]
-        if target_arg.startswith("@"):
-            username_to_find = target_arg[1:]
-            target_user = get_user_from_db_by_username(username_to_find)
-            if not target_user:
-                try:
-                    chat_info = await context.bot.get_chat(target_arg)
-                    if chat_info.type == ChatType.PRIVATE: target_user = User(id=chat_info.id, first_name=chat_info.first_name or "",is_bot=getattr(chat_info, 'is_bot', False),username=chat_info.username, last_name=chat_info.last_name)
-                except: pass
-            if not target_user: await send_safe_reply(update, context, text=f"User @{html.escape(username_to_find)} not found."); return
-        else:
-            try:
-                target_id = int(target_arg)
-                try:
-                    chat_info = await context.bot.get_chat(target_id)
-                    if chat_info.type == ChatType.PRIVATE: target_user = User(id=chat_info.id, first_name=chat_info.first_name or f"User {target_id}", is_bot=getattr(chat_info, 'is_bot',False), username=chat_info.username, last_name=chat_info.last_name)
-                    else: target_user = User(id=target_id, first_name=f"User {target_id}", is_bot=False)
-                except: target_user = User(id=target_id, first_name=f"User {target_id}", is_bot=False)
-            except ValueError: await send_safe_reply(update, context, text="Invalid user ID."); return
+        target_user = await resolve_user_with_telethon(context, target_arg)
+        
+        if not target_user and target_arg.isdigit():
+            logger.info(f"Unban fallback: Creating a temporary User object for ID {target_arg}")
+            target_user = User(id=int(target_arg), first_name=f"User {target_arg}", is_bot=False)
+        elif not target_user:
+            await send_safe_reply(update, context, text=f"User {html.escape(target_arg)} not found.")
+            return
     else:
         await send_safe_reply(update, context, text="Usage: /unban <ID/@username/reply>")
         return
@@ -1239,7 +915,7 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     try:
         await context.bot.unban_chat_member(chat_id=chat.id, user_id=target_user.id, only_if_banned=True)
-        user_display_name = target_user.mention_html() if target_user.username else html.escape(target_user.first_name or str(target_user.id))
+        user_display_name = target_user.mention_html() or html.escape(target_user.full_name or str(target_user.id))
         response_lines = ["Success: User Unbanned", f"<b>• User:</b> {user_display_name} (<code>{target_user.id}</code>)"]
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
     except TelegramError as e: await send_safe_reply(update, context, text=f"Failed to unban user: {html.escape(str(e))}")
@@ -1267,45 +943,32 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     target_user: User | None = None
-    duration_str: str | None = None
-    reason_list: list[str] = []
-    reason: str = "No reason provided."
-    args_to_parse_for_duration_reason = list(context.args)
+    args_for_reason_and_time = list(context.args)
 
     if update.message.reply_to_message:
         target_user = update.message.reply_to_message.from_user
     elif context.args:
         target_arg = context.args[0]
-        args_to_parse_for_duration_reason = list(context.args[1:])
-        if target_arg.startswith("@"):
-            username_to_find = target_arg[1:]
-            target_user = get_user_from_db_by_username(username_to_find)
-            if not target_user:
-                try:
-                    chat_info = await context.bot.get_chat(target_arg)
-                    if chat_info.type == ChatType.PRIVATE: target_user = User(id=chat_info.id, first_name=chat_info.first_name or "",is_bot=getattr(chat_info, 'is_bot',False),username=chat_info.username, last_name=chat_info.last_name)
-                except: pass
-            if not target_user: await send_safe_reply(update, context, text=f"User @{html.escape(username_to_find)} not found."); return
-        else:
-            try:
-                target_id = int(target_arg)
-                try:
-                    chat_info = await context.bot.get_chat(target_id)
-                    if chat_info.type == ChatType.PRIVATE: target_user = User(id=chat_info.id, first_name=chat_info.first_name or f"User {target_id}", is_bot=getattr(chat_info, 'is_bot',False), username=chat_info.username, last_name=chat_info.last_name)
-                    else: await send_safe_reply(update, context, text="Target ID does not seem to be a user."); return
-                except: target_user = User(id=target_id, first_name=f"User {target_id}", is_bot=False)
-            except ValueError: await send_safe_reply(update, context, text="Invalid user ID."); return
+        args_for_reason_and_time = list(context.args[1:])
+        target_user = await resolve_user_with_telethon(context, target_arg)
+        if not target_user:
+            await send_safe_reply(update, context, text=f"User {html.escape(target_arg)} not found.")
+            return
     else:
         await send_safe_reply(update, context, text="Usage: /mute <ID/@username/reply> [duration] [reason]")
         return
 
-    if args_to_parse_for_duration_reason:
-        potential_duration_td = parse_duration_to_timedelta(args_to_parse_for_duration_reason[0])
+    duration_str: str | None = None
+    reason_list: list[str] = []
+    reason: str = "No reason provided."
+
+    if args_for_reason_and_time:
+        potential_duration_td = parse_duration_to_timedelta(args_for_reason_and_time[0])
         if potential_duration_td:
-            duration_str = args_to_parse_for_duration_reason[0]
-            if len(args_to_parse_for_duration_reason) > 1: reason_list = args_to_parse_for_duration_reason[1:]
+            duration_str = args_for_reason_and_time[0]
+            if len(args_for_reason_and_time) > 1: reason_list = args_for_reason_and_time[1:]
         else:
-            reason_list = args_to_parse_for_duration_reason
+            reason_list = args_for_reason_and_time
         if reason_list: reason = " ".join(reason_list)
 
     if not target_user: await send_safe_reply(update, context, text="Could not identify user to mute."); return
@@ -1325,28 +988,29 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                  return
     except TelegramError as e:
         if "user not found" in str(e).lower():
-            await send_safe_reply(update, context, text=f"User {target_user.mention_html()} is not in this chat, cannot be muted.", parse_mode=ParseMode.HTML)
+            user_display = target_user.mention_html() or html.escape(target_user.full_name or str(target_user.id))
+            await send_safe_reply(update, context, text=f"User {user_display} is not in this chat, cannot be muted.", parse_mode=ParseMode.HTML)
             return
         logger.warning(f"Could not get target's chat member status for /mute: {e}")
 
     duration_td = parse_duration_to_timedelta(duration_str)
     permissions_to_set_for_mute = ChatPermissions(can_send_messages=False, can_send_audios=False, can_send_documents=False, can_send_photos=False, can_send_videos=False, can_send_video_notes=False, can_send_voice_notes=False, can_send_polls=False, can_send_other_messages=False, can_add_web_page_previews=False)
     until_date_dt: datetime | None = None
-    time_str_display = "permanently"
 
     if duration_td:
         until_date_dt = datetime.now(timezone.utc) + duration_td
-        time_str_display = f"for {duration_str}"
 
     try:
         await context.bot.restrict_chat_member(chat_id=chat.id, user_id=target_user.id, permissions=permissions_to_set_for_mute, until_date=until_date_dt, use_independent_chat_permissions=True)
-        user_display_name = target_user.mention_html() if target_user.username else html.escape(target_user.first_name or str(target_user.id))
+        user_display_name = target_user.mention_html() or html.escape(target_user.full_name or str(target_user.id))
 
         response_lines = ["Success: User Muted"]
         response_lines.append(f"<b>• User:</b> {user_display_name} (<code>{target_user.id}</code>)")
         response_lines.append(f"<b>• Reason:</b> {html.escape(reason)}")
-        if duration_str and until_date_dt: response_lines.append(f"<b>• Duration:</b> <code>{time_str_display.replace('for ', '')}</code> (until <code>{until_date_dt.strftime('%Y-%m-%d %H:%M:%S %Z')}</code>)")
-        else: response_lines.append(f"<b>• Duration:</b> <code>Permanent</code>")
+        if duration_str and until_date_dt:
+            response_lines.append(f"<b>• Duration:</b> <code>{duration_str}</code> (until <code>{until_date_dt.strftime('%Y-%m-%d %H:%M:%S %Z')}</code>)")
+        else:
+            response_lines.append(f"<b>• Duration:</b> <code>Permanent</code>")
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
     except TelegramError as e: await send_safe_reply(update, context, text=f"Failed to mute user: {html.escape(str(e))}")
     except Exception as e: logger.error(f"Unexpected error in /mute: {e}", exc_info=True); await send_safe_reply(update, context, text="An unexpected error occurred.")
@@ -1376,24 +1040,10 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         target_user = update.message.reply_to_message.from_user
     elif context.args:
         target_arg = context.args[0]
-        if target_arg.startswith("@"):
-            username_to_find = target_arg[1:]
-            target_user = get_user_from_db_by_username(username_to_find)
-            if not target_user:
-                try:
-                    chat_info = await context.bot.get_chat(target_arg)
-                    if chat_info.type == ChatType.PRIVATE: target_user = User(id=chat_info.id, first_name=chat_info.first_name or "",is_bot=getattr(chat_info, 'is_bot',False),username=chat_info.username, last_name=chat_info.last_name)
-                except: pass
-            if not target_user: await send_safe_reply(update, context, text=f"User @{html.escape(username_to_find)} not found."); return
-        else:
-            try:
-                target_id = int(target_arg)
-                try:
-                    chat_info = await context.bot.get_chat(target_id)
-                    if chat_info.type == ChatType.PRIVATE: target_user = User(id=chat_info.id, first_name=chat_info.first_name or f"User {target_id}", is_bot=getattr(chat_info, 'is_bot',False), username=chat_info.username, last_name=chat_info.last_name)
-                    else: target_user = User(id=target_id, first_name=f"User {target_id}", is_bot=False)
-                except: target_user = User(id=target_id, first_name=f"User {target_id}", is_bot=False)
-            except ValueError: await send_safe_reply(update, context, text="Invalid user ID."); return
+        target_user = await resolve_user_with_telethon(context, target_arg)
+        if not target_user:
+            await send_safe_reply(update, context, text=f"User {html.escape(target_arg)} not found.")
+            return
     else:
         await send_safe_reply(update, context, text="Usage: /unmute <ID/@username/reply>")
         return
@@ -1411,7 +1061,7 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     try:
         await context.bot.restrict_chat_member(chat_id=chat.id, user_id=target_user.id, permissions=permissions_to_restore, use_independent_chat_permissions=True)
-        user_display_name = target_user.mention_html() if target_user.username else html.escape(target_user.first_name or str(target_user.id))
+        user_display_name = target_user.mention_html() or html.escape(target_user.full_name or str(target_user.id))
         response_lines = ["Success: User Unmuted", f"<b>• User:</b> {user_display_name} (<code>{target_user.id}</code>)"]
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
     except TelegramError as e: await send_safe_reply(update, context, text=f"Failed to unmute user: {html.escape(str(e))}")
@@ -1439,39 +1089,24 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     target_user: User | None = None
-    reason_list: list[str] = []
-    reason: str = "No reason provided."
-    args_to_parse_for_reason = list(context.args)
+    args_for_reason = list(context.args)
 
     if update.message.reply_to_message:
         target_user = update.message.reply_to_message.from_user
-        if context.args: reason_list = list(context.args)
     elif context.args:
         target_arg = context.args[0]
-        args_to_parse_for_reason = list(context.args[1:])
-        if target_arg.startswith("@"):
-            username_to_find = target_arg[1:]
-            target_user = get_user_from_db_by_username(username_to_find)
-            if not target_user:
-                try:
-                    chat_info = await context.bot.get_chat(target_arg)
-                    if chat_info.type == ChatType.PRIVATE: target_user = User(id=chat_info.id, first_name=chat_info.first_name or "",is_bot=getattr(chat_info, 'is_bot', False),username=chat_info.username, last_name=chat_info.last_name)
-                except: pass
-            if not target_user: await send_safe_reply(update, context, text=f"User @{html.escape(username_to_find)} not found."); return
-        else:
-            try:
-                target_id = int(target_arg)
-                try:
-                    chat_info = await context.bot.get_chat(target_id)
-                    if chat_info.type == ChatType.PRIVATE: target_user = User(id=chat_info.id, first_name=chat_info.first_name or f"User {target_id}", is_bot=getattr(chat_info, 'is_bot',False), username=chat_info.username, last_name=chat_info.last_name)
-                    else: await send_safe_reply(update, context, text="Target ID does not seem to be a user."); return
-                except: target_user = User(id=target_id, first_name=f"User {target_id}", is_bot=False)
-            except ValueError: await send_safe_reply(update, context, text="Invalid user ID."); return
+        args_for_reason = list(context.args[1:])
+        target_user = await resolve_user_with_telethon(context, target_arg)
+        if not target_user:
+            await send_safe_reply(update, context, text=f"User {html.escape(target_arg)} not found.")
+            return
     else:
         await send_safe_reply(update, context, text="Usage: /kick <ID/@username/reply> [reason]")
         return
 
-    if args_to_parse_for_reason: reason = " ".join(args_to_parse_for_reason)
+    reason: str = "No reason provided."
+    if args_for_reason:
+        reason = " ".join(args_for_reason)
 
     if not target_user: await send_safe_reply(update, context, text="Could not identify user to kick."); return
     if not isinstance(target_user, User): await send_safe_reply(update, context, text="Kick can only be applied to users."); return
@@ -1485,15 +1120,16 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             return
     except TelegramError as e:
         if "user not found" in str(e).lower():
-             await send_safe_reply(update, context, text=f"User {target_user.mention_html()} is not in this chat, cannot be kicked.", parse_mode=ParseMode.HTML)
-             return
+            user_display = target_user.mention_html() or html.escape(target_user.full_name or str(target_user.id))
+            await send_safe_reply(update, context, text=f"User {user_display} is not in this chat, cannot be kicked.", parse_mode=ParseMode.HTML)
+            return
         logger.warning(f"Could not get target's chat member status for /kick: {e}")
 
     try:
         await context.bot.ban_chat_member(chat_id=chat.id, user_id=target_user.id)
         await context.bot.unban_chat_member(chat_id=chat.id, user_id=target_user.id, only_if_banned=True)
 
-        user_display_name = target_user.mention_html() if target_user.username else html.escape(target_user.first_name or str(target_user.id))
+        user_display_name = target_user.mention_html() or html.escape(target_user.full_name or str(target_user.id))
         response_lines = ["Success: User Kicked", f"<b>• User:</b> {user_display_name} (<code>{target_user.id}</code>)", f"<b>• Reason:</b> {html.escape(reason)}"]
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
     except TelegramError as e: await send_safe_reply(update, context, text=f"Failed to kick user: {html.escape(str(e))}")
@@ -1583,47 +1219,30 @@ async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     target_user: User | None = None
-    provided_custom_title: str | None = None
+    args_for_title = list(context.args)
 
     if message.reply_to_message and message.reply_to_message.from_user:
         target_user = message.reply_to_message.from_user
-        if context.args: provided_custom_title = " ".join(context.args)
     elif context.args:
-        target_arg, parsed_provided_title = parse_promote_args(list(context.args))
-        if not target_arg:
-            await message.reply_text("Usage: /promote <ID/@username/reply> [optional admin title]")
-            return
-        provided_custom_title = parsed_provided_title
-        
-        try:
-            if target_arg.startswith("@"):
-                chat_info = await context.bot.get_chat(target_arg)
-            else:
-                chat_info = await context.bot.get_chat(int(target_arg))
-            
-            if chat_info.type == 'private':
-                 target_user = User(id=chat_info.id, first_name=chat_info.first_name, is_bot=False, username=chat_info.username, last_name=chat_info.last_name)
-            else:
-                await message.reply_text("Promotion can only be applied to users.")
-                return
-        except (ValueError, TelegramError):
-            await message.reply_text("Could not find that user.")
+        target_arg = context.args[0]
+        args_for_title = list(context.args[1:])
+        target_user = await resolve_user_with_telethon(context, target_arg)
+        if not target_user:
+            await message.reply_text(f"Could not find user {html.escape(target_arg)}.")
             return
     else:
         await message.reply_text("Usage: /promote <ID/@username/reply> [optional admin title]")
         return
 
-    if not target_user: await message.reply_text("Could not identify user to promote."); return
+    provided_custom_title = " ".join(args_for_title) if args_for_title else None
     
-    if target_user.id == context.bot.id:
-        await message.reply_text("Error: I'm a bot, I can't promote myself.")
-        return
-        
+    if not target_user: await message.reply_text("Could not identify user to promote."); return
+    if target_user.id == context.bot.id: await message.reply_text("Error: I'm a bot, I can't promote myself."); return
     if target_user.is_bot: await message.reply_text("Error: Bots should be promoted manually with specific, limited rights for security reasons."); return
 
     try:
         target_chat_member = await context.bot.get_chat_member(chat.id, target_user.id)
-        user_display = target_user.mention_html()
+        user_display = target_user.mention_html() or html.escape(target_user.full_name)
 
         if target_chat_member.status == "creator":
             await message.reply_html(f"{user_display} is the chat Creator and already has ultimate power!")
@@ -1641,9 +1260,7 @@ async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 else:
                     await message.reply_html(f"ℹ️ User {user_display} is already an admin. Provide a title to change it.")
             else:
-                await message.reply_html(
-                    f"ℹ️ User {user_display} is already an administrator, but I do not have sufficient rights to modify their title."
-                )
+                await message.reply_html(f"ℹ️ User {user_display} is already an administrator, but I do not have sufficient rights to modify their title.")
             return
 
     except TelegramError as e:
@@ -1663,396 +1280,95 @@ async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         )
         await context.bot.set_chat_administrator_custom_title(chat.id, target_user.id, title_to_set)
         
-        user_display = target_user.mention_html()
+        user_display = target_user.mention_html() or html.escape(target_user.full_name)
         await message.reply_html(f"✅ User {user_display} has been promoted with the title '<i>{html.escape(title_to_set)}</i>'.")
     except TelegramError as e:
         await message.reply_text(f"Failed to promote user: {html.escape(str(e))}")
 
 async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat = update.effective_chat
-    message = update.effective_message
-    if not message: return
+    if not await _can_user_perform_action(update, context, 'can_promote_members', "You can't demote users.", priv_override=False): return
+    target, _ = await _resolve_mod_target(update, context)
+    if not target: await update.message.reply_text("User not found."); return
     
-    if chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP]:
-        await message.reply_text("Users can only be demoted in groups and supergroups.")
-        return
-
     try:
-        bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
-        if not (bot_member.status == "administrator" and getattr(bot_member, 'can_promote_members', False)):
-            await send_safe_reply(update, context, text="Error: I need to be an admin with rights to manage admin privileges in this chat.")
-            return
-    except TelegramError:
-        await send_safe_reply(update, context, text="Error: Couldn't verify my own permissions in this chat.")
-        return
-
-    if not await _can_user_perform_action(
-        update, context, 'can_promote_members',
-        "Error: You need to be the chat creator or an admin with 'Promote Members' rights to use this command.",
-        allow_bot_privileged_override=False
-    ):
-        return
-    
-    target_user: User | None = None
-
-    if message.reply_to_message and message.reply_to_message.from_user:
-        target_user = message.reply_to_message.from_user
-    elif context.args:
-        target_arg = context.args[0]
-        try:
-            if target_arg.startswith("@"):
-                chat_info = await context.bot.get_chat(target_arg)
-            else:
-                chat_info = await context.bot.get_chat(int(target_arg))
-            
-            if chat_info.type == 'private':
-                 target_user = User(id=chat_info.id, first_name=chat_info.first_name, is_bot=False, username=chat_info.username, last_name=chat_info.last_name)
-            else:
-                await message.reply_text("Demotion can only be applied to users.")
-                return
-        except (ValueError, TelegramError):
-            await message.reply_text("Could not find that user.")
-            return
-    else:
-        await message.reply_text("Usage: /demote <ID/@username/reply>")
-        return
-
-    if not target_user: await message.reply_text("Could not identify user to demote."); return
-        
-    if target_user.id == context.bot.id:
-        await message.reply_text("I can't demote myself.")
-        return
-
-    try:
-        target_chat_member = await context.bot.get_chat_member(chat.id, target_user.id)
-        user_display = target_user.mention_html()
-
-        if target_chat_member.status == "creator":
-            await message.reply_html(f"The chat Creator cannot be demoted."); return
-        
-        if target_chat_member.status != "administrator":
-            await message.reply_html(f"ℹ️ User {user_display} is not an administrator."); return
-
-        if not target_chat_member.can_be_edited:
-            await message.reply_html(f"❌ I do not have sufficient rights to demote {user_display}. This usually means they were promoted by the Creator or by another admin.")
-            return
-
         await context.bot.promote_chat_member(
-            chat_id=chat.id, user_id=target_user.id,
-            is_anonymous=False, can_manage_chat=False, can_delete_messages=False,
+            update.effective_chat.id, target.id, is_anonymous=False, can_manage_chat=False, can_delete_messages=False,
             can_manage_video_chats=False, can_restrict_members=False, can_promote_members=False,
-            can_change_info=False, can_invite_users=False, can_pin_messages=False, can_manage_topics=False
-        )
-        await message.reply_html(f"✅ User {user_display} has been demoted to a regular member.")
+            can_change_info=False, can_invite_users=False, can_pin_messages=False)
+        await update.message.reply_html(f"✅ User {target.mention_html()} demoted.")
+    except Exception as e: await update.message.reply_text(f"Failed to demote: {e}")
 
-    except TelegramError as e:
-        if "user not found" in str(e).lower():
-            await message.reply_text("User not found in this chat.")
-        else:
-            logger.error(f"Error during demotion: {e}")
-            await message.reply_text(f"Failed to demote user. Reason: {html.escape(str(e))}")
-            
 async def pin_message_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat = update.effective_chat
-    user_who_pins = update.effective_user
-    message_to_pin = update.message.reply_to_message
-
-    if chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP, ChatType.CHANNEL]:
-        await update.message.reply_text("Messages can only be pinned in groups, supergroups, or channels.")
-        return
-
-    if not message_to_pin:
-        await update.message.reply_text("Please use this command by replying to the message you want to pin.")
-        return
-
+    if not await _can_user_perform_action(update, context, 'can_pin_messages', "You can't pin messages."): return
+    if not update.message.reply_to_message: await update.message.reply_text("Reply to a message to pin it."); return
+    notify = context.args and context.args[0].lower() in ["loud", "notify"]
     try:
-        bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
-        if not (bot_member.status == "administrator" and getattr(bot_member, 'can_pin_messages', False)):
-            await update.message.reply_text("Error: I need to be an admin with the 'Pin Messages' permission in this chat to do that.")
-            return
-    except TelegramError as e:
-        logger.error(f"Error checking bot's own permissions in /pin for chat {chat.id}: {e}")
-        await update.message.reply_text("Error: Couldn't verify my own permissions in this chat.")
-        return
-        
-    if not await _can_user_perform_action(update, context, 'can_pin_messages', "Error: You need to be an admin with 'Pin Messages' permission in this chat to use this command."):
-        return
-
-    disable_notification = True
-    pin_mode_text = ""
-
-    if context.args and context.args[0].lower() in ["loud", "notify"]:
-        disable_notification = False
-        pin_mode_text = " with notification"
-        logger.info(f"User {user_who_pins.id} requested loud pin in chat {chat.id}")
-    else:
-        logger.info(f"User {user_who_pins.id} requested silent pin (default) in chat {chat.id}")
-
-
-    try:
-        await context.bot.pin_chat_message(
-            chat_id=chat.id,
-            message_id=message_to_pin.message_id,
-            disable_notification=disable_notification
-        )
-        logger.info(f"User {user_who_pins.id} pinned message {message_to_pin.message_id} in chat {chat.id}. Notification: {'Disabled' if disable_notification else 'Enabled'}")
-        
-        await send_safe_reply(update, context, text=f"✅ Message pinned{pin_mode_text}!")
-
-    except TelegramError as e:
-        logger.error(f"Failed to pin message in chat {chat.id}: {e}")
-        error_message = str(e)
-        if "message to pin not found" in error_message.lower():
-            await send_safe_reply(update, context, text="Error: I can't find the message you replied to. Maybe it was deleted?")
-        elif "not enough rights" in error_message.lower() or "not admin" in error_message.lower():
-             await send_safe_reply(update, context, text="Error: It seems I don't have enough rights to pin messages, or the target message cannot be pinned by me.")
-        else:
-            await send_safe_reply(update, context, text=f"Failed to pin message: {html.escape(error_message)}")
-    except Exception as e:
-        logger.error(f"Unexpected error in /pin: {e}", exc_info=True)
-        await send_safe_reply(update, context, text="An unexpected error occurred while trying to pin the message.")
+        await context.bot.pin_chat_message(update.effective_chat.id, update.message.reply_to_message.message_id, disable_notification=not notify)
+        await send_safe_reply(update, context, text=f"✅ Message pinned{' with notification' if notify else ''}!")
+    except Exception as e: await send_safe_reply(update, context, text=f"Failed to pin: {e}")
 
 async def unpin_message_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat = update.effective_chat
-    message_to_unpin = update.message.reply_to_message
-
-    if chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP, ChatType.CHANNEL]:
-        await update.message.reply_text("Messages can only be unpinned in groups, supergroups, or channels.")
-        return
-        
-    if not message_to_unpin:
-        await update.message.reply_text("Please reply to a pinned message to unpin it.")
-        return
-
+    if not await _can_user_perform_action(update, context, 'can_pin_messages', "You can't unpin messages."): return
+    if not update.message.reply_to_message: await update.message.reply_text("Reply to a pinned message to unpin it."); return
     try:
-        bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
-        if not (bot_member.status == ChatMemberStatus.ADMINISTRATOR and getattr(bot_member, 'can_pin_messages', False)):
-            await update.message.reply_text("Error: I need to be an admin with the 'Pin Messages' permission to do that.")
-            return
-    except TelegramError as e:
-        logger.error(f"Error checking bot's own permissions in /unpin for chat {chat.id}: {e}")
-        await update.message.reply_text("Error: Couldn't verify my own permissions in this chat.")
-        return
-
-    if not await _can_user_perform_action(update, context, 'can_pin_messages', "Error: You need to be an admin with 'Pin Messages' permission to use this command."):
-        return
-
-    try:
-        await context.bot.unpin_chat_message(
-            chat_id=chat.id,
-            message_id=message_to_unpin.message_id
-        )
-        await update.message.reply_text("✅ Message unpinned successfully!", quote=False)
-        
-    except TelegramError as e:
-        logger.error(f"Failed to unpin message {message_to_unpin.message_id} in chat {chat.id}: {e}")
-        error_message = str(e)
-        if "message not found" in error_message.lower() or "message to unpin not found" in error_message.lower():
-             await update.message.reply_text("Error: The message you replied to is not pinned or I can't find it.")
-        else:
-            await update.message.reply_text(f"Failed to unpin message: {html.escape(error_message)}")
-    except Exception as e:
-        logger.error(f"Unexpected error in /unpin: {e}", exc_info=True)
-        await update.message.reply_text("An unexpected error occurred while trying to unpin the message.")
+        await context.bot.unpin_chat_message(update.effective_chat.id, message_id=update.message.reply_to_message.message_id)
+        await update.message.reply_text("✅ Message unpinned.", quote=False)
+    except Exception as e: await update.message.reply_text(f"Failed to unpin: {e}")
 
 async def purge_messages_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat = update.effective_chat
-    user_who_purges = update.effective_user
-    command_message = update.message
-    replied_to_message = update.message.reply_to_message
-
-    if chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP]:
-        await command_message.reply_text("Messages can only be purged in groups and supergroups.")
-        return
-
-    if not replied_to_message:
-        await context.bot.send_message(chat.id, "Please use this command by replying to the message up to which you want to delete (that message will also be deleted).")
-        return
-
-    try:
-        bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
-        if not (bot_member.status == "administrator" and getattr(bot_member, 'can_delete_messages', False)):
-            await context.bot.send_message(chat.id, "Error: I need to be an admin with the 'Delete Messages' permission in this chat.")
-            return
-    except TelegramError as e:
-        logger.error(f"Error checking bot's own permissions in /purge for chat {chat.id}: {e}")
-        await context.bot.send_message(chat.id, "Error: Couldn't verify my own permissions in this chat.")
-        return
-
-    if not await _can_user_perform_action(update, context, 'can_delete_messages', "Error: You do not have permission to use this command."):
-        return
-
-    is_silent_purge = False
-    if context.args and context.args[0].lower() == "silent":
-        is_silent_purge = True
-        logger.info(f"User {user_who_purges.id} initiated silent purge in chat {chat.id} up to message {replied_to_message.message_id}")
-    else:
-        logger.info(f"User {user_who_purges.id} initiated purge in chat {chat.id} up to message {replied_to_message.message_id}")
-
-    start_message_id = replied_to_message.message_id
-    end_message_id = command_message.message_id
-    message_ids_to_delete = list(range(start_message_id, end_message_id + 1))
-
-    if not message_ids_to_delete or len(message_ids_to_delete) < 1:
-        if not is_silent_purge:
-            await context.bot.send_message(chat.id, "No messages found between your reply and this command to delete.")
-        return
-
-    errors_occurred = False
-    start_time = datetime.now()
-
-    for i in range(0, len(message_ids_to_delete), 100):
-        batch_ids = message_ids_to_delete[i:i + 100]
-        try:
-            success = await context.bot.delete_messages(chat_id=chat.id, message_ids=batch_ids)
-            if not success:
-                errors_occurred = True
-                logger.warning(f"A batch purge in chat {chat.id} failed or partially failed.")
-            if len(message_ids_to_delete) > 100 and i + 100 < len(message_ids_to_delete):
-                await asyncio.sleep(1.1)
-        except TelegramError as e:
-            logger.error(f"TelegramError during purge batch in chat {chat.id}: {e}")
-            errors_occurred = True
-            if not is_silent_purge:
-                await context.bot.send_message(chat.id, text=f"Error occurred: {html.escape(str(e))}. Purge stopped.")
-            break
-        except Exception as e:
-            logger.error(f"Unexpected error during purge batch in chat {chat.id}: {e}", exc_info=True)
-            errors_occurred = True
-            if not is_silent_purge:
-                await context.bot.send_message(chat.id, text="An unexpected error occurred. Purge stopped.")
-            break
-
-    end_time = datetime.now()
-    duration_secs = (end_time - start_time).total_seconds()
-
-    if not is_silent_purge:
-        final_message_text = f"✅ Purge completed in <code>{duration_secs:.2f}s</code>."
-        if errors_occurred:
-            final_message_text += "\nSome messages may not have been deleted (e.g., older than 48h or service messages)."
-
-        try:
-            await context.bot.send_message(chat_id=chat.id, text=final_message_text, parse_mode=ParseMode.HTML)
-        except Exception as e_send_final:
-            logger.error(f"Purge: Failed to send final purge status message: {e_send_final}")
-    else:
-        logger.info(f"Silent purge completed in chat {chat.id}. Duration: {duration_secs:.2f}s. Errors occurred: {errors_occurred}")
-
-async def resolve_target_entity(update: Update, context: ContextTypes.DEFAULT_TYPE) -> User | Chat | None:
-    """
-    Resolves the target entity (User or Channel) from a command message.
-    Handles replies, @usernames (DB first for users), and IDs.
-    """
-    message = update.effective_message
-    if not message: return None
+    if not await _can_user_perform_action(update, context, 'can_delete_messages', "You can't delete messages."): return
+    if not update.message.reply_to_message: await update.message.reply_text("Reply to a message to start purging from."); return
     
-    if message.reply_to_message:
-        if message.reply_to_message.sender_chat:
-            return message.reply_to_message.sender_chat
-        if message.reply_to_message.from_user:
-            return message.reply_to_message.from_user
-        return None
-
-    if context.args:
-        target_id_str = context.args[0]
-        
-        if target_id_str.startswith('@'):
-            user_from_db = get_user_from_db_by_username(target_id_str)
-            if user_from_db:
-                return user_from_db
-            
-            try:
-                logger.info(f"Querying API for entity {target_id_str}.")
-                return await context.bot.get_chat(target_id_str)
-            except TelegramError:
-                await message.reply_text(f"Error: Could not find any user or channel with the username: {html.escape(target_id_str)}")
-                return None
-
+    start_id = update.message.reply_to_message.message_id; end_id = update.message.message_id
+    message_ids = list(range(start_id, end_id + 1))
+    silent = context.args and context.args[0].lower() == "silent"
+    errors = False
+    
+    for i in range(0, len(message_ids), 100):
+        batch = message_ids[i:i + 100]
         try:
-            entity_id = int(target_id_str)
-            return await context.bot.get_chat(entity_id)
-        except (ValueError, TelegramError):
-            await message.reply_text(f"Error: Could not find any entity with the ID: {html.escape(target_id_str)}")
-            return None
-
-    return None
+            if not await context.bot.delete_messages(update.effective_chat.id, batch): errors = True
+        except Exception: errors = True; break
+        await asyncio.sleep(1.1)
+    
+    if not silent:
+        msg = "✅ Purge complete." + ("\n(Some messages may not have been deleted)" if errors else "")
+        await context.bot.send_message(update.effective_chat.id, msg)
 
 async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat = update.effective_chat
-    reporter = update.effective_user
-    message = update.effective_message
+    if update.effective_chat.type == ChatType.PRIVATE: await update.message.reply_text("Command for groups only."); return
+    target, args = await _resolve_mod_target(update, context)
+    if not target: await update.message.reply_text("User not found or not specified."); return
+    reason = " ".join(args) or "No reason provided."
+    await send_safe_reply(update, context, text=f"📢 <b>Report for Admins</b>\n\n"
+                                             f"<b>Reported:</b> {target.mention_html()}\n"
+                                             f"<b>Reason:</b> {html.escape(reason)}\n"
+                                             f"<b>By:</b> {update.effective_user.mention_html()}", parse_mode=ParseMode.HTML)
 
-    if not message or chat.type == ChatType.PRIVATE:
-        await message.reply_text("This command can only be used in groups.")
-        return
-
-    target_entity = await resolve_target_entity(update, context)
-    
-    if not target_entity:
-        if not context.args:
-            await message.reply_text("Usage: /report <ID/@user/reply> [reason]")
-        return
-        
-    reason_args = context.args[1:] if context.args and not message.reply_to_message else context.args
-    reason = " ".join(reason_args) if reason_args else "No specific reason provided."
-    
-    reporter_mention = reporter.mention_html()
-    
-    if isinstance(target_entity, User) or target_entity.type == ChatType.PRIVATE:
-        target_display = target_entity.mention_html()
-        entity_type_label = "User"
-    else:
-        target_display = html.escape(target_entity.title or f"User {target_entity.id}")
-        entity_type_label = target_entity.type.capitalize()
-
-    report_message = (
-        f"📢 <b>Report for Administrators</b>\n\n"
-        f"<b>Reported {entity_type_label}:</b> {target_display} (<code>{target_entity.id}</code>)\n"
-        f"<b>Reason:</b> {html.escape(reason)}\n"
-        f"<b>Reported by:</b> {reporter_mention}"
-    )
-
-    await send_safe_reply(update, context, text=report_message, parse_mode=ParseMode.HTML)
-
-# --- Helper for Simulation Commands ---
-async def _handle_action_command(update: Update, context: ContextTypes.DEFAULT_TYPE, action_texts: list[str], gif_search_terms: list[str], command_name: str, target_required: bool = True, target_required_msg: str = "This command requires a target.", hug_command: bool = False):
-    if not action_texts: logger.warning(f"List '{command_name.upper()}_TEXTS' empty!"); await update.message.reply_text(f"Error: No texts for /{command_name}."); return
-    target_mention = None; is_protected = False; is_owner = False
-    if target_required:
+async def _handle_action_command(update, context, texts, gifs, name, req_target=True, msg=""):
+    target_mention = None
+    if req_target:
         if update.message.reply_to_message:
-            target_user = update.message.reply_to_message.from_user; is_protected = await check_target_protection(target_user.id, context); is_owner = (target_user.id == OWNER_ID)
-            if is_protected: refusal_list = CANT_TARGET_OWNER_TEXTS if is_owner else CANT_TARGET_SELF_TEXTS; await update.message.reply_html(random.choice(refusal_list)); return
-            target_mention = target_user.mention_html()
+            target = update.message.reply_to_message.from_user
+            if await check_target_protection(target.id, context):
+                await update.message.reply_html(random.choice(CANT_TARGET_OWNER_TEXTS if target.id == OWNER_ID else CANT_TARGET_SELF_TEXTS)); return
+            target_mention = target.mention_html()
         elif context.args and context.args[0].startswith('@'):
-            target_mention_str = context.args[0].strip(); is_protected, is_owner = await check_username_protection(target_mention_str, context)
-            if is_protected: refusal_list = CANT_TARGET_OWNER_TEXTS if is_owner else CANT_TARGET_SELF_TEXTS; await update.message.reply_html(random.choice(refusal_list)); return
-            target_mention = target_mention_str
-        else: await update.message.reply_text(target_required_msg); return
-    gif_url = await get_themed_gif(context, gif_search_terms)
-    message_text = random.choice(action_texts)
-    if "{target}" in message_text: effective_target = target_mention if target_required else update.effective_user.mention_html(); message_text = message_text.format(target=effective_target) if effective_target else message_text.replace("{target}", "someone")
-
+            target_mention = context.args[0]
+            is_prot, is_owner = await check_username_protection(target_mention, context)
+            if is_prot: await update.message.reply_html(random.choice(CANT_TARGET_OWNER_TEXTS if is_owner else CANT_TARGET_SELF_TEXTS)); return
+        else: await update.message.reply_text(msg); return
+    
+    text = random.choice(texts).format(target=target_mention or "someone")
+    gif_url = await get_themed_gif(context, gifs)
     try:
-        if gif_url: await update.message.reply_animation(animation=gif_url, caption=message_text, parse_mode=ParseMode.HTML)
-        else: await update.message.reply_html(message_text)
-    except TelegramError as e_primary:
-        logger.error(f"TelegramError sending {command_name} (animation/HTML): {e_primary}. Trying HTML fallback.")
-        try: await update.message.reply_html(message_text); logger.info(f"Sent fallback HTML for {command_name}.")
-        except Exception as e_html_fallback:
-            logger.error(f"Fallback HTML failed for {command_name}: {e_html_fallback}. Trying plain text.")
-            try: await update.message.reply_text(message_text); logger.info(f"Sent fallback plain text for {command_name}.")
-            except Exception as e_plain_fallback: logger.error(f"Fallback plain text also failed for {command_name}: {e_plain_fallback}")
-    except Exception as e_other:
-        logger.error(f"Unexpected error sending {command_name} (animation/HTML): {e_other}", exc_info=True)
-        try: await update.message.reply_html(message_text); logger.info(f"Sent fallback HTML for {command_name} after unexpected error.")
-        except Exception as e_html_fallback:
-             logger.error(f"Fallback HTML failed for {command_name} after unexpected error: {e_html_fallback}. Trying plain text.")
-             try: await update.message.reply_text(message_text); logger.info(f"Sent fallback plain text for {command_name} after unexpected error.")
-             except Exception as e_plain_fallback: logger.error(f"Fallback plain text also failed for {command_name} after unexpected error: {e_plain_fallback}")
+        if gif_url: await update.message.reply_animation(gif_url, caption=text, parse_mode=ParseMode.HTML)
+        else: await update.message.reply_html(text)
+    except Exception as e: logger.error(f"Error sending {name} action: {e}"); await update.message.reply_html(text)
 
-async def kill(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, KILL_TEXTS, ["gun", "gun shoting"], "kill", True, "Who to 'kill'? Reply or use /kill @username/reply.")
-async def punch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, PUNCH_TEXTS, ["punch", "hit"], "punch", True, "Who to 'punch'? Reply or use /punch @username/reply.")
-async def slap(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, SLAP_TEXTS, ["huge slap", "smack"], "slap", True, "Who to slap? Reply or use /slap @username/reply.")
+async def kill(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, KILL_TEXTS, ["gun", "gun shoting"], "kill", True, "Who to 'kill'?")
+async def punch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, PUNCH_TEXTS, ["punch", "hit"], "punch", True, "Who to 'punch'?")
+async def slap(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, SLAP_TEXTS, ["huge slap", "smack"], "slap", True, "Who to slap?")
 
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
@@ -2580,7 +1896,7 @@ async def speedtest_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             await context.bot.edit_message_text(chat_id=message.chat_id, message_id=message.message_id, text=f"An unexpected error occurred during the speed test: {html.escape(str(e))}")
         except Exception:
             pass
-    
+
 async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if user.id != OWNER_ID:
@@ -2716,7 +2032,6 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
                                            text=f"💥 Unexpected error leaving chat <b>{safe_chat_title_to_leave}</b> (<code>{target_chat_id_to_leave}</code>). Check logs.", 
                                            parse_mode=ParseMode.HTML)
 
-# Handler for welcoming the owner when they join a group and send log to pm
 async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message or not update.message.new_chat_members:
         return
@@ -2754,11 +2069,14 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
 
         gban_reason = get_gban_reason(member.id)
         if gban_reason:
-            logger.info(f"G-banned user {member.id} tried to join {chat.id}. Removing.")
+            logger.info(f"Gbanned user {member.id} tried to join {chat.id}. Removing.")
             try:
                 await context.bot.ban_chat_member(chat_id=chat.id, user_id=member.id)
                 await update.message.reply_text(
-                    f"User {member.mention_html()} was removed because they are globally banned.\n<b>Reason:</b> {html.escape(gban_reason)}",
+                    f"⚠️ <b>Alert!</b> This user is globally banned.\n"
+                    f"<i>Enforcing ban in this chat.</i>\n\n"
+                    f"<b>User ID:</b> <code>{member.id}</code>\n"
+                    f"<b>Reason:</b> {html.escape(gban_reason)}",
                     parse_mode=ParseMode.HTML
                 )
             except Exception as e:
@@ -2801,7 +2119,6 @@ async def send_operational_log(context: ContextTypes.DEFAULT_TYPE, message: str,
         except Exception as e:
             logger.error(f"Unexpected error sending operational log to {target_id_for_log}: {e}", exc_info=True)
 
-# --- Blacklist Commands ---
 async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.effective_message
@@ -2812,7 +2129,7 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         return
 
     target_user: User | None = None
-    reason: str = "No reason provided."
+    args_for_reason = list(context.args)
     
     if message.reply_to_message:
         if message.reply_to_message.from_user:
@@ -2820,55 +2137,26 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         else:
             await message.reply_text("You must reply to a user's message.")
             return
-        if context.args:
-            reason = " ".join(context.args)
     elif context.args:
-        target_id_str = context.args[0]
-        if target_id_str.startswith('@'):
-            target_user = get_user_from_db_by_username(target_id_str)
-            if not target_user:
-                try:
-                    chat_info = await context.bot.get_chat(target_id_str)
-                    if chat_info.type == 'private':
-                        target_user = User(id=chat_info.id, first_name=chat_info.first_name, is_bot=False, username=chat_info.username, last_name=chat_info.last_name)
-                    else:
-                        await message.reply_text("Blacklist can only be applied to users.")
-                        return
-                except TelegramError:
-                    await message.reply_text(f"Could not find user {html.escape(target_id_str)}.")
-                    return
-        else:
-            try:
-                user_id = int(target_id_str)
-                try:
-                    chat_info = await context.bot.get_chat(user_id)
-                    if chat_info.type == 'private':
-                        target_user = User(id=chat_info.id, first_name=chat_info.first_name, is_bot=False, username=chat_info.username, last_name=chat_info.last_name)
-                    else:
-                        await message.reply_text("Blacklist can only be applied to users, not channels or groups.")
-                        return
-                except TelegramError:
-                    target_user = User(id=user_id, first_name=f"{user_id}", is_bot=False)
-            except ValueError:
-                await message.reply_text("Invalid User ID format.")
-                return
-
-        if len(context.args) > 1:
-            reason = " ".join(context.args[1:])
+        target_arg = context.args[0]
+        args_for_reason = list(context.args[1:])
+        target_user = await resolve_user_with_telethon(context, target_arg)
+        if not target_user:
+            await message.reply_text(f"Could not find user {html.escape(target_arg)}.")
+            return
     else:
         await message.reply_text("Usage: /blist <ID/@user/reply> [reason]")
         return
+    
+    reason: str = " ".join(args_for_reason) if args_for_reason else "No reason provided."
         
     if not target_user:
         await message.reply_text("Could not identify the user to blacklist.")
         return
 
-    if isinstance(target_user, Chat):
-        if target_user.type == 'private':
-            target_user = User(id=target_user.id, first_name=target_user.first_name, is_bot=False, username=target_user.username, last_name=target_user.last_name)
-        else:
-            await message.reply_text("Blacklist can only be applied to users.")
-            return
+    if not isinstance(target_user, User):
+        await message.reply_text("Blacklist can only be applied to users.")
+        return
 
     if target_user.id == OWNER_ID:
         await message.reply_text("The Bot Owner cannot be blacklisted.")
@@ -2878,9 +2166,10 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         return
     
     if is_sudo_user(target_user.id):
+        user_display = target_user.mention_html() or html.escape(target_user.full_name)
         if user.id == OWNER_ID:
             await message.reply_html(
-                f"To blacklist the Sudo user {target_user.mention_html()}, "
+                f"To blacklist the Sudo user {user_display}, "
                 f"you must first revoke their privileges using /delsudo."
             )
         else:
@@ -2888,16 +2177,18 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         return
 
     if is_user_blacklisted(target_user.id):
-        await message.reply_html(f"ℹ️ User {target_user.mention_html()} is already on the blacklist.")
+        user_display = target_user.mention_html() or html.escape(target_user.full_name)
+        await message.reply_html(f"ℹ️ User {user_display} is already on the blacklist.")
         return
 
     if add_to_blacklist(target_user.id, user.id, reason):
-        user_display = target_user.mention_html()
+        user_display = target_user.mention_html() or html.escape(target_user.full_name)
         await message.reply_html(f"✅ User {user_display} has been added to the blacklist.\nReason: {html.escape(reason)}")
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-            pm_message = (f"<b>#BLACKLISTED</b>\n\n<b>User:</b> {user_display} (<code>{target_user.id}</code>)\n<b>Username:</b> @{html.escape(target_user.username) if target_user.username else 'N/A'}\n<b>Reason:</b> {html.escape(reason)}\n<b>Admin:</b> {user.mention_html()}\n<b>Date:</b> <code>{current_time}</code>")
+            log_user_display = target_user.mention_html() or f"{html.escape(target_user.full_name)} (No username)"
+            pm_message = (f"<b>#BLACKLISTED</b>\n\n<b>User:</b> {log_user_display} (<code>{target_user.id}</code>)\n<b>Username:</b> @{html.escape(target_user.username) if target_user.username else 'N/A'}\n<b>Reason:</b> {html.escape(reason)}\n<b>Admin:</b> {user.mention_html()}\n<b>Date:</b> <code>{current_time}</code>")
             await send_operational_log(context, pm_message)
         except Exception as e:
             logger.error(f"Error preparing/sending #BLACKLISTED operational log: {e}", exc_info=True)
@@ -2910,88 +2201,60 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
         logger.warning(f"Unauthorized /unblist attempt by user {user.id}.")
         return
 
-    target_user_obj: User | None = None
-    target_input_str: str | None = None
+    target_user: User | None = None
 
     if update.message.reply_to_message:
-        replied_user = update.message.reply_to_message.from_user
-        if replied_user:
-            target_user_obj = replied_user
+        if update.message.reply_to_message.from_user:
+            target_user = update.message.reply_to_message.from_user
         else:
             await update.message.reply_text("Please reply to a user's message to unblacklist them.")
             return
     elif context.args:
-        target_input_str = context.args[0]
-        if target_input_str.startswith("@"):
-            username_to_find = target_input_str[1:]
-            target_user_obj = get_user_from_db_by_username(username_to_find)
-            if not target_user_obj:
-                try: 
-                    chat_info = await context.bot.get_chat(target_input_str)
-                    if chat_info.type == ChatType.PRIVATE:
-                        target_user_obj = User(id=chat_info.id, first_name=chat_info.first_name or f"({target_input_str})", is_bot=getattr(chat_info, 'is_bot', False), username=chat_info.username, last_name=chat_info.last_name)
-                    else:
-                        await update.message.reply_text(f"Error: @{username_to_find} resolved to a {chat_info.type}. Unblacklist can only be applied to users.")
-                        return
-                except TelegramError:
-                    await update.message.reply_text(f"Error: Could not find user @{html.escape(username_to_find)} via API. Try ID or reply.")
-                    return
-                except Exception as e:
-                    logger.error(f"Unexpected error for @{username_to_find} in unblacklist: {e}", exc_info=True)
-                    await update.message.reply_text("An error occurred while trying to find the user.")
-                    return
-        else:
-            try:
-                target_id = int(target_input_str)
-                try: 
-                    chat_info = await context.bot.get_chat(target_id)
-                    if chat_info.type == ChatType.PRIVATE:
-                        target_user_obj = User(id=chat_info.id, first_name=chat_info.first_name or f"{target_id}", is_bot=getattr(chat_info, 'is_bot', False), username=chat_info.username, last_name=chat_info.last_name)
-                    else:
-                        logger.warning(f"Attempt to unblacklist non-user ID {target_id} (type: {chat_info.type}). Using ID directly.")
-                        target_user_obj = User(id=target_id, first_name=f"{target_id}", is_bot=False)
-                except TelegramError: 
-                    logger.warning(f"Couldn't fully verify user ID {target_id} for unblacklist. Using minimal User object.")
-                    target_user_obj = User(id=target_id, first_name=f"User {target_id}", is_bot=False)
-            except ValueError:
-                await update.message.reply_text("Invalid format. Use /unblist <ID/@username> or reply.")
-                return
+        target_arg = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_arg)
+        
+        if not target_user and target_arg.isdigit():
+            logger.info(f"Unblist fallback: Creating a temporary User object for ID {target_arg}")
+            target_user = User(id=int(target_arg), first_name=f"User {target_arg}", is_bot=False)
+        elif not target_user:
+            await update.message.reply_text(f"Could not find user {html.escape(target_arg)}.")
+            return
     else:
         await update.message.reply_text("Specify a user ID/@username (or reply) to unblacklist.")
         return
         
-    if not target_user_obj:
+    if not target_user:
         await update.message.reply_text("Could not identify the user to unblacklist.")
         return
     
-    if not isinstance(target_user_obj, User) or getattr(target_user_obj, 'type', ChatType.PRIVATE) != ChatType.PRIVATE :
+    if not isinstance(target_user, User):
         await update.message.reply_text("Unblacklist can only be applied to individual users.")
         return
 
-    if target_user_obj.id == OWNER_ID:
+    if target_user.id == OWNER_ID:
         await update.message.reply_text("The Owner is never on the blacklist.")
         return
 
-    if not is_user_blacklisted(target_user_obj.id):
-        user_display = target_user_obj.mention_html() if target_user_obj.username else html.escape(target_user_obj.first_name or str(target_user_obj.id))
+    if not is_user_blacklisted(target_user.id):
+        user_display = target_user.mention_html() or html.escape(target_user.full_name or str(target_user.id))
         await update.message.reply_html(f"ℹ️ User {user_display} is not on the blacklist.")
         return
 
-    if remove_from_blacklist(target_user_obj.id):
-        logger.info(f"Owner {user.id} unblacklisted user {target_user_obj.id} (@{target_user_obj.username}).")
-        user_display = target_user_obj.mention_html() if target_user_obj.username else html.escape(target_user_obj.first_name or str(target_user_obj.id))
+    if remove_from_blacklist(target_user.id):
+        logger.info(f"Privileged user {user.id} unblacklisted user {target_user.id}")
+        user_display = target_user.mention_html() or html.escape(target_user.full_name or str(target_user.id))
         await update.message.reply_html(f"✅ User {user_display} has been removed from the blacklist.")
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-            log_message_to_send = (f"<b>#UNBLACKLISTED</b>\n\n<b>User:</b> {user_display} (<code>{target_user_obj.id}</code>)\n<b>Username:</b> @{html.escape(target_user_obj.username) if target_user_obj.username else 'N/A'}\n<b>Admin:</b> {user.mention_html()}\n<b>Date:</b> <code>{current_time}</code>")
+            log_user_display = target_user.mention_html() or f"{html.escape(target_user.full_name)} (No username)"
+            log_message_to_send = (f"<b>#UNBLACKLISTED</b>\n\n<b>User:</b> {log_user_display} (<code>{target_user.id}</code>)\n<b>Username:</b> @{html.escape(target_user.username) if target_user.username else 'N/A'}\n<b>Admin:</b> {user.mention_html()}\n<b>Date:</b> <code>{current_time}</code>")
             await send_operational_log(context, log_message_to_send)
         except Exception as e:
             logger.error(f"Error preparing/sending #UNBLACKLISTED operational log: {e}", exc_info=True)
     else:
         await update.message.reply_text("Failed to remove user from the blacklist. Check logs.")
 
-# --- Global Ban ---
 async def check_gban_on_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.effective_chat or update.effective_chat.type == ChatType.PRIVATE:
         return
@@ -3027,7 +2290,7 @@ async def check_gban_on_message(update: Update, context: ContextTypes.DEFAULT_TY
                     except Exception: pass
                 
                 message_text = (
-                    f"⚠️ <b>Alert:</b> This user is globally banned.\n"
+                    f"⚠️ <b>Alert!</b> This user is globally banned.\n"
                     f"<i>Enforcing ban in this chat.</i>\n\n"
                     f"<b>User ID:</b> <code>{user.id}</code>\n"
                     f"<b>Reason:</b> {html.escape(gban_reason)}"
@@ -3049,44 +2312,26 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     target_user: User | None = None
-    reason: str = "No reason provided."
+    args_for_reason = list(context.args)
     
     if message.reply_to_message:
         target_user = message.reply_to_message.from_user
-        if context.args: reason = " ".join(context.args)
     elif context.args:
-        target_id_str = context.args[0]
-        if target_id_str.startswith('@'):
-            target_user = get_user_from_db_by_username(target_id_str)
-            if not target_user:
-                try:
-                    target_user = await context.bot.get_chat(target_id_str)
-                except TelegramError:
-                    await message.reply_text(f"Error: User not found in my database. Please use their ID or reply to a message.")
-                    return
-        else:
-            try:
-                user_id = int(target_id_str)
-                try:
-                    target_user = await context.bot.get_chat(user_id)
-                except TelegramError:
-                    target_user = User(id=user_id, first_name=f"{user_id}", is_bot=False)
-            except ValueError:
-                await message.reply_text("Invalid User ID format.")
-                return
-        
-        if len(context.args) > 1: reason = " ".join(context.args[1:])
+        target_arg = context.args[0]
+        args_for_reason = list(context.args[1:])
+        target_user = await resolve_user_with_telethon(context, target_arg)
+        if not target_user:
+            await message.reply_text(f"Could not find user {html.escape(target_arg)}.")
+            return
     else:
         await message.reply_text("Usage: /gban <ID/@username/reply> [reason]"); return
 
+    reason: str = " ".join(args_for_reason) if args_for_reason else "No reason provided."
+
     if not target_user:
         await message.reply_text("Could not identify the user to gban."); return
-        
-    if isinstance(target_user, Chat):
-        if target_user.type == 'private':
-            target_user = User(id=target_user.id, first_name=target_user.first_name, is_bot=False, username=target_user.username, last_name=target_user.last_name)
-        else:
-            await message.reply_text("Global bans can only be applied to users."); return
+    if not isinstance(target_user, User):
+        await message.reply_text("Global bans can only be applied to users."); return
             
     if is_privileged_user(target_user.id) or target_user.id == context.bot.id:
         await message.reply_text("This user cannot be globally banned."); return
@@ -3095,7 +2340,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     add_to_gban(target_user.id, user_who_gbans.id, reason)
     
-    user_display = target_user.mention_html()
+    user_display = target_user.mention_html() or html.escape(target_user.full_name or str(target_user.id))
     
     if chat.type != ChatType.PRIVATE:
         try:
@@ -3112,18 +2357,19 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         target_username = f"@{html.escape(target_user.username)}" if target_user.username else "N/A"
         
-        chat_name_display = html.escape(chat.title or f"{user_who_gbans.first_name}")
+        chat_name_display = html.escape(chat.title or f"PM with {user_who_gbans.first_name}")
         
         if chat.type != ChatType.PRIVATE and chat.username:
             message_link = f"https://t.me/{chat.username}/{message.message_id}"
             chat_name_display = f"<a href='{message_link}'>{html.escape(chat.title)}</a>"
 
         reason_display = html.escape(reason)
+        log_user_display = target_user.mention_html() or f"{html.escape(target_user.full_name)} (No username)"
 
         log_message = (
             f"<b>#GBANNED</b>\n"
             f"<b>Initiated From:</b> {chat_name_display} (<code>{chat.id}</code>)\n\n"
-            f"<b>User:</b> {user_display} (<code>{target_user.id}</code>)\n"
+            f"<b>User:</b> {log_user_display} (<code>{target_user.id}</code>)\n"
             f"<b>Username:</b> {target_username}\n"
             f"<b>Reason:</b> {reason_display}\n"
             f"<b>Admin:</b> {user_who_gbans.mention_html()}\n"
@@ -3147,17 +2393,15 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if message.reply_to_message:
         target_user = message.reply_to_message.from_user
     elif context.args:
-        target_id_str = context.args[0]
-        try:
-            if target_id_str.startswith('@'):
-                target_user = get_user_from_db_by_username(target_id_str)
-                if not target_user:
-                    await message.reply_text(f"Error: User not found in my database. Please use their ID or reply to a message.")
-                    return
-            else:
-                target_user = User(id=int(target_id_str), first_name=f"{int(target_id_str)}", is_bot=False)
-        except (ValueError, IndexError):
-            await message.reply_text("Invalid User ID or format."); return
+        target_arg = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_arg)
+        
+        if not target_user and target_arg.isdigit():
+            logger.info(f"Ungban fallback: Creating a temporary User object for ID {target_arg}")
+            target_user = User(id=int(target_arg), first_name=f"User {target_arg}", is_bot=False)
+        elif not target_user:
+            await message.reply_text(f"Could not find user {html.escape(target_arg)}.")
+            return
     else:
         await message.reply_text("Usage: /ungban <ID/@username/reply>"); return
         
@@ -3165,23 +2409,14 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await message.reply_text("Could not identify the user to ungban."); return
 
     if not get_gban_reason(target_user.id):
-        try:
-            full_user = await context.bot.get_chat(target_user.id)
-            user_display = full_user.mention_html()
-        except:
-            user_display = f"User <code>{target_user.id}</code>"
+        user_display = target_user.mention_html() or html.escape(target_user.full_name or f"User {target_user.id}")
         await message.reply_html(f"User {user_display} is not globally banned.")
         return
 
     remove_from_gban(target_user.id)
     
-    try:
-        full_target_user = await context.bot.get_chat(target_user.id)
-        user_display = full_target_user.mention_html()
-        username_for_log = f"@{html.escape(full_target_user.username)}" if full_target_user.username else "N/A"
-    except:
-        user_display = target_user.mention_html()
-        username_for_log = "N/A"
+    user_display = target_user.mention_html() or html.escape(target_user.full_name or f"User {target_user.id}")
+    username_for_log = f"@{html.escape(target_user.username)}" if target_user.username else "N/A"
 
     await message.reply_html(
         f"✅ User {user_display} has been globally unbanned.\n\n"
@@ -3196,13 +2431,13 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     try:
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-        
-        chat_name = chat.title or f"{user_who_ungbans.first_name}"
+        chat_name = chat.title or f"PM with {user_who_ungbans.first_name}"
+        log_user_display = target_user.mention_html() or f"{html.escape(target_user.full_name)} (No username)"
 
         log_message = (
             f"<b>#UNGBANNED</b>\n"
             f"<b>Initiated From:</b> {html.escape(chat_name)} (<code>{chat.id}</code>)\n\n"
-            f"<b>User:</b> {user_display} (<code>{target_user.id}</code>)\n"
+            f"<b>User:</b> {log_user_display} (<code>{target_user.id}</code>)\n"
             f"<b>Username:</b> {username_for_log}\n"
             f"<b>Admin:</b> {user_who_ungbans.mention_html()}\n"
             f"<b>Date:</b> <code>{current_time}</code>"
@@ -3348,8 +2583,8 @@ async def enforce_gban_command(update: Update, context: ContextTypes.DEFAULT_TYP
             "This may expose your community to users banned for severe offenses like spam, harassment, or illegal activities."
         )
 
-# --- Sudo commands ---
-async def add_sudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
+async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if user.id != OWNER_ID:
         logger.warning(f"Unauthorized /addsudo attempt by user {user.id}.")
@@ -3364,26 +2599,10 @@ async def add_sudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             await update.message.reply_text("You must reply to a user's message.")
             return
     elif context.args:
-        target_id_str = context.args[0]
-        try:
-            if target_id_str.startswith('@'):
-                target_user = get_user_from_db_by_username(target_id_str)
-                if not target_user:
-                    chat_info = await context.bot.get_chat(target_id_str)
-                    if chat_info.type == 'private':
-                        target_user = User(id=chat_info.id, first_name=chat_info.first_name, is_bot=False, username=chat_info.username, last_name=chat_info.last_name)
-                    else:
-                        await update.message.reply_text("Sudo can only be granted to users, not channels or groups.")
-                        return
-            else:
-                chat_info = await context.bot.get_chat(int(target_id_str))
-                if chat_info.type == 'private':
-                    target_user = User(id=chat_info.id, first_name=chat_info.first_name, is_bot=False, username=chat_info.username, last_name=chat_info.last_name)
-                else:
-                    await update.message.reply_text("Sudo can only be granted to users, not channels or groups.")
-                    return
-        except (ValueError, TelegramError):
-            await update.message.reply_text("Could not find that user.")
+        target_arg = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_arg)
+        if not target_user:
+            await update.message.reply_text(f"Could not find user {html.escape(target_arg)}.")
             return
     else:
         await update.message.reply_text("Usage: /addsudo <ID/@username/reply>")
@@ -3394,7 +2613,7 @@ async def add_sudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return
     
     if not isinstance(target_user, User):
-        await update.message.reply_text("Internal error: Target is not a valid User object.")
+        await update.message.reply_text("Sudo can only be granted to users.")
         return
 
     if target_user.id == OWNER_ID:
@@ -3407,13 +2626,13 @@ async def add_sudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await update.message.reply_text("Other bots do not need sudo access.")
         return
     if is_sudo_user(target_user.id):
-        user_display = target_user.mention_html()
+        user_display = target_user.mention_html() or html.escape(target_user.full_name)
         await update.message.reply_html(f"User {user_display} already has sudo powers.")
         return
 
     if add_sudo_user(target_user.id, user.id):
         logger.info(f"Owner {user.id} added sudo user {target_user.id} (@{target_user.username})")
-        user_display = target_user.mention_html()
+        user_display = target_user.mention_html() or html.escape(target_user.full_name)
         await update.message.reply_html(f"✅ User {user_display} has been granted sudo powers.")
         
         try:
@@ -3423,9 +2642,10 @@ async def add_sudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            log_user_display = target_user.mention_html() or f"{html.escape(target_user.full_name)} (No username)"
             log_message_to_send = (
                 f"<b>#SUDO</b>\n\n"
-                f"<b>User:</b> {user_display} (<code>{target_user.id}</code>)\n"
+                f"<b>User:</b> {log_user_display} (<code>{target_user.id}</code>)\n"
                 f"<b>Username:</b> @{html.escape(target_user.username) if target_user.username else 'N/A'}\n"
                 f"<b>Date:</b> <code>{current_time}</code>"
             )
@@ -3435,7 +2655,7 @@ async def add_sudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     else:
         await update.message.reply_text("Failed to add user to sudo list. Check logs.")
 
-async def del_sudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if user.id != OWNER_ID:
         logger.warning(f"Unauthorized /delsudo attempt by user {user.id}.")
@@ -3450,17 +2670,13 @@ async def del_sudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             await update.message.reply_text("You must reply to a user's message.")
             return
     elif context.args:
-        target_id_str = context.args[0]
-        try:
-            if target_id_str.startswith('@'):
-                target_user = get_user_from_db_by_username(target_id_str)
-                if not target_user:
-                    await update.message.reply_text(f"User {html.escape(target_id_str)} not found in my database. Please use their ID.")
-                    return
-            else:
-                target_user = User(id=int(target_id_str), first_name=f"User {target_id_str}", is_bot=False)
-        except (ValueError, IndexError):
-            await update.message.reply_text("Invalid User ID or format.")
+        target_arg = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_arg)
+        
+        if not target_user and target_arg.isdigit():
+             target_user = User(id=int(target_arg), first_name=f"User {target_arg}", is_bot=False)
+        elif not target_user:
+            await update.message.reply_text(f"Could not find user {html.escape(target_arg)}.")
             return
     else:
         await update.message.reply_text("Usage: /delsudo <ID/@username/reply>")
@@ -3471,7 +2687,7 @@ async def del_sudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return
 
     if not isinstance(target_user, User):
-        await update.message.reply_text("Internal error: Target is not a valid User object.")
+        await update.message.reply_text("Sudo can only be revoked from users.")
         return
 
     if target_user.id == OWNER_ID:
@@ -3479,24 +2695,15 @@ async def del_sudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return
     
     if not is_sudo_user(target_user.id):
-        try:
-            full_user = await context.bot.get_chat(target_user.id)
-            user_display = full_user.mention_html()
-        except:
-            user_display = f"User <code>{target_user.id}</code>"
+        user_display = target_user.mention_html() or html.escape(target_user.full_name or f"User {target_user.id}")
         await update.message.reply_html(f"User {user_display} does not have sudo powers.")
         return
 
     if remove_sudo_user(target_user.id):
         logger.info(f"Owner {user.id} removed sudo for user {target_user.id} (@{target_user.username})")
         
-        try:
-            full_user = await context.bot.get_chat(target_user.id)
-            user_display = full_user.mention_html()
-            username_for_log = f"@{html.escape(full_user.username)}" if full_user.username else "N/A"
-        except:
-            user_display = f"User <code>{target_user.id}</code>"
-            username_for_log = "N/A"
+        user_display = target_user.mention_html() or html.escape(target_user.full_name or f"User {target_user.id}")
+        username_for_log = f"@{html.escape(target_user.username)}" if target_user.username else "N/A"
 
         await update.message.reply_html(f"✅ Sudo powers for user {user_display} have been revoked.")
         
@@ -3507,9 +2714,10 @@ async def del_sudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            log_user_display = target_user.mention_html() or f"{html.escape(target_user.full_name)} (No username)"
             log_message_to_send = (
                 f"<b>#UNSUDO</b>\n\n"
-                f"<b>User:</b> {user_display} (<code>{target_user.id}</code>)\n"
+                f"<b>User:</b> {log_user_display} (<code>{target_user.id}</code>)\n"
                 f"<b>Username:</b> {username_for_log}\n"
                 f"<b>Date:</b> <code>{current_time}</code>"
             )
@@ -3546,7 +2754,7 @@ async def sudo_commands_command(update: Update, context: ContextTypes.DEFAULT_TY
     message_text = "The list of privileged commands has been sent to your private chat. Please click the button below to see it."
     
     await send_safe_reply(update, context, text=message_text, reply_markup=keyboard)
-        
+
 async def list_sudo_users_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if user.id != OWNER_ID:
@@ -3563,38 +2771,32 @@ async def list_sudo_users_command(update: Update, context: ContextTypes.DEFAULT_
     
     for user_id, timestamp_str in sudo_user_tuples:
         user_display_name = f"<code>{user_id}</code>"
-        user_obj_from_db = get_user_from_db_by_username(str(user_id))
 
-        if user_obj_from_db:
-            display_name_parts = []
-            if user_obj_from_db.first_name: display_name_parts.append(html.escape(user_obj_from_db.first_name))
-            if user_obj_from_db.last_name: display_name_parts.append(html.escape(user_obj_from_db.last_name))
-            if user_obj_from_db.username: display_name_parts.append(f"(@{html.escape(user_obj_from_db.username)})")
+        try:
+            chat_info = await context.bot.get_chat(user_id)
+            name_parts = []
+            if chat_info.first_name: name_parts.append(html.escape(chat_info.first_name))
+            if chat_info.last_name: name_parts.append(html.escape(chat_info.last_name))
+            if chat_info.username: name_parts.append(f"(@{html.escape(chat_info.username)})")
             
-            if display_name_parts:
-                user_display_name = " ".join(display_name_parts) + f" (<code>{user_id}</code>)"
-            else:
-                user_display_name = f"User (<code>{user_id}</code>)"
-        else:
-            try:
-                chat_info = await context.bot.get_chat(user_id)
-                name_parts = []
-                if chat_info.first_name: name_parts.append(html.escape(chat_info.first_name))
-                if chat_info.last_name: name_parts.append(html.escape(chat_info.last_name))
-                if chat_info.username: name_parts.append(f"(@{html.escape(chat_info.username)})")
-                
-                if name_parts:
-                    user_display_name = " ".join(name_parts) + f" (<code>{user_id}</code>)"
-            except Exception:
-                pass
+            if name_parts:
+                user_display_name = " ".join(name_parts) + f" (<code>{user_id}</code>)"
+        except Exception:
+            user_obj_from_db = get_user_from_db_by_username(str(user_id))
+            if user_obj_from_db:
+                display_name_parts = []
+                if user_obj_from_db.first_name: display_name_parts.append(html.escape(user_obj_from_db.first_name))
+                if user_obj_from_db.last_name: display_name_parts.append(html.escape(user_obj_from_db.last_name))
+                if user_obj_from_db.username: display_name_parts.append(f"(@{html.escape(user_obj_from_db.username)})")
+                if display_name_parts:
+                    user_display_name = " ".join(display_name_parts) + f" (<code>{user_id}</code>)"
 
         formatted_added_time = timestamp_str
         try:
             dt_obj = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
             formatted_added_time = dt_obj.strftime('%Y-%m-%d %H:%M')
-        except ValueError:
+        except (ValueError, TypeError):
             logger.warning(f"Could not parse timestamp '{timestamp_str}' for sudo user {user_id}")
-            pass
 
         response_lines.append(f"• {user_display_name}\n<b>Added:</b> <code>{formatted_added_time}</code>\n")
 
@@ -3604,138 +2806,88 @@ async def list_sudo_users_command(update: Update, context: ContextTypes.DEFAULT_
         message_text += f"\n\n...and {len(sudo_user_tuples) - 15} more (list too long to display fully)."
         logger.info(f"Sudo list too long, truncated for display. Total: {len(sudo_user_tuples)}")
 
-    await update.message.reply_html(message_text)
+    await update.message.reply_html(message_text, disable_web_page_preview=True)
 
 # --- Main Function ---
-def main() -> None:
+async def main() -> None:
+    """Główna funkcja, która uruchamia PTB i Telethona razem."""
     init_db()
-    logger.info("Initializing bot application...")
-    application = Application.builder().token(BOT_TOKEN).build()
+    logger.info("Initializing Telethon client and PTB application...")
 
-    connect_timeout_val = 20.0
-    read_timeout_val = 80.0
-    write_timeout_val = 80.0
-    pool_timeout_val = 20.0
+    async with TelegramClient(SESSION_NAME, API_ID, API_HASH) as telethon_client:
+        logger.info("Telethon client started.")
+        
+        custom_request_settings = HTTPXRequest(connect_timeout=20.0, read_timeout=80.0, write_timeout=80.0, pool_timeout=20.0)
+        
+        application = (
+            Application.builder()
+            .token(BOT_TOKEN)
+            .request(custom_request_settings)
+            .job_queue(JobQueue())
+            .build()
+        )
+        logger.info("PTB Application built with custom timeouts and JobQueue.")
 
-    custom_request_settings = HTTPXRequest(
-        connect_timeout=connect_timeout_val,
-        read_timeout=read_timeout_val,
-        write_timeout=write_timeout_val,
-        pool_timeout=pool_timeout_val
-    )
+        application.bot_data['telethon_client'] = telethon_client
+        logger.info("Telethon client has been injected into bot_data.")
 
-    job_queue = JobQueue()
-    
-    application = (
-        Application.builder()
-        .token(BOT_TOKEN)
-        .request(custom_request_settings)
-        .job_queue(job_queue)
-        .build()
-    )
-    
-    application = Application.builder().token(BOT_TOKEN).request(custom_request_settings).build()
-    logger.info(f"Custom request timeouts set for HTTPXRequest: "
-                f"Connect={connect_timeout_val}, Read={read_timeout_val}, "
-                f"Write={write_timeout_val}, Pool={pool_timeout_val}")
-    logger.info("JobQueue has been enabled.")
-    
-    logger.info("Registering blacklist check handler...")
-    application.add_handler(MessageHandler(filters.COMMAND, check_blacklist_handler), group=-1)
+        # --- Handlers Registration ---
+        application.add_handler(MessageHandler(filters.COMMAND, check_blacklist_handler), group=-1)
+        application.add_handler(MessageHandler(filters.ALL & (~filters.UpdateType.EDITED_MESSAGE), log_user_from_interaction), group=10)
+        application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND) & filters.ChatType.GROUPS, check_gban_on_message), group=-2)
 
-    logger.info("Registering user interaction logging handler...")
-    application.add_handler(MessageHandler(
-        filters.ALL & (~filters.UpdateType.EDITED_MESSAGE),
-        log_user_from_interaction
-    ), group=10)
+        handlers = [
+            CommandHandler("start", start), CommandHandler("help", help_command), CommandHandler("github", github),
+            CommandHandler("owner", owner_info), CommandHandler("info", entity_info_command), CommandHandler("chatstat", chat_stat_command),
+            CommandHandler("cinfo", chat_info_command), CommandHandler("ban", ban_command), CommandHandler("unban", unban_command),
+            CommandHandler("mute", mute_command), CommandHandler("unmute", unmute_command), CommandHandler("kick", kick_command),
+            CommandHandler("kickme", kickme_command), CommandHandler("promote", promote_command), CommandHandler("demote", demote_command),
+            CommandHandler("pin", pin_message_command), CommandHandler("unpin", unpin_message_command), CommandHandler("purge", purge_messages_command),
+            CommandHandler("report", report_command), CommandHandler("listadmins", list_admins_command), CommandHandler("admins", list_admins_command),
+            CommandHandler("kill", kill), CommandHandler("punch", punch), CommandHandler("slap", slap),
+            CommandHandler("status", status), CommandHandler("say", say), CommandHandler("leave", leave_chat),
+            CommandHandler("speedtest", speedtest_command), CommandHandler("blist", blacklist_user_command),
+            CommandHandler("unblist", unblacklist_user_command), CommandHandler("gban", gban_command),
+            CommandHandler("ungban", ungban_command), CommandHandler("enforcegban", enforce_gban_command),
+            CommandHandler("listsudo", list_sudo_users_command), CommandHandler("sudocmds", sudocmds_command),
+            CommandHandler("addsudo", addsudo_command), CommandHandler("delsudo", delsudo_command)
+        ]
+        application.add_handlers(handlers)
+        logger.info(f"{len(handlers)} command handlers registered.")
 
-    logger.info("Registering global bans handler...")
-    application.add_handler(MessageHandler(
-        filters.TEXT & (~filters.COMMAND) & filters.ChatType.GROUPS,
-        check_gban_on_message
-    ), group=-2)
+        application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_group_members))
+        application.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, handle_left_group_member))
+        logger.info("Status update handlers registered.")
 
-    logger.info("Registering command handlers...")
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("github", github))
-    application.add_handler(CommandHandler("owner", owner_info))
-    application.add_handler(CommandHandler("info", entity_info_command))
-    application.add_handler(CommandHandler("chatstat", chat_stat_command))
-    application.add_handler(CommandHandler("cinfo", chat_info_command))
-    application.add_handler(CommandHandler("ban", ban_command))
-    application.add_handler(CommandHandler("unban", unban_command))
-    application.add_handler(CommandHandler("mute", mute_command))
-    application.add_handler(CommandHandler("unmute", unmute_command))
-    application.add_handler(CommandHandler("kick", kick_command))
-    application.add_handler(CommandHandler("kickme", kickme_command))
-    application.add_handler(CommandHandler("promote", promote_command))
-    application.add_handler(CommandHandler("demote", demote_command))
-    application.add_handler(CommandHandler("pin", pin_message_command))
-    application.add_handler(CommandHandler("unpin", unpin_message_command))
-    application.add_handler(CommandHandler("purge", purge_messages_command))
-    application.add_handler(CommandHandler("report", report_command))
-    application.add_handler(CommandHandler("listadmins", list_admins_command))
-    application.add_handler(CommandHandler("admins", list_admins_command))
-    application.add_handler(CommandHandler("kill", kill))
-    application.add_handler(CommandHandler("punch", punch))
-    application.add_handler(CommandHandler("slap", slap))
-    application.add_handler(CommandHandler("status", status))
-    application.add_handler(CommandHandler("say", say))
-    application.add_handler(CommandHandler("leave", leave_chat))
-    application.add_handler(CommandHandler("speedtest", speedtest_command))
-    application.add_handler(CommandHandler("blist", blacklist_user_command))
-    application.add_handler(CommandHandler("unblist", unblacklist_user_command))
-    application.add_handler(CommandHandler("gban", gban_command))
-    application.add_handler(CommandHandler("ungban", ungban_command))
-    application.add_handler(CommandHandler("enforcegban", enforce_gban_command))
-    application.add_handler(CommandHandler("listsudo", list_sudo_users_command))
-    application.add_handler(CommandHandler("sudocmds", sudo_commands_command))
-    application.add_handler(CommandHandler("addsudo", add_sudo_command))
-    application.add_handler(CommandHandler("delsudo", del_sudo_command))
+        async def send_startup_message(app: Application):
+            await send_operational_log(app.bot, "<i>Bot Started...</i>", parse_mode=ParseMode.HTML)
+        application.post_init = send_startup_message
+        
+        logger.info(f"Bot starting polling... Owner ID: {OWNER_ID}")
+        print(f"Bot starting polling... Owner ID: {OWNER_ID}")
 
-    logger.info("Registering message handlers for group joins and lefts...")
-    application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_group_members))
-    application.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, handle_left_group_member))
+        await application.initialize()
+        await application.start()
+        await application.updater.start_polling(allowed_updates=Update.ALL_TYPES)
 
-    async def send_simple_startup_message(app: Application) -> None:
-            startup_message_text = "<i>Bot Started...</i>"
-            
-            target_id_for_log = LOG_CHAT_ID
-            if not target_id_for_log and OWNER_ID:
-                target_id_for_log = OWNER_ID
-            
-            if target_id_for_log:
-                try:
-                    await app.bot.send_message(chat_id=target_id_for_log, text=startup_message_text, parse_mode=ParseMode.HTML)
-                    logger.info(f"Sent simple startup notification to {target_id_for_log}.")
-                except TelegramError as e:
-                    logger.error(f"Failed to send simple startup message to {target_id_for_log}: {e}")
-                    if LOG_CHAT_ID and target_id_for_log == LOG_CHAT_ID and OWNER_ID and LOG_CHAT_ID != OWNER_ID:
-                        logger.info("Falling back to send simple startup message to OWNER_ID.")
-                        try:
-                            await app.bot.send_message(chat_id=OWNER_ID, text=f"[Fallback] {startup_message_text}", parse_mode=ParseMode.HTML)
-                        except Exception as e_owner:
-                             logger.error(f"Failed to send simple startup message to OWNER_ID as fallback: {e_owner}")
-                except Exception as e_other:
-                    logger.error(f"Unexpected error sending simple startup message to {target_id_for_log}: {e_other}", exc_info=True)
-    
-            else:
-                logger.warning("No target (LOG_CHAT_ID or OWNER_ID) to send simple startup message.")
+        await telethon_client.run_until_disconnected()
 
-    application.post_init = send_simple_startup_message
-
-    logger.info(f"Bot starting polling... Owner ID configured: {OWNER_ID}")
-    print(f"Bot starting polling... Owner ID: {OWNER_ID}")
-    try: application.run_polling(allowed_updates=Update.ALL_TYPES)
-    except KeyboardInterrupt: logger.info("Bot stopped by user (Ctrl+C)."); print("\nBot stopped by user.")
-    except TelegramError as te: logger.critical(f"CRITICAL: TelegramError during polling: {te}"); print(f"\n--- FATAL TELEGRAM ERROR ---\n{te}"); exit(1)
-    except Exception as e: logger.critical(f"CRITICAL: Bot crashed unexpectedly: {e}", exc_info=True); print(f"\n--- FATAL ERROR ---\nBot crashed: {e}"); exit(1)
-    finally: logger.info("Bot shutdown process initiated."); print("Bot shutting down...")
-    logger.info("Bot stopped."); print("Bot stopped.")
+        await application.updater.stop()
+        await application.stop()
+        logger.info("Bot shutdown process completed.")
+        print("Bot shut down.")
 
 # --- Script Execution ---
 if __name__ == "__main__":
-    try: import requests
-    except ImportError: print("\n--- DEPENDENCY ERROR ---\n'requests' required.\nPlease install: pip install requests"); exit(1)
-    main()
+    try:
+        import requests
+    except ImportError:
+        print("\n--- DEPENDENCY ERROR ---\n'requests' required.\nPlease install: pip install requests"); exit(1)
+    
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("Bot stopped by user (Ctrl+C)."); print("\nBot stopped by user.")
+    except Exception as e:
+        logger.critical(f"CRITICAL: Bot crashed unexpectedly at top level: {e}", exc_info=True)
+        print(f"\n--- FATAL ERROR ---\nBot crashed: {e}"); exit(1)
