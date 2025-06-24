@@ -491,24 +491,30 @@ def telethon_entity_to_ptb_user(entity: 'TelethonUser') -> User | None:
                 last_name=entity.last_name, username=entity.username, language_code=getattr(entity, 'lang_code', None))
 
 async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_input: str) -> User | None:
+    if target_input.startswith('@'):
+        user_from_db = get_user_from_db_by_username(target_input)
+        if user_from_db:
+            logger.info(f"Resolved '{target_input}' from local database.")
+            return user_from_db
+
     if 'telethon_client' not in context.bot_data:
-        logger.error("Telethon client not available. Using fallback PTB resolver.")
-        try:
-            chat_info = await context.bot.get_chat(target_input)
-            if chat_info.type == 'private':
-                return User(id=chat_info.id, first_name=chat_info.first_name or "", is_bot=getattr(chat_info, 'is_bot', False),
-                            username=chat_info.username, last_name=chat_info.last_name)
-        except Exception: return None
+        logger.error("Telethon client not available. Cannot use advanced resolver.")
         return None
     
     telethon_client: 'TelegramClient' = context.bot_data['telethon_client']
     try:
+        logger.info(f"Resolving '{target_input}' using Telethon...")
         entity = await telethon_client.get_entity(target_input)
+        
         if entity and isinstance(entity, TelethonUser):
             ptb_user = telethon_entity_to_ptb_user(entity)
-            if ptb_user: update_user_in_db(ptb_user); return ptb_user
+            if ptb_user:
+                logger.info(f"Telethon resolved '{target_input}' to user {ptb_user.id}. Saving to DB.")
+                update_user_in_db(ptb_user)
+                return ptb_user
     except Exception as e:
         logger.warning(f"Telethon resolver failed for '{target_input}': {e}.")
+
     return None
 
 def get_readable_time_delta(delta: timedelta) -> str:
