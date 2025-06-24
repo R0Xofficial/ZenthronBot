@@ -937,7 +937,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             except Exception:
                 logger.warning(f"PTB also failed to get_chat for ID {target_input}. Creating a minimal object.")
                 try:
-                    target_entity = User(id=int(target_input), first_name=f"ID: {target_input}", is_bot=False)
+                    target_entity = User(id=int(target_input), first_name=f"{target_input}", is_bot=False)
                 except ValueError:
                     await update.message.reply_text(f"Error: Invalid ID format '{html.escape(target_input)}'.")
                     return
@@ -1089,7 +1089,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         
         if not target_user and target_arg.isdigit():
             logger.info(f"Ban fallback: Creating a temporary User object for ID {target_arg}")
-            target_user = User(id=int(target_arg), first_name=f"User {target_arg}", is_bot=False)
+            target_user = User(id=int(target_arg), first_name=f"{target_arg}", is_bot=False)
         elif not target_user:
             await send_safe_reply(update, context, text=f"User {html.escape(target_arg)} not found.")
             return
@@ -1184,7 +1184,7 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         
         if not target_user and target_arg.isdigit():
             logger.info(f"Unban fallback: Creating a temporary User object for ID {target_arg}")
-            target_user = User(id=int(target_arg), first_name=f"User {target_arg}", is_bot=False)
+            target_user = User(id=int(target_arg), first_name=f"{target_arg}", is_bot=False)
         elif not target_user:
             await send_safe_reply(update, context, text=f"User {html.escape(target_arg)} not found.")
             return
@@ -2681,7 +2681,7 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         
         if not target_user and target_arg.isdigit():
             logger.info(f"Blacklist fallback: Creating a temporary User object for ID {target_arg}")
-            target_user = User(id=int(target_arg), first_name=f"User {target_arg}", is_bot=False)
+            target_user = User(id=int(target_arg), first_name=f"{target_arg}", is_bot=False)
         elif not target_user:
             await message.reply_text(f"Could not find user {html.escape(target_arg)}.")
             return
@@ -2758,7 +2758,7 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
         
         if not target_user and target_arg.isdigit():
             logger.info(f"Unblist fallback: Creating a temporary User object for ID {target_arg}")
-            target_user = User(id=int(target_arg), first_name=f"User {target_arg}", is_bot=False)
+            target_user = User(id=int(target_arg), first_name=f"{target_arg}", is_bot=False)
         elif not target_user:
             await update.message.reply_text(f"Could not find user {html.escape(target_arg)}.")
             return
@@ -2866,7 +2866,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         
         if not target_user and target_arg.isdigit():
             logger.info(f"Gban fallback: Creating a temporary User object for ID {target_arg}")
-            target_user = User(id=int(target_arg), first_name=f"User {target_arg}", is_bot=False)
+            target_user = User(id=int(target_arg), first_name=f"{target_arg}", is_bot=False)
         elif not target_user:
             await message.reply_text(f"Could not find user {html.escape(target_arg)}.")
             return
@@ -2945,7 +2945,7 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         
         if not target_user and target_arg.isdigit():
             logger.info(f"Ungban fallback: Creating a temporary User object for ID {target_arg}")
-            target_user = User(id=int(target_arg), first_name=f"User {target_arg}", is_bot=False)
+            target_user = User(id=int(target_arg), first_name=f"{target_arg}", is_bot=False)
         elif not target_user:
             await message.reply_text(f"Could not find user {html.escape(target_arg)}.")
             return
@@ -3153,7 +3153,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
         if not target_user and target_arg.isdigit():
             logger.info(f"Addsudo fallback: Creating a temporary User object for ID {target_arg}")
-            target_user = User(id=int(target_arg), first_name=f"User {target_arg}", is_bot=False)
+            target_user = User(id=int(target_arg), first_name=f"{target_arg}", is_bot=False)
         elif not target_user:
             await update.message.reply_text(f"Could not find user {html.escape(target_arg)}.")
             return
@@ -3232,7 +3232,7 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         
         if not target_user and target_arg.isdigit():
              logger.info(f"Delsudo fallback: Creating a temporary User object for ID {target_arg}")
-             target_user = User(id=int(target_arg), first_name=f"User {target_arg}", is_bot=False)
+             target_user = User(id=int(target_arg), first_name=f"{target_arg}", is_bot=False)
         elif not target_user:
             await update.message.reply_text(f"Could not find user {html.escape(target_arg)}.")
             return
