@@ -1849,23 +1849,29 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await message.reply_text("This command can only be used in groups.")
         return
 
-    target_entity = await resolve_target_entity(update, context)
+    target_entity: Chat | User | None = None
+    args_for_reason = list(context.args)
+
+    if message.reply_to_message:
+        target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
+    elif context.args:
+        target_arg = context.args[0]
+        args_for_reason = list(context.args[1:])
+        target_entity = await resolve_user_with_telethon(context, target_arg)
     
     if not target_entity:
-        if not context.args:
-            await message.reply_text("Usage: /report <ID/@user/reply> [reason]")
+        await message.reply_text("Usage: /report <ID/@user/reply> [reason]")
         return
         
-    reason_args = context.args[1:] if context.args and not message.reply_to_message else context.args
-    reason = " ".join(reason_args) if reason_args else "No specific reason provided."
+    reason = " ".join(args_for_reason) if args_for_reason else "No specific reason provided."
     
     reporter_mention = reporter.mention_html()
     
-    if isinstance(target_entity, User) or target_entity.type == ChatType.PRIVATE:
-        target_display = target_entity.mention_html()
+    if isinstance(target_entity, User) or (hasattr(target_entity, 'type') and target_entity.type == ChatType.PRIVATE):
+        target_display = target_entity.mention_html() or html.escape(getattr(target_entity, 'full_name', '') or f"<code>{target_entity.id}</code>")
         entity_type_label = "User"
     else:
-        target_display = html.escape(target_entity.title or f"User {target_entity.id}")
+        target_display = html.escape(target_entity.title or f"Entity {target_entity.id}")
         entity_type_label = target_entity.type.capitalize()
 
     report_message = (
