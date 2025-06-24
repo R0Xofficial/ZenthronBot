@@ -345,6 +345,28 @@ def get_user_from_db_by_username(username_query: str) -> User | None:
             conn.close()
     return user_obj
 
+def get_user_from_db_by_id(user_id: int) -> User | None:
+    if not user_id:
+        return None
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT user_id, username, first_name, last_name, language_code, is_bot FROM users WHERE user_id = ?",
+                (user_id,)
+            )
+            row = cursor.fetchone()
+            if row:
+                user_obj = User(
+                    id=row[0], username=row[1], first_name=row[2] or "",
+                    last_name=row[3], language_code=row[4], is_bot=bool(row[5])
+                )
+                logger.info(f"User ID {user_id} found in DB.")
+                return user_obj
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error fetching user by ID {user_id}: {e}", exc_info=True)
+    return None
+
 async def log_user_from_interaction(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_user:
         update_user_in_db(update.effective_user)
@@ -491,19 +513,26 @@ def telethon_entity_to_ptb_user(entity: 'TelethonUser') -> User | None:
                 last_name=entity.last_name, username=entity.username, language_code=getattr(entity, 'lang_code', None))
 
 async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_input: str) -> User | None:
-    if target_input.startswith('@'):
-        user_from_db = get_user_from_db_by_username(target_input)
-        if user_from_db:
-            logger.info(f"Resolved '{target_input}' from local database.")
-            return user_from_db
+    resolved_user: User | None = None
+    
+    try:
+        user_id = int(target_input)
+        resolved_user = get_user_from_db_by_id(user_id)
+        if resolved_user:
+            return resolved_user
+    except ValueError:
+        if target_input.startswith('@'):
+            resolved_user = get_user_from_db_by_username(target_input)
+            if resolved_user:
+                return resolved_user
 
     if 'telethon_client' not in context.bot_data:
-        logger.error("Telethon client not available. Cannot use advanced resolver.")
+        logger.error("Telethon client not available for advanced resolving.")
         return None
     
     telethon_client: 'TelegramClient' = context.bot_data['telethon_client']
     try:
-        logger.info(f"Resolving '{target_input}' using Telethon...")
+        logger.info(f"Resolving '{target_input}' using Telethon as fallback...")
         entity = await telethon_client.get_entity(target_input)
         
         if entity and isinstance(entity, TelethonUser):
@@ -513,7 +542,7 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
                 update_user_in_db(ptb_user)
                 return ptb_user
     except Exception as e:
-        logger.warning(f"Telethon resolver failed for '{target_input}': {e}.")
+        logger.warning(f"Telethon resolver also failed for '{target_input}': {e}.")
 
     return None
 
