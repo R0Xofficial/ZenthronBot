@@ -508,42 +508,63 @@ async def _can_user_perform_action(
 
 # --- Utility Functions ---
 def telethon_entity_to_ptb_user(entity: 'TelethonUser') -> User | None:
-    if not isinstance(entity, TelethonUser): return None
-    return User(id=entity.id, first_name=entity.first_name or "", is_bot=entity.bot or False,
-                last_name=entity.last_name, username=entity.username, language_code=getattr(entity, 'lang_code', None))
-
-async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_input: str) -> User | None:
-    resolved_user: User | None = None
-    
-    try:
-        user_id = int(target_input)
-        resolved_user = get_user_from_db_by_id(user_id)
-        if resolved_user:
-            return resolved_user
-    except ValueError:
-        if target_input.startswith('@'):
-            resolved_user = get_user_from_db_by_username(target_input)
-            if resolved_user:
-                return resolved_user
-
-    if 'telethon_client' not in context.bot_data:
-        logger.error("Telethon client not available for advanced resolving.")
+    if not isinstance(entity, TelethonUser):
         return None
     
+    full_name_parts = []
+    if entity.first_name:
+        full_name_parts.append(entity.first_name)
+    if entity.last_name:
+        full_name_parts.append(entity.last_name)
+    full_name_str = " ".join(full_name_parts).strip()
+
+    return User(
+        id=entity.id,
+        first_name=entity.first_name or "",
+        is_bot=entity.bot or False,
+        last_name=entity.last_name,
+        username=entity.username,
+        language_code=getattr(entity, 'lang_code', None),
+        full_name=full_name_str
+    )
+
+async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_input: str) -> User | Chat | None:
+    identifier: str | int = target_input
+    try: identifier = int(target_input)
+    except ValueError: pass
+    
+    if isinstance(identifier, int):
+        user_from_db = get_user_from_db_by_id(identifier)
+        if user_from_db: return user_from_db
+    elif identifier.startswith('@'):
+        user_from_db = get_user_from_db_by_username(identifier)
+        if user_from_db: return user_from_db
+
+    if 'telethon_client' not in context.bot_data: return None
     telethon_client: 'TelegramClient' = context.bot_data['telethon_client']
+    
     try:
         logger.info(f"Resolving '{target_input}' using Telethon as fallback...")
-        entity = await telethon_client.get_entity(target_input)
+        entity_from_telethon = await telethon_client.get_entity(target_input)
         
-        if entity and isinstance(entity, TelethonUser):
-            ptb_user = telethon_entity_to_ptb_user(entity)
+        if isinstance(entity_from_telethon, TelethonUser):
+            ptb_user = telethon_entity_to_ptb_user(entity_from_telethon)
             if ptb_user:
-                logger.info(f"Telethon resolved '{target_input}' to user {ptb_user.id}. Saving to DB.")
                 update_user_in_db(ptb_user)
                 return ptb_user
-    except Exception as e:
-        logger.warning(f"Telethon resolver also failed for '{target_input}': {e}.")
+        
+        elif isinstance(entity_from_telethon, (TelethonChannel)):
+            try:
+                ptb_chat = await context.bot.get_chat(entity_from_telethon.id)
+                add_chat_to_db(ptb_chat.id, ptb_chat.title)
+                return ptb_chat
+            except Exception as e:
+                logger.error(f"Failed to get_chat for a channel found by Telethon: {e}")
+                return None
 
+    except Exception:
+        return None
+        
     return None
 
 def get_readable_time_delta(delta: timedelta) -> str:
@@ -930,24 +951,20 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         target_entity = update.message.reply_to_message.sender_chat or update.message.reply_to_message.from_user
     elif context.args:
         target_input = context.args[0]
+        
         target_entity = await resolve_user_with_telethon(context, target_input)
         
-        if not target_entity and (target_input.isdigit() or (target_input.startswith('-') and target_input[1:].isdigit())):
+        if not target_entity:
             try:
-                target_entity = await context.bot.get_chat(int(target_input))
+                target_entity = await context.bot.get_chat(target_input)
             except Exception:
-                logger.warning(f"PTB also failed to get_chat for ID {target_input}. Creating a minimal object.")
-                try:
-                    target_entity = User(id=int(target_input), first_name=f"{target_input}", is_bot=False)
-                except ValueError:
-                    await update.message.reply_text(f"Error: Invalid ID format '{html.escape(target_input)}'.")
-                    return
-
+                await update.message.reply_text(f"Error: Could not find or resolve the specified user/entity.")
+                return
     else:
-        target_entity = update.effective_user
+        target_entity = update.message.sender_chat or update.effective_user
 
     if not target_entity:
-        await update.message.reply_text("Error: Could not find or resolve the specified user/entity.")
+        await update.message.reply_text("Error: Could not determine what to get info for.")
         return
 
     if isinstance(target_entity, User):
@@ -965,7 +982,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             member_status_in_current_chat_str = chat_member.status
         except TelegramError:
             member_status_in_current_chat_str = "not_a_member"
-            
+
     info_message = format_entity_info(
         entity=target_entity,
         chat_member_status_str=member_status_in_current_chat_str,
