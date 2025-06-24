@@ -512,44 +512,37 @@ def telethon_entity_to_ptb_user(entity: 'TelethonUser') -> User | None:
     return User(id=entity.id, first_name=entity.first_name or "", is_bot=entity.bot or False,
                 last_name=entity.last_name, username=entity.username, language_code=getattr(entity, 'lang_code', None))
 
-async def resolve_entity_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_input: str) -> User | Chat | None:
-    resolved_entity: User | Chat | None = None
+async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_input: str) -> User | None:
+    resolved_user: User | None = None
+    
     try:
-        if target_input.isdigit() or (target_input.startswith('-') and target_input[1:].isdigit()):
-            user_id = int(target_input)
-            resolved_entity = get_user_from_db_by_id(user_id)
+        user_id = int(target_input)
+        resolved_user = get_user_from_db_by_id(user_id)
+        if resolved_user:
+            return resolved_user
     except ValueError:
         if target_input.startswith('@'):
-            resolved_entity = get_user_from_db_by_username(target_input)
-    
-    if resolved_entity:
-        return resolved_entity
+            resolved_user = get_user_from_db_by_username(target_input)
+            if resolved_user:
+                return resolved_user
 
     if 'telethon_client' not in context.bot_data:
+        logger.error("Telethon client not available for advanced resolving.")
         return None
     
     telethon_client: 'TelegramClient' = context.bot_data['telethon_client']
     try:
         logger.info(f"Resolving '{target_input}' using Telethon as fallback...")
-        entity_from_telethon = await telethon_client.get_entity(target_input)
+        entity = await telethon_client.get_entity(target_input)
         
-        if isinstance(entity_from_telethon, TelethonUser):
-            ptb_user = telethon_entity_to_ptb_user(entity_from_telethon)
+        if entity and isinstance(entity, TelethonUser):
+            ptb_user = telethon_entity_to_ptb_user(entity)
             if ptb_user:
+                logger.info(f"Telethon resolved '{target_input}' to user {ptb_user.id}. Saving to DB.")
                 update_user_in_db(ptb_user)
                 return ptb_user
-        
-        elif isinstance(entity_from_telethon, (TelethonChannel)):
-            try:
-                ptb_chat = await context.bot.get_chat(entity_from_telethon.id)
-                add_chat_to_db(ptb_chat.id, ptb_chat.title)
-                return ptb_chat
-            except Exception as e:
-                logger.error(f"Failed to get_chat for a channel found by Telethon: {e}")
-                return None
-
     except Exception as e:
-        logger.warning(f"Telethon resolver failed for '{target_input}': {e}.")
+        logger.warning(f"Telethon resolver also failed for '{target_input}': {e}.")
 
     return None
 
@@ -937,21 +930,21 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         target_entity = update.message.reply_to_message.sender_chat or update.message.reply_to_message.from_user
     elif context.args:
         target_input = context.args[0]
-        
-        target_entity = await resolve_entity_with_telethon(context, target_input)
+        target_entity = await resolve_user_with_telethon(context, target_input)
         
         if not target_entity and (target_input.isdigit() or (target_input.startswith('-') and target_input[1:].isdigit())):
             try:
                 target_entity = await context.bot.get_chat(int(target_input))
-            except:
-                 await update.message.reply_text(f"Error: Couldn't find any entity for ID {html.escape(target_input)}.")
-                 return
+            except Exception:
+                logger.warning(f"PTB also failed to get_chat for ID {target_input}. Creating a minimal object.")
+                try:
+                    target_entity = User(id=int(target_input), first_name=f"{target_input}", is_bot=False)
+                except ValueError:
+                    await update.message.reply_text(f"Error: Invalid ID format '{html.escape(target_input)}'.")
+                    return
 
     else:
-        if update.message.sender_chat:
-            target_entity = update.message.sender_chat
-        else:
-            target_entity = update.effective_user
+        target_entity = update.effective_user
 
     if not target_entity:
         await update.message.reply_text("Error: Could not find or resolve the specified user/entity.")
@@ -959,7 +952,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if isinstance(target_entity, User):
         update_user_in_db(target_entity)
-            
+
     is_target_owner_flag = (target_entity.id == OWNER_ID)
     is_target_sudo_flag = is_sudo_user(target_entity.id)
     blacklist_reason_str = get_blacklist_reason(target_entity.id)
@@ -1093,11 +1086,11 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     elif context.args:
         target_arg = context.args[0]
         args_for_reason_and_time = list(context.args[1:])
-        target_user = await resolve_entity_with_telethon(context, target_arg)
+        target_user = await resolve_user_with_telethon(context, target_arg)
         
         if not target_user and target_arg.isdigit():
             logger.info(f"Ban fallback: Creating a temporary User object for ID {target_arg}")
-            target_user = User(id=int(target_arg), first_name=f"User {target_arg}", is_bot=False)
+            target_user = User(id=int(target_arg), first_name=f"{target_arg}", is_bot=False)
         elif not target_user:
             await send_safe_reply(update, context, text=f"User {html.escape(target_arg)} not found.")
             return
@@ -1188,11 +1181,11 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         target_user = update.message.reply_to_message.from_user
     elif context.args:
         target_arg = context.args[0]
-        target_user = await resolve_entity_with_telethon(context, target_arg)
+        target_user = await resolve_user_with_telethon(context, target_arg)
         
         if not target_user and target_arg.isdigit():
             logger.info(f"Unban fallback: Creating a temporary User object for ID {target_arg}")
-            target_user = User(id=int(target_arg), first_name=f"User {target_arg}", is_bot=False)
+            target_user = User(id=int(target_arg), first_name=f"{target_arg}", is_bot=False)
         elif not target_user:
             await send_safe_reply(update, context, text=f"User {html.escape(target_arg)} not found.")
             return
@@ -1242,7 +1235,7 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     elif context.args:
         target_arg = context.args[0]
         args_for_reason_and_time = list(context.args[1:])
-        target_user = await resolve_entity_with_telethon(context, target_arg)
+        target_user = await resolve_user_with_telethon(context, target_arg)
         if not target_user:
             await send_safe_reply(update, context, text=f"User {html.escape(target_arg)} not found.")
             return
@@ -1332,7 +1325,7 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         target_user = update.message.reply_to_message.from_user
     elif context.args:
         target_arg = context.args[0]
-        target_user = await resolve_entity_with_telethon(context, target_arg)
+        target_user = await resolve_user_with_telethon(context, target_arg)
         if not target_user:
             await send_safe_reply(update, context, text=f"User {html.escape(target_arg)} not found.")
             return
@@ -1388,7 +1381,7 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     elif context.args:
         target_arg = context.args[0]
         args_for_reason = list(context.args[1:])
-        target_user = await resolve_entity_with_telethon(context, target_arg)
+        target_user = await resolve_user_with_telethon(context, target_arg)
         if not target_user:
             await send_safe_reply(update, context, text=f"User {html.escape(target_arg)} not found.")
             return
@@ -1518,7 +1511,7 @@ async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     elif context.args:
         target_arg = context.args[0]
         args_for_title = list(context.args[1:])
-        target_user = await resolve_entity_with_telethon(context, target_arg)
+        target_user = await resolve_user_with_telethon(context, target_arg)
         if not target_user:
             await message.reply_text(f"Could not find user {html.escape(target_arg)}.")
             return
@@ -1864,7 +1857,7 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     elif context.args:
         target_arg = context.args[0]
         args_for_reason = list(context.args[1:])
-        target_entity = await resolve_entity_with_telethon(context, target_arg)
+        target_entity = await resolve_user_with_telethon(context, target_arg)
     
     if not target_entity:
         await message.reply_text("Usage: /report <ID/@username/reply> [reason]")
@@ -2685,11 +2678,11 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
     elif context.args:
         target_arg = context.args[0]
         args_for_reason = list(context.args[1:])
-        target_user = await resolve_entity_with_telethon(context, target_arg)
+        target_user = await resolve_user_with_telethon(context, target_arg)
         
         if not target_user and target_arg.isdigit():
             logger.info(f"Blacklist fallback: Creating a temporary User object for ID {target_arg}")
-            target_user = User(id=int(target_arg), first_name=f"User {target_arg}", is_bot=False)
+            target_user = User(id=int(target_arg), first_name=f"{target_arg}", is_bot=False)
         elif not target_user:
             await message.reply_text(f"Could not find user {html.escape(target_arg)}.")
             return
@@ -2762,11 +2755,11 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
             return
     elif context.args:
         target_arg = context.args[0]
-        target_user = await resolve_entity_with_telethon(context, target_arg)
+        target_user = await resolve_user_with_telethon(context, target_arg)
         
         if not target_user and target_arg.isdigit():
             logger.info(f"Unblist fallback: Creating a temporary User object for ID {target_arg}")
-            target_user = User(id=int(target_arg), first_name=f"User {target_arg}", is_bot=False)
+            target_user = User(id=int(target_arg), first_name=f"{target_arg}", is_bot=False)
         elif not target_user:
             await update.message.reply_text(f"Could not find user {html.escape(target_arg)}.")
             return
@@ -2870,11 +2863,11 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     elif context.args:
         target_arg = context.args[0]
         args_for_reason = list(context.args[1:])
-        target_user = await resolve_entity_with_telethon(context, target_arg)
+        target_user = await resolve_user_with_telethon(context, target_arg)
         
         if not target_user and target_arg.isdigit():
             logger.info(f"Gban fallback: Creating a temporary User object for ID {target_arg}")
-            target_user = User(id=int(target_arg), first_name=f"User {target_arg}", is_bot=False)
+            target_user = User(id=int(target_arg), first_name=f"{target_arg}", is_bot=False)
         elif not target_user:
             await message.reply_text(f"Could not find user {html.escape(target_arg)}.")
             return
@@ -2949,11 +2942,11 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         target_user = message.reply_to_message.from_user
     elif context.args:
         target_arg = context.args[0]
-        target_user = await resolve_entity_with_telethon(context, target_arg)
+        target_user = await resolve_user_with_telethon(context, target_arg)
         
         if not target_user and target_arg.isdigit():
             logger.info(f"Ungban fallback: Creating a temporary User object for ID {target_arg}")
-            target_user = User(id=int(target_arg), first_name=f"User {target_arg}", is_bot=False)
+            target_user = User(id=int(target_arg), first_name=f"{target_arg}", is_bot=False)
         elif not target_user:
             await message.reply_text(f"Could not find user {html.escape(target_arg)}.")
             return
@@ -3157,11 +3150,11 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             return
     elif context.args:
         target_arg = context.args[0]
-        target_user = await resolve_entity_with_telethon(context, target_arg)
+        target_user = await resolve_user_with_telethon(context, target_arg)
 
         if not target_user and target_arg.isdigit():
             logger.info(f"Addsudo fallback: Creating a temporary User object for ID {target_arg}")
-            target_user = User(id=int(target_arg), first_name=f"User {target_arg}", is_bot=False)
+            target_user = User(id=int(target_arg), first_name=f"{target_arg}", is_bot=False)
         elif not target_user:
             await update.message.reply_text(f"Could not find user {html.escape(target_arg)}.")
             return
@@ -3236,11 +3229,11 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             return
     elif context.args:
         target_arg = context.args[0]
-        target_user = await resolve_entity_with_telethon(context, target_arg)
+        target_user = await resolve_user_with_telethon(context, target_arg)
         
         if not target_user and target_arg.isdigit():
              logger.info(f"Delsudo fallback: Creating a temporary User object for ID {target_arg}")
-             target_user = User(id=int(target_arg), first_name=f"User {target_arg}", is_bot=False)
+             target_user = User(id=int(target_arg), first_name=f"{target_arg}", is_bot=False)
         elif not target_user:
             await update.message.reply_text(f"Could not find user {html.escape(target_arg)}.")
             return
