@@ -1,4 +1,4 @@
-![ZenthronBot](https://github.com/R0Xofficial/ZenthronBot/blob/python-telegram-bot/banner.png)
+![ZenthronBot](https://github.com/R0Xofficial/ZenthronBot/blob/ZenthronBot/banner.png)
 
 # ZenthronBot - An Advanced Moderation & Management Bot
 
