@@ -1860,7 +1860,7 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         target_entity = await resolve_user_with_telethon(context, target_arg)
     
     if not target_entity:
-        await message.reply_text("Usage: /report <ID/@user/reply> [reason]")
+        await message.reply_text("Usage: /report <ID/@username/reply> [reason]")
         return
         
     reason = " ".join(args_for_reason) if args_for_reason else "No specific reason provided."
