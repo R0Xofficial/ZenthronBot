@@ -1199,11 +1199,7 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     try:
         await context.bot.unban_chat_member(chat_id=chat.id, user_id=target_user.id, only_if_banned=True)
         
-        try:
-            full_user_profile = await context.bot.get_chat(target_user.id)
-            user_display_name = full_user_profile.mention_html() or html.escape(full_user_profile.full_name or str(target_user.id))
-        except:
-            user_display_name = f"<code>{target_user.id}</code>"
+        user_display_name = target_user.mention_html() or html.escape(getattr(target_user, 'full_name', '') or f"<code>{target_user.id}</code>")
 
         response_lines = ["Success: User Unbanned", f"<b>• User:</b> {user_display_name} (<code>{target_user.id}</code>)"]
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
@@ -1575,64 +1571,274 @@ async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await message.reply_text(f"Failed to promote user: {html.escape(str(e))}")
 
 async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not await _can_user_perform_action(update, context, 'can_promote_members', "You can't demote users.", priv_override=False): return
-    target, _ = await _resolve_mod_target(update, context)
-    if not target: await update.message.reply_text("User not found."); return
+    chat = update.effective_chat
+    message = update.effective_message
+    if not message: return
     
-    try:
-        await context.bot.promote_chat_member(
-            update.effective_chat.id, target.id, is_anonymous=False, can_manage_chat=False, can_delete_messages=False,
-            can_manage_video_chats=False, can_restrict_members=False, can_promote_members=False,
-            can_change_info=False, can_invite_users=False, can_pin_messages=False)
-        await update.message.reply_html(f"✅ User {target.mention_html()} demoted.")
-    except Exception as e: await update.message.reply_text(f"Failed to demote: {e}")
+    if chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP]:
+        await message.reply_text("Users can only be demoted in groups and supergroups.")
+        return
 
-async def pin_message_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not await _can_user_perform_action(update, context, 'can_pin_messages', "You can't pin messages."): return
-    if not update.message.reply_to_message: await update.message.reply_text("Reply to a message to pin it."); return
-    notify = context.args and context.args[0].lower() in ["loud", "notify"]
     try:
-        await context.bot.pin_chat_message(update.effective_chat.id, update.message.reply_to_message.message_id, disable_notification=not notify)
-        await send_safe_reply(update, context, text=f"✅ Message pinned{' with notification' if notify else ''}!")
-    except Exception as e: await send_safe_reply(update, context, text=f"Failed to pin: {e}")
+        bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
+        if not (bot_member.status == "administrator" and getattr(bot_member, 'can_promote_members', False)):
+            await send_safe_reply(update, context, text="Error: I need to be an admin with rights to manage admin privileges in this chat.")
+            return
+    except TelegramError:
+        await send_safe_reply(update, context, text="Error: Couldn't verify my own permissions in this chat.")
+        return
+
+    if not await _can_user_perform_action(
+        update, context, 'can_promote_members',
+        "Error: You need to be the chat creator or an admin with 'Promote Members' rights to use this command.",
+        allow_bot_privileged_override=False
+    ):
+        return
+    
+    target_user: User | None = None
+
+    if message.reply_to_message and message.reply_to_message.from_user:
+        target_user = message.reply_to_message.from_user
+    elif context.args:
+        target_arg = context.args[0]
+        try:
+            if target_arg.startswith("@"):
+                chat_info = await context.bot.get_chat(target_arg)
+            else:
+                chat_info = await context.bot.get_chat(int(target_arg))
+            
+            if chat_info.type == 'private':
+                 target_user = User(id=chat_info.id, first_name=chat_info.first_name, is_bot=False, username=chat_info.username, last_name=chat_info.last_name)
+            else:
+                await message.reply_text("Demotion can only be applied to users.")
+                return
+        except (ValueError, TelegramError):
+            await message.reply_text("Could not find that user.")
+            return
+    else:
+        await message.reply_text("Usage: /demote <ID/@username/reply>")
+        return
+
+    if not target_user: await message.reply_text("Could not identify user to demote."); return
+        
+    if target_user.id == context.bot.id:
+        await message.reply_text("I can't demote myself.")
+        return
+
+    try:
+        target_chat_member = await context.bot.get_chat_member(chat.id, target_user.id)
+        user_display = target_user.mention_html()
+
+        if target_chat_member.status == "creator":
+            await message.reply_html(f"The chat Creator cannot be demoted."); return
+        
+        if target_chat_member.status != "administrator":
+            await message.reply_html(f"ℹ️ User {user_display} is not an administrator."); return
+
+        if not target_chat_member.can_be_edited:
+            await message.reply_html(f"❌ I do not have sufficient rights to demote {user_display}. This usually means they were promoted by the Creator or by another admin.")
+            return
+
+        await context.bot.promote_chat_member(
+            chat_id=chat.id, user_id=target_user.id,
+            is_anonymous=False, can_manage_chat=False, can_delete_messages=False,
+            can_manage_video_chats=False, can_restrict_members=False, can_promote_members=False,
+            can_change_info=False, can_invite_users=False, can_pin_messages=False, can_manage_topics=False
+        )
+        await message.reply_html(f"✅ User {user_display} has been demoted to a regular member.")
+
+    except TelegramError as e:
+        if "user not found" in str(e).lower():
+            await message.reply_text("User not found in this chat.")
+        else:
+            logger.error(f"Error during demotion: {e}")
+            await message.reply_text(f"Failed to demote user. Reason: {html.escape(str(e))}")
+            
+async def pin_message_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+    user_who_pins = update.effective_user
+    message_to_pin = update.message.reply_to_message
+
+    if chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP, ChatType.CHANNEL]:
+        await update.message.reply_text("Messages can only be pinned in groups, supergroups, or channels.")
+        return
+
+    if not message_to_pin:
+        await update.message.reply_text("Please use this command by replying to the message you want to pin.")
+        return
+
+    try:
+        bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
+        if not (bot_member.status == "administrator" and getattr(bot_member, 'can_pin_messages', False)):
+            await update.message.reply_text("Error: I need to be an admin with the 'Pin Messages' permission in this chat to do that.")
+            return
+    except TelegramError as e:
+        logger.error(f"Error checking bot's own permissions in /pin for chat {chat.id}: {e}")
+        await update.message.reply_text("Error: Couldn't verify my own permissions in this chat.")
+        return
+        
+    if not await _can_user_perform_action(update, context, 'can_pin_messages', "Error: You need to be an admin with 'Pin Messages' permission in this chat to use this command."):
+        return
+
+    disable_notification = True
+    pin_mode_text = ""
+
+    if context.args and context.args[0].lower() in ["loud", "notify"]:
+        disable_notification = False
+        pin_mode_text = " with notification"
+        logger.info(f"User {user_who_pins.id} requested loud pin in chat {chat.id}")
+    else:
+        logger.info(f"User {user_who_pins.id} requested silent pin (default) in chat {chat.id}")
+
+
+    try:
+        await context.bot.pin_chat_message(
+            chat_id=chat.id,
+            message_id=message_to_pin.message_id,
+            disable_notification=disable_notification
+        )
+        logger.info(f"User {user_who_pins.id} pinned message {message_to_pin.message_id} in chat {chat.id}. Notification: {'Disabled' if disable_notification else 'Enabled'}")
+        
+        await send_safe_reply(update, context, text=f"✅ Message pinned{pin_mode_text}!")
+
+    except TelegramError as e:
+        logger.error(f"Failed to pin message in chat {chat.id}: {e}")
+        error_message = str(e)
+        if "message to pin not found" in error_message.lower():
+            await send_safe_reply(update, context, text="Error: I can't find the message you replied to. Maybe it was deleted?")
+        elif "not enough rights" in error_message.lower() or "not admin" in error_message.lower():
+             await send_safe_reply(update, context, text="Error: It seems I don't have enough rights to pin messages, or the target message cannot be pinned by me.")
+        else:
+            await send_safe_reply(update, context, text=f"Failed to pin message: {html.escape(error_message)}")
+    except Exception as e:
+        logger.error(f"Unexpected error in /pin: {e}", exc_info=True)
+        await send_safe_reply(update, context, text="An unexpected error occurred while trying to pin the message.")
 
 async def unpin_message_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not await _can_user_perform_action(update, context, 'can_pin_messages', "You can't unpin messages."): return
-    if not update.message.reply_to_message: await update.message.reply_text("Reply to a pinned message to unpin it."); return
+    chat = update.effective_chat
+    message_to_unpin = update.message.reply_to_message
+
+    if chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP, ChatType.CHANNEL]:
+        await update.message.reply_text("Messages can only be unpinned in groups, supergroups, or channels.")
+        return
+        
+    if not message_to_unpin:
+        await update.message.reply_text("Please reply to a pinned message to unpin it.")
+        return
+
     try:
-        await context.bot.unpin_chat_message(update.effective_chat.id, message_id=update.message.reply_to_message.message_id)
-        await update.message.reply_text("✅ Message unpinned.", quote=False)
-    except Exception as e: await update.message.reply_text(f"Failed to unpin: {e}")
+        bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
+        if not (bot_member.status == ChatMemberStatus.ADMINISTRATOR and getattr(bot_member, 'can_pin_messages', False)):
+            await update.message.reply_text("Error: I need to be an admin with the 'Pin Messages' permission to do that.")
+            return
+    except TelegramError as e:
+        logger.error(f"Error checking bot's own permissions in /unpin for chat {chat.id}: {e}")
+        await update.message.reply_text("Error: Couldn't verify my own permissions in this chat.")
+        return
+
+    if not await _can_user_perform_action(update, context, 'can_pin_messages', "Error: You need to be an admin with 'Pin Messages' permission to use this command."):
+        return
+
+    try:
+        await context.bot.unpin_chat_message(
+            chat_id=chat.id,
+            message_id=message_to_unpin.message_id
+        )
+        await update.message.reply_text("✅ Message unpinned successfully!", quote=False)
+        
+    except TelegramError as e:
+        logger.error(f"Failed to unpin message {message_to_unpin.message_id} in chat {chat.id}: {e}")
+        error_message = str(e)
+        if "message not found" in error_message.lower() or "message to unpin not found" in error_message.lower():
+             await update.message.reply_text("Error: The message you replied to is not pinned or I can't find it.")
+        else:
+            await update.message.reply_text(f"Failed to unpin message: {html.escape(error_message)}")
+    except Exception as e:
+        logger.error(f"Unexpected error in /unpin: {e}", exc_info=True)
+        await update.message.reply_text("An unexpected error occurred while trying to unpin the message.")
 
 async def purge_messages_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not await _can_user_perform_action(update, context, 'can_delete_messages', "You can't delete messages."): return
-    if not update.message.reply_to_message: await update.message.reply_text("Reply to a message to start purging from."); return
-    
-    start_id = update.message.reply_to_message.message_id; end_id = update.message.message_id
-    message_ids = list(range(start_id, end_id + 1))
-    silent = context.args and context.args[0].lower() == "silent"
-    errors = False
-    
-    for i in range(0, len(message_ids), 100):
-        batch = message_ids[i:i + 100]
-        try:
-            if not await context.bot.delete_messages(update.effective_chat.id, batch): errors = True
-        except Exception: errors = True; break
-        await asyncio.sleep(1.1)
-    
-    if not silent:
-        msg = "✅ Purge complete." + ("\n(Some messages may not have been deleted)" if errors else "")
-        await context.bot.send_message(update.effective_chat.id, msg)
+    chat = update.effective_chat
+    user_who_purges = update.effective_user
+    command_message = update.message
+    replied_to_message = update.message.reply_to_message
 
-async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.effective_chat.type == ChatType.PRIVATE: await update.message.reply_text("Command for groups only."); return
-    target, args = await _resolve_mod_target(update, context)
-    if not target: await update.message.reply_text("User not found or not specified."); return
-    reason = " ".join(args) or "No reason provided."
-    await send_safe_reply(update, context, text=f"📢 <b>Report for Admins</b>\n\n"
-                                             f"<b>Reported:</b> {target.mention_html()}\n"
-                                             f"<b>Reason:</b> {html.escape(reason)}\n"
-                                             f"<b>By:</b> {update.effective_user.mention_html()}", parse_mode=ParseMode.HTML)
+    if chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP]:
+        await command_message.reply_text("Messages can only be purged in groups and supergroups.")
+        return
+
+    if not replied_to_message:
+        await context.bot.send_message(chat.id, "Please use this command by replying to the message up to which you want to delete (that message will also be deleted).")
+        return
+
+    try:
+        bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
+        if not (bot_member.status == "administrator" and getattr(bot_member, 'can_delete_messages', False)):
+            await context.bot.send_message(chat.id, "Error: I need to be an admin with the 'Delete Messages' permission in this chat.")
+            return
+    except TelegramError as e:
+        logger.error(f"Error checking bot's own permissions in /purge for chat {chat.id}: {e}")
+        await context.bot.send_message(chat.id, "Error: Couldn't verify my own permissions in this chat.")
+        return
+
+    if not await _can_user_perform_action(update, context, 'can_delete_messages', "Error: You do not have permission to use this command."):
+        return
+
+    is_silent_purge = False
+    if context.args and context.args[0].lower() == "silent":
+        is_silent_purge = True
+        logger.info(f"User {user_who_purges.id} initiated silent purge in chat {chat.id} up to message {replied_to_message.message_id}")
+    else:
+        logger.info(f"User {user_who_purges.id} initiated purge in chat {chat.id} up to message {replied_to_message.message_id}")
+
+    start_message_id = replied_to_message.message_id
+    end_message_id = command_message.message_id
+    message_ids_to_delete = list(range(start_message_id, end_message_id + 1))
+
+    if not message_ids_to_delete or len(message_ids_to_delete) < 1:
+        if not is_silent_purge:
+            await context.bot.send_message(chat.id, "No messages found between your reply and this command to delete.")
+        return
+
+    errors_occurred = False
+    start_time = datetime.now()
+
+    for i in range(0, len(message_ids_to_delete), 100):
+        batch_ids = message_ids_to_delete[i:i + 100]
+        try:
+            success = await context.bot.delete_messages(chat_id=chat.id, message_ids=batch_ids)
+            if not success:
+                errors_occurred = True
+                logger.warning(f"A batch purge in chat {chat.id} failed or partially failed.")
+            if len(message_ids_to_delete) > 100 and i + 100 < len(message_ids_to_delete):
+                await asyncio.sleep(1.1)
+        except TelegramError as e:
+            logger.error(f"TelegramError during purge batch in chat {chat.id}: {e}")
+            errors_occurred = True
+            if not is_silent_purge:
+                await context.bot.send_message(chat.id, text=f"Error occurred: {html.escape(str(e))}. Purge stopped.")
+            break
+        except Exception as e:
+            logger.error(f"Unexpected error during purge batch in chat {chat.id}: {e}", exc_info=True)
+            errors_occurred = True
+            if not is_silent_purge:
+                await context.bot.send_message(chat.id, text="An unexpected error occurred. Purge stopped.")
+            break
+
+    end_time = datetime.now()
+    duration_secs = (end_time - start_time).total_seconds()
+
+    if not is_silent_purge:
+        final_message_text = f"✅ Purge completed in <code>{duration_secs:.2f}s</code>."
+        if errors_occurred:
+            final_message_text += "\nSome messages may not have been deleted (e.g., older than 48h or service messages)."
+
+        try:
+            await context.bot.send_message(chat_id=chat.id, text=final_message_text, parse_mode=ParseMode.HTML)
+        except Exception as e_send_final:
+            logger.error(f"Purge: Failed to send final purge status message: {e_send_final}")
+    else:
+        logger.info(f"Silent purge completed in chat {chat.id}. Duration: {duration_secs:.2f}s. Errors occurred: {errors_occurred}")
 
 async def _handle_action_command(update, context, texts, gifs, name, req_target=True, msg=""):
     target_mention = None
@@ -2459,11 +2665,7 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         return
     
     if is_sudo_user(target_user.id):
-        try:
-            full_user_profile = await context.bot.get_chat(target_user.id)
-            user_display = full_user_profile.mention_html() or html.escape(full_user_profile.full_name)
-        except:
-            user_display = f"<code>{target_user.id}</code>"
+        user_display = target_user.mention_html() or html.escape(getattr(target_user, 'full_name', '') or f"<code>{target_user.id}</code>")
         
         if user.id == OWNER_ID:
             await message.reply_html(
@@ -2475,20 +2677,12 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         return
 
     if is_user_blacklisted(target_user.id):
-        try:
-            full_user_profile = await context.bot.get_chat(target_user.id)
-            user_display = full_user_profile.mention_html() or html.escape(full_user_profile.full_name)
-        except:
-            user_display = f"<code>{target_user.id}</code>"
+        user_display = target_user.mention_html() or html.escape(getattr(target_user, 'full_name', '') or f"<code>{target_user.id}</code>")
         await message.reply_html(f"ℹ️ User {user_display} is already on the blacklist.")
         return
 
     if add_to_blacklist(target_user.id, user.id, reason):
-        try:
-            full_user_profile = await context.bot.get_chat(target_user.id)
-            user_display = full_user_profile.mention_html() or html.escape(full_user_profile.full_name)
-        except:
-            user_display = f"<code>{target_user.id}</code>"
+        user_display = target_user.mention_html() or html.escape(getattr(target_user, 'full_name', '') or f"<code>{target_user.id}</code>")
             
         await message.reply_html(f"✅ User {user_display} has been added to the blacklist.\nReason: {html.escape(reason)}")
         
@@ -2542,11 +2736,7 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
         await update.message.reply_text("The Owner is never on the blacklist.")
         return
 
-    try:
-        full_user_profile = await context.bot.get_chat(target_user.id)
-        user_display = full_user_profile.mention_html() or html.escape(full_user_profile.full_name)
-    except:
-        user_display = f"<code>{target_user.id}</code>"
+    user_display = target_user.mention_html() or html.escape(getattr(target_user, 'full_name', '') or f"<code>{target_user.id}</code>")
 
     if not is_user_blacklisted(target_user.id):
         await update.message.reply_html(f"ℹ️ User {user_display} is not on the blacklist.")
@@ -2655,11 +2845,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     add_to_gban(target_user.id, user_who_gbans.id, reason)
     
-    try:
-        full_user_profile = await context.bot.get_chat(target_user.id)
-        user_display = full_user_profile.mention_html() or html.escape(full_user_profile.full_name)
-    except:
-        user_display = f"<code>{target_user.id}</code>"
+    user_display = target_user.mention_html() or html.escape(getattr(target_user, 'full_name', '') or f"<code>{target_user.id}</code>")
     
     if chat.type != ChatType.PRIVATE:
         try:
@@ -2675,13 +2861,8 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     try:
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         
-        try:
-            full_user_for_log = await context.bot.get_chat(target_user.id)
-            target_username = f"@{html.escape(full_user_for_log.username)}" if full_user_for_log.username else "N/A"
-            log_user_display = full_user_for_log.mention_html() or html.escape(full_user_for_log.full_name)
-        except:
-            target_username = "N/A"
-            log_user_display = f"<code>{target_user.id}</code>"
+        target_username = f"@{html.escape(target_user.username)}" if target_user.username else "N/A"
+        log_user_display = user_display
         
         chat_name_display = html.escape(chat.title or f"PM with {user_who_gbans.first_name}")
         if chat.type != ChatType.PRIVATE and chat.username:
@@ -2732,11 +2913,7 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not target_user:
         await message.reply_text("Could not identify the user to ungban."); return
 
-    try:
-        full_user_profile = await context.bot.get_chat(target_user.id)
-        user_display = full_user_profile.mention_html() or html.escape(full_user_profile.full_name)
-    except:
-        user_display = f"<code>{target_user.id}</code>"
+    user_display = target_user.mention_html() or html.escape(getattr(target_user, 'full_name', '') or f"<code>{target_user.id}</code>")
 
     if not get_gban_reason(target_user.id):
         await message.reply_html(f"User {user_display} is not globally banned.")
@@ -2763,11 +2940,7 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         chat_name = chat.title or f"PM with {user_who_ungbans.first_name}"
         log_user_display = user_display
         
-        try:
-             full_user_for_log = await context.bot.get_chat(target_user.id)
-             username_for_log = f"@{html.escape(full_user_for_log.username)}" if full_user_for_log.username else "N/A"
-        except:
-             username_for_log = "N/A"
+        username_for_log = f"@{html.escape(target_user.username)}" if target_user.username else "N/A"
 
         log_message = (
             f"<b>#UNGBANNED</b>\n"
@@ -2964,11 +3137,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text("Other bots do not need sudo access.")
         return
 
-    try:
-        full_user_profile = await context.bot.get_chat(target_user.id)
-        user_display = full_user_profile.mention_html() or html.escape(full_user_profile.full_name)
-    except:
-        user_display = f"<code>{target_user.id}</code>"
+    user_display = target_user.mention_html() or html.escape(getattr(target_user, 'full_name', '') or f"<code>{target_user.id}</code>")
     
     if is_sudo_user(target_user.id):
         await update.message.reply_html(f"User {user_display} already has sudo powers.")
@@ -2986,13 +3155,8 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
             
-            try:
-                full_user_for_log = await context.bot.get_chat(target_user.id)
-                log_user_display = full_user_for_log.mention_html() or html.escape(full_user_for_log.full_name)
-                username_for_log = f"@{html.escape(full_user_for_log.username)}" if full_user_for_log.username else 'N/A'
-            except:
-                log_user_display = f"<code>{target_user.id}</code>"
-                username_for_log = 'N/A'
+            log_user_display = user_display
+            username_for_log = f"@{html.escape(target_user.username)}" if target_user.username else 'N/A'
 
             log_message_to_send = (
                 f"<b>#SUDO</b>\n\n"
@@ -3046,11 +3210,7 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text("The Owner's powers are inherent and cannot be revoked.")
         return
     
-    try:
-        full_user_profile = await context.bot.get_chat(target_user.id)
-        user_display = full_user_profile.mention_html() or html.escape(full_user_profile.full_name)
-    except:
-        user_display = f"<code>{target_user.id}</code>"
+    user_display = target_user.mention_html() or html.escape(getattr(target_user, 'full_name', '') or f"<code>{target_user.id}</code>")
 
     if not is_sudo_user(target_user.id):
         await update.message.reply_html(f"User {user_display} does not have sudo powers.")
@@ -3068,13 +3228,8 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
             
-            try:
-                full_user_for_log = await context.bot.get_chat(target_user.id)
-                log_user_display = full_user_for_log.mention_html() or html.escape(full_user_for_log.full_name)
-                username_for_log = f"@{html.escape(full_user_for_log.username)}" if full_user_for_log.username else "N/A"
-            except:
-                log_user_display = f"<code>{target_user.id}</code>"
-                username_for_log = "N/A"
+            log_user_display = user_display
+            username_for_log = f"@{html.escape(target_user.username)}" if target_user.username else "N/A"
 
             log_message_to_send = (
                 f"<b>#UNSUDO</b>\n\n"
