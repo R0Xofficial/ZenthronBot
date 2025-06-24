@@ -511,21 +511,13 @@ def telethon_entity_to_ptb_user(entity: 'TelethonUser') -> User | None:
     if not isinstance(entity, TelethonUser):
         return None
     
-    full_name_parts = []
-    if entity.first_name:
-        full_name_parts.append(entity.first_name)
-    if entity.last_name:
-        full_name_parts.append(entity.last_name)
-    full_name_str = " ".join(full_name_parts).strip()
-
     return User(
         id=entity.id,
         first_name=entity.first_name or "",
         is_bot=entity.bot or False,
         last_name=entity.last_name,
         username=entity.username,
-        language_code=getattr(entity, 'lang_code', None),
-        full_name=full_name_str
+        language_code=getattr(entity, 'lang_code', None)
     )
 
 async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_input: str) -> User | Chat | None:
