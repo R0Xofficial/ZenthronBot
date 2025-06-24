@@ -530,41 +530,52 @@ def telethon_entity_to_ptb_user(entity: 'TelethonUser') -> User | None:
 
 async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_input: str) -> User | Chat | None:
     identifier: str | int = target_input
-    try: identifier = int(target_input)
-    except ValueError: pass
-    
-    if isinstance(identifier, int):
-        user_from_db = get_user_from_db_by_id(identifier)
-        if user_from_db: return user_from_db
-    elif identifier.startswith('@'):
-        user_from_db = get_user_from_db_by_username(identifier)
-        if user_from_db: return user_from_db
-
-    if 'telethon_client' not in context.bot_data: return None
-    telethon_client: 'TelegramClient' = context.bot_data['telethon_client']
-    
     try:
-        logger.info(f"Resolving '{target_input}' using Telethon as fallback...")
-        entity_from_telethon = await telethon_client.get_entity(target_input)
-        
-        if isinstance(entity_from_telethon, TelethonUser):
-            ptb_user = telethon_entity_to_ptb_user(entity_from_telethon)
-            if ptb_user:
-                update_user_in_db(ptb_user)
-                return ptb_user
-        
-        elif isinstance(entity_from_telethon, (TelethonChannel)):
-            try:
+        identifier = int(target_input)
+    except ValueError:
+        pass
+
+    if isinstance(identifier, int):
+        entity_from_db = get_user_from_db_by_id(identifier)
+    else:
+        entity_from_db = get_user_from_db_by_username(identifier)
+    
+    if entity_from_db:
+        logger.info(f"Resolved '{target_input}' from local database.")
+        return entity_from_db
+
+    if 'telethon_client' in context.bot_data:
+        telethon_client: 'TelegramClient' = context.bot_data['telethon_client']
+        try:
+            logger.info(f"Resolving '{target_input}' using Telethon...")
+            entity_from_telethon = await telethon_client.get_entity(target_input)
+            
+            if isinstance(entity_from_telethon, TelethonUser):
+                ptb_user = telethon_entity_to_ptb_user(entity_from_telethon)
+                if ptb_user:
+                    update_user_in_db(ptb_user)
+                    return ptb_user
+            
+            elif isinstance(entity_from_telethon, (TelethonChannel)):
                 ptb_chat = await context.bot.get_chat(entity_from_telethon.id)
                 add_chat_to_db(ptb_chat.id, ptb_chat.title)
                 return ptb_chat
-            except Exception as e:
-                logger.error(f"Failed to get_chat for a channel found by Telethon: {e}")
-                return None
 
-    except Exception:
-        return None
-        
+        except Exception as e:
+            logger.warning(f"Telethon couldn't resolve '{target_input}': {e}. Trying PTB API as a final fallback.")
+
+    try:
+        logger.info(f"Final fallback: Trying to resolve '{target_input}' with PTB's get_chat.")
+        ptb_entity = await context.bot.get_chat(target_input)
+        if ptb_entity:
+            if isinstance(ptb_entity, User):
+                update_user_in_db(ptb_entity)
+            elif isinstance(ptb_entity, Chat):
+                add_chat_to_db(ptb_entity.id, ptb_entity.title)
+            return ptb_entity
+    except Exception as e:
+        logger.error(f"All resolving methods failed for '{target_input}'. Final error: {e}")
+
     return None
 
 def get_readable_time_delta(delta: timedelta) -> str:
