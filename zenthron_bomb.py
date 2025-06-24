@@ -958,7 +958,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             try:
                 target_entity = await context.bot.get_chat(target_input)
             except Exception:
-                await update.message.reply_text(f"Error: Could not find or resolve the specified user/entity.")
+                await update.message.reply_text(f"Error: Could not find user. Make sure you entered the details correctly.")
                 return
     else:
         target_entity = update.message.sender_chat or update.effective_user
