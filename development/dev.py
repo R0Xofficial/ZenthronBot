@@ -895,118 +895,59 @@ def format_entity_info(entity: Chat | User,
     return "\n".join(info_lines)
 
 async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    target_entity_obj: Chat | User | None = None
-    initial_entity_id_for_refresh: int | None = None
+    target_entity: Chat | User | None = None
     
-    current_chat_id = update.effective_chat.id
-
-    if update.effective_user:
-        update_user_in_db(update.effective_user)
-
     if update.message.reply_to_message:
-        if update.message.reply_to_message.sender_chat:
-            target_entity_obj = update.message.reply_to_message.sender_chat
-        else:
-            target_entity_obj = update.message.reply_to_message.from_user
-            if target_entity_obj:
-                update_user_in_db(target_entity_obj)
+        target_entity = update.message.reply_to_message.sender_chat or update.message.reply_to_message.from_user
     elif context.args:
-        target_input_str = context.args[0]
+        target_input = context.args[0]
+        target_entity = await resolve_user_with_telethon(context, target_input)
         
-        if 'telethon_client' in context.bot_data:
-            telethon_client: 'TelegramClient' = context.bot_data['telethon_client']
+        if not target_entity and (target_input.isdigit() or (target_input.startswith('-') and target_input[1:].isdigit())):
             try:
-                entity_from_telethon = await telethon_client.get_entity(target_input_str)
-                
-                if isinstance(entity_from_telethon, TelethonUser):
-                    target_entity_obj = telethon_entity_to_ptb_user(entity_from_telethon)
-                elif isinstance(entity_from_telethon, (TelethonChannel)):
-                    target_entity_obj = await context.bot.get_chat(entity_from_telethon.id)
-
-            except Exception as e:
-                logger.warning(f"Telethon couldn't resolve '{target_input_str}' for /info: {e}")
+                target_entity = await context.bot.get_chat(int(target_input))
+            except Exception:
+                logger.warning(f"PTB also failed to get_chat for ID {target_input}. Creating a minimal object.")
                 try:
-                    target_entity_obj = await context.bot.get_chat(target_input_str)
-                except:
-                    await update.message.reply_text(f"Error: Couldn't find any user or channel for '{html.escape(target_input_str)}'.")
+                    target_entity = User(id=int(target_input), first_name=f"ID: {target_input}", is_bot=False)
+                except ValueError:
+                    await update.message.reply_text(f"Error: Invalid ID format '{html.escape(target_input)}'.")
                     return
-        else:
-            try:
-                target_entity_obj = await context.bot.get_chat(target_input_str)
-            except:
-                await update.message.reply_text(f"Error: Couldn't find any user or channel for '{html.escape(target_input_str)}'.")
-                return
-    else:
-        target_entity_obj = update.effective_user
-        if target_entity_obj:
-            update_user_in_db(target_entity_obj)
 
-    if not target_entity_obj:
-        await update.message.reply_text("Error: Couldn't determine what to get info for.")
+    else:
+        target_entity = update.effective_user
+
+    if not target_entity:
+        await update.message.reply_text("Error: Could not find or resolve the specified user/entity.")
         return
-    
-    initial_entity_id_for_refresh = target_entity_obj.id
-    final_entity_to_display: Chat | User | None = target_entity_obj
-    
-    is_target_owner_flag = False
-    is_target_sudo_flag = False
+
+    if isinstance(target_entity, User):
+        update_user_in_db(target_entity)
+
+    is_target_owner_flag = (target_entity.id == OWNER_ID)
+    is_target_sudo_flag = is_sudo_user(target_entity.id)
+    blacklist_reason_str = get_blacklist_reason(target_entity.id)
+    gban_reason_str = get_gban_reason(target_entity.id)
     member_status_in_current_chat_str: str | None = None
-    blacklist_reason_str: str | None = None
-    gban_reason_str: str | None = None
-
-    try:
-        fresh_data_chat_obj = await context.bot.get_chat(chat_id=initial_entity_id_for_refresh)
-        
-        is_user_like = isinstance(final_entity_to_display, User) or (hasattr(fresh_data_chat_obj, 'type') and fresh_data_chat_obj.type == ChatType.PRIVATE)
-
-        if is_user_like:
-            refreshed_user = User(
-                id=fresh_data_chat_obj.id,
-                first_name=fresh_data_chat_obj.first_name or "",
-                last_name=fresh_data_chat_obj.last_name,
-                username=fresh_data_chat_obj.username,
-                is_bot=getattr(fresh_data_chat_obj, 'is_bot', False),
-                language_code=getattr(fresh_data_chat_obj, 'language_code', None)
-            )
-            update_user_in_db(refreshed_user)
-            final_entity_to_display = refreshed_user
-            
-            is_target_owner_flag = (OWNER_ID is not None and final_entity_to_display.id == OWNER_ID)
-            if not is_target_owner_flag:
-                 is_target_sudo_flag = is_sudo_user(final_entity_to_display.id)
-            
-            blacklist_reason_str = get_blacklist_reason(final_entity_to_display.id)
-            gban_reason_str = get_gban_reason(final_entity_to_display.id)
-
-            if current_chat_id != final_entity_to_display.id and update.effective_chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
-                try:
-                    chat_member = await context.bot.get_chat_member(chat_id=current_chat_id, user_id=final_entity_to_display.id)
-                    member_status_in_current_chat_str = chat_member.status
-                except TelegramError as e:
-                    if "user not found" in str(e).lower(): member_status_in_current_chat_str = "not_a_member"
-                    else: logger.warning(f"Could not get status for {final_entity_to_display.id}: {e}")
-        else:
-            final_entity_to_display = fresh_data_chat_obj
-    except TelegramError as e:
-        logger.warning(f"Could not refresh entity data for {initial_entity_id_for_refresh} from API: {e}. Using initial data.")
-
-    if final_entity_to_display:
-        info_message = format_entity_info(
-            final_entity_to_display, 
-            member_status_in_current_chat_str, 
-            is_target_owner_flag, 
-            is_target_sudo_flag, 
-            blacklist_reason_str, 
-            gban_reason_str,
-            current_chat_id, 
-            context
-        )
+    
+    if isinstance(target_entity, User) and update.effective_chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
         try:
-            await update.message.reply_html(info_message)
-        except Exception as e_reply:
-            logger.error(f"Failed to send /info reply in chat {update.effective_chat.id}: {e_reply}")
-    else:
-        await update.message.reply_text("Error: Could not obtain entity details to display.")
+            chat_member = await context.bot.get_chat_member(update.effective_chat.id, target_entity.id)
+            member_status_in_current_chat_str = chat_member.status
+        except TelegramError:
+            member_status_in_current_chat_str = "not_a_member"
+            
+    info_message = format_entity_info(
+        entity=target_entity,
+        chat_member_status_str=member_status_in_current_chat_str,
+        is_target_owner=is_target_owner_flag,
+        is_target_sudo=is_target_sudo_flag,
+        blacklist_reason_str=blacklist_reason_str,
+        gban_reason_str=gban_reason_str,
+        current_chat_id_for_status=update.effective_chat.id
+    )
+    
+    await update.message.reply_html(info_message, disable_web_page_preview=True)
         
 async def list_admins_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
