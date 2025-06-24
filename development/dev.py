@@ -1840,6 +1840,43 @@ async def purge_messages_command(update: Update, context: ContextTypes.DEFAULT_T
     else:
         logger.info(f"Silent purge completed in chat {chat.id}. Duration: {duration_secs:.2f}s. Errors occurred: {errors_occurred}")
 
+async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+    reporter = update.effective_user
+    message = update.effective_message
+
+    if not message or chat.type == ChatType.PRIVATE:
+        await message.reply_text("This command can only be used in groups.")
+        return
+
+    target_entity = await resolve_target_entity(update, context)
+    
+    if not target_entity:
+        if not context.args:
+            await message.reply_text("Usage: /report <ID/@user/reply> [reason]")
+        return
+        
+    reason_args = context.args[1:] if context.args and not message.reply_to_message else context.args
+    reason = " ".join(reason_args) if reason_args else "No specific reason provided."
+    
+    reporter_mention = reporter.mention_html()
+    
+    if isinstance(target_entity, User) or target_entity.type == ChatType.PRIVATE:
+        target_display = target_entity.mention_html()
+        entity_type_label = "User"
+    else:
+        target_display = html.escape(target_entity.title or f"User {target_entity.id}")
+        entity_type_label = target_entity.type.capitalize()
+
+    report_message = (
+        f"📢 <b>Report for Administrators</b>\n\n"
+        f"<b>Reported {entity_type_label}:</b> {target_display} (<code>{target_entity.id}</code>)\n"
+        f"<b>Reason:</b> {html.escape(reason)}\n"
+        f"<b>Reported by:</b> {reporter_mention}"
+    )
+
+    await send_safe_reply(update, context, text=report_message, parse_mode=ParseMode.HTML)
+
 async def _handle_action_command(update, context, texts, gifs, name, req_target=True, msg=""):
     target_mention = None
     if req_target:
