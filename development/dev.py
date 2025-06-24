@@ -906,30 +906,28 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
                 update_user_in_db(target_entity_obj)
     elif context.args:
         target_input_str = context.args[0]
-        entity_from_telethon = None
         
         if 'telethon_client' in context.bot_data:
             telethon_client: 'TelegramClient' = context.bot_data['telethon_client']
             try:
                 entity_from_telethon = await telethon_client.get_entity(target_input_str)
+                
+                if isinstance(entity_from_telethon, TelethonUser):
+                    target_entity_obj = telethon_entity_to_ptb_user(entity_from_telethon)
+                elif isinstance(entity_from_telethon, (TelethonChannel)):
+                    target_entity_obj = await context.bot.get_chat(entity_from_telethon.id)
+
             except Exception as e:
                 logger.warning(f"Telethon couldn't resolve '{target_input_str}' for /info: {e}")
-        
-        if entity_from_telethon:
-            try:
-                target_entity_obj = await context.bot.get_chat(entity_from_telethon.id)
-            except Exception as e:
-                 logger.error(f"Could not get_chat for entity found by Telethon {entity_from_telethon.id}: {e}")
-                 await update.message.reply_text(f"Error: Found entity for '{html.escape(target_input_str)}' but couldn't fetch its full details.")
-                 return
-        else:
-            if target_input_str.isdigit() or (target_input_str.startswith('-') and target_input_str[1:].isdigit()):
-                 try:
-                    target_entity_obj = await context.bot.get_chat(int(target_input_str))
-                 except:
+                try:
+                    target_entity_obj = await context.bot.get_chat(target_input_str)
+                except:
                     await update.message.reply_text(f"Error: Couldn't find any user or channel for '{html.escape(target_input_str)}'.")
                     return
-            else:
+        else:
+            try:
+                target_entity_obj = await context.bot.get_chat(target_input_str)
+            except:
                 await update.message.reply_text(f"Error: Couldn't find any user or channel for '{html.escape(target_input_str)}'.")
                 return
     else:
