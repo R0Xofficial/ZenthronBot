@@ -536,28 +536,8 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
         logger.info(f"Resolved '{target_input}' from local database.")
         return entity_from_db
 
-    if 'telethon_client' in context.bot_data:
-        telethon_client: 'TelegramClient' = context.bot_data['telethon_client']
-        try:
-            logger.info(f"Resolving '{target_input}' using Telethon...")
-            entity_from_telethon = await telethon_client.get_entity(target_input)
-            
-            if isinstance(entity_from_telethon, TelethonUser):
-                ptb_user = telethon_entity_to_ptb_user(entity_from_telethon)
-                if ptb_user:
-                    update_user_in_db(ptb_user)
-                    return ptb_user
-            
-            elif isinstance(entity_from_telethon, (TelethonChannel)):
-                ptb_chat = await context.bot.get_chat(entity_from_telethon.id)
-                add_chat_to_db(ptb_chat.id, ptb_chat.title)
-                return ptb_chat
-
-        except Exception as e:
-            logger.warning(f"Telethon couldn't resolve '{target_input}': {e}. Trying PTB API as a final fallback.")
-
     try:
-        logger.info(f"Final fallback: Trying to resolve '{target_input}' with PTB's get_chat.")
+        logger.info(f"Trying to resolve '{target_input}' with PTB's get_chat.")
         ptb_entity = await context.bot.get_chat(target_input)
         if ptb_entity:
             if isinstance(ptb_entity, User):
@@ -566,10 +546,32 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
                 add_chat_to_db(ptb_entity.id, ptb_entity.title)
             return ptb_entity
     except Exception as e:
-        logger.error(f"All resolving methods failed for '{target_input}'. Final error: {e}")
+        logger.warning(f"PTB's get_chat failed for '{target_input}': {e}. Trying Telethon as a final fallback.")
+
+    if 'telethon_client' not in context.bot_data:
+        return None
+    
+    telethon_client: 'TelegramClient' = context.bot_data['telethon_client']
+    try:
+        logger.info(f"Final fallback: Resolving '{target_input}' using Telethon...")
+        entity_from_telethon = await telethon_client.get_entity(target_input)
+        
+        if isinstance(entity_from_telethon, TelethonUser):
+            ptb_user = telethon_entity_to_ptb_user(entity_from_telethon)
+            if ptb_user:
+                update_user_in_db(ptb_user)
+                return ptb_user
+        
+        elif isinstance(entity_from_telethon, (TelethonChannel)):
+            ptb_chat = await context.bot.get_chat(entity_from_telethon.id)
+            add_chat_to_db(ptb_chat.id, ptb_chat.title)
+            return ptb_chat
+
+    except Exception as e:
+        logger.error(f"All resolving methods failed for '{target_input}'. Final Telethon error: {e}")
 
     return None
-
+    
 def get_readable_time_delta(delta: timedelta) -> str:
     total_seconds = int(delta.total_seconds())
     if total_seconds < 0: 
@@ -726,6 +728,17 @@ async def get_themed_gif(context: ContextTypes.DEFAULT_TYPE, search_terms: list[
     except Exception as e: logger.error(f"Unexpected error in get_themed_gif for '{search_term}': {e}", exc_info=True)
     
     return None
+
+def create_user_html_link(user: User) -> str:
+    display_text = getattr(user, 'full_name', '').strip()
+    
+    if not display_text:
+        display_text = getattr(user, 'first_name', '').strip()
+    
+    if not display_text:
+        display_text = str(user.id)
+        
+    return f'<a href="tg://user?id={user.id}">{html.escape(display_text)}</a>'
 
 # --- Command Handlers ---
 HELP_TEXT = """
