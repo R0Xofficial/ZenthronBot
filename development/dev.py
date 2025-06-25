@@ -533,11 +533,10 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
         entity_from_db = get_user_from_db_by_username(identifier)
     
     if entity_from_db:
-        logger.info(f"Resolved '{target_input}' from local database.")
         return entity_from_db
 
     try:
-        logger.info(f"Trying to resolve '{target_input}' with PTB's get_chat.")
+        logger.info(f"Trying to resolve '{target_input}' with PTB")
         ptb_entity = await context.bot.get_chat(target_input)
         if ptb_entity:
             if isinstance(ptb_entity, User):
@@ -546,14 +545,14 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
                 add_chat_to_db(ptb_entity.id, ptb_entity.title)
             return ptb_entity
     except Exception as e:
-        logger.warning(f"PTB's get_chat failed for '{target_input}': {e}. Trying Telethon as a final fallback.")
+        logger.warning(f"PTB failed for '{target_input}': {e}. Trying Telethon...")
 
     if 'telethon_client' not in context.bot_data:
         return None
     
     telethon_client: 'TelegramClient' = context.bot_data['telethon_client']
     try:
-        logger.info(f"Final fallback: Resolving '{target_input}' using Telethon...")
+        logger.info(f"Resolving '{target_input}' using Telethon...")
         entity_from_telethon = await telethon_client.get_entity(target_input)
         
         if isinstance(entity_from_telethon, TelethonUser):
@@ -568,7 +567,7 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
             return ptb_chat
 
     except Exception as e:
-        logger.error(f"All resolving methods failed for '{target_input}'. Final Telethon error: {e}")
+        logger.error(f"All methods failed for '{target_input}'. Final Telethon error: {e}")
 
     return None
     
@@ -963,7 +962,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             try:
                 target_entity = await context.bot.get_chat(target_input)
             except Exception:
-                await update.message.reply_text(f"Error: Could not find or resolve the specified user/entity.")
+                await update.message.reply_text(f"Error: Could not find user. Make sure you entered the details correctly or if I've seen him before")
                 return
     else:
         target_entity = update.message.sender_chat or update.effective_user
@@ -2754,7 +2753,7 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
             log_user_display = user_display
-            pm_message = (f"<b>#BLACKLISTED</b>\n\n<b>User:</b> {log_user_display} (<code>{target_user.id}</code>)\n<b>Username:</b> @{html.escape(target_user.username) if target_user.username else 'N/A'}\n<b>Reason:</b> {html.escape(reason)}\n<b>Admin:</b> {user.mention_html()}\n<b>Date:</b> <code>{current_time}</code>")
+            pm_message = (f"<b>#BLACKLISTED</b>\n\n<b>User:</b> {log_user_display}\n<b>User ID:</b> <code>{target_user.id}</code>\n<b>Reason:</b> {html.escape(reason)}\n<b>Admin:</b> {user.mention_html()}\n<b>Date:</b> <code>{current_time}</code>")
             await send_operational_log(context, pm_message)
         except Exception as e:
             logger.error(f"Error preparing/sending #BLACKLISTED operational log: {e}", exc_info=True)
@@ -2814,7 +2813,7 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
             log_user_display = user_display
-            log_message_to_send = (f"<b>#UNBLACKLISTED</b>\n\n<b>User:</b> {log_user_display} (<code>{target_user.id}</code>)\n<b>Username:</b> @{html.escape(target_user.username) if target_user.username else 'N/A'}\n<b>Admin:</b> {user.mention_html()}\n<b>Date:</b> <code>{current_time}</code>")
+            log_message_to_send = (f"<b>#UNBLACKLISTED</b>\n\n<b>User:</b> {log_user_display}\n<b>User ID:</b> <code>{target_user.id}</code>\n<b>Admin:</b> {user.mention_html()}\n<b>Date:</b> <code>{current_time}</code>")
             await send_operational_log(context, log_message_to_send)
         except Exception as e:
             logger.error(f"Error preparing/sending #UNBLACKLISTED operational log: {e}", exc_info=True)
@@ -2926,7 +2925,6 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     try:
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         
-        target_username = f"@{html.escape(target_user.username)}" if target_user.username else "N/A"
         log_user_display = user_display
         
         chat_name_display = html.escape(chat.title or f"PM with {user_who_gbans.first_name}")
@@ -2939,8 +2937,8 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         log_message = (
             f"<b>#GBANNED</b>\n"
             f"<b>Initiated From:</b> {chat_name_display} (<code>{chat.id}</code>)\n\n"
-            f"<b>User:</b> {log_user_display} (<code>{target_user.id}</code>)\n"
-            f"<b>Username:</b> {target_username}\n"
+            f"<b>User:</b> {log_user_display}\n"
+            f"<b>User ID:</b> <code>{target_user.id}</code>\n"
             f"<b>Reason:</b> {reason_display}\n"
             f"<b>Admin:</b> {user_who_gbans.mention_html()}\n"
             f"<b>Date:</b> <code>{current_time}</code>"
@@ -3004,14 +3002,12 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         chat_name = chat.title or f"PM with {user_who_ungbans.first_name}"
         log_user_display = user_display
-        
-        username_for_log = f"@{html.escape(target_user.username)}" if target_user.username else "N/A"
 
         log_message = (
             f"<b>#UNGBANNED</b>\n"
             f"<b>Initiated From:</b> {html.escape(chat_name)} (<code>{chat.id}</code>)\n\n"
-            f"<b>User:</b> {log_user_display} (<code>{target_user.id}</code>)\n"
-            f"<b>Username:</b> {username_for_log}\n"
+            f"<b>User:</b> {log_user_display}\n"
+            f"<b>User ID:</b> <code>{target_user.id}</code>\n"
             f"<b>Admin:</b> {user_who_ungbans.mention_html()}\n"
             f"<b>Date:</b> <code>{current_time}</code>"
         )
