@@ -2729,7 +2729,7 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         return
     
     if is_sudo_user(target_user.id):
-        user_display = target_user.mention_html() or f'<a href="tg://user?id={target_user.id}">{html.escape(getattr(target_user, "full_name", "") or getattr(target_user, "first_name", "") or str(target_user.id))}</a>'
+        user_display = target_user.mention_html() or html.escape(getattr(target_user, 'full_name', '') or f"<code>{target_user.id}</code>")
         
         if user.id == OWNER_ID:
             await message.reply_html(
@@ -2741,12 +2741,12 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         return
 
     if is_user_blacklisted(target_user.id):
-        user_display = target_user.mention_html() or f'<a href="tg://user?id={target_user.id}">{html.escape(getattr(target_user, "full_name", "") or getattr(target_user, "first_name", "") or str(target_user.id))}</a>'
+        user_display = target_user.mention_html() or html.escape(getattr(target_user, 'full_name', '') or f"<code>{target_user.id}</code>")
         await message.reply_html(f"ℹ️ User {user_display} is already on the blacklist.")
         return
 
     if add_to_blacklist(target_user.id, user.id, reason):
-        user_display = target_user.mention_html() or f'<a href="tg://user?id={target_user.id}">{html.escape(getattr(target_user, "full_name", "") or getattr(target_user, "first_name", "") or str(target_user.id))}</a>'
+        user_display = target_user.mention_html() or html.escape(getattr(target_user, 'full_name', '') or f"<code>{target_user.id}</code>")
             
         await message.reply_html(f"✅ User {user_display} has been added to the blacklist.\nReason: {html.escape(reason)}")
         
@@ -2800,7 +2800,7 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
         await update.message.reply_text("The Owner is never on the blacklist.")
         return
 
-    user_display = target_user.mention_html() or f'<a href="tg://user?id={target_user.id}">{html.escape(getattr(target_user, "full_name", "") or getattr(target_user, "first_name", "") or str(target_user.id))}</a>'
+    user_display = target_user.mention_html() or html.escape(getattr(target_user, 'full_name', '') or f"<code>{target_user.id}</code>")
 
     if not is_user_blacklisted(target_user.id):
         await update.message.reply_html(f"ℹ️ User {user_display} is not on the blacklist.")
@@ -2909,7 +2909,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     add_to_gban(target_user.id, user_who_gbans.id, reason)
     
-    user_display = target_user.mention_html() or f'<a href="tg://user?id={target_user.id}">{html.escape(getattr(target_user, "full_name", "") or getattr(target_user, "first_name", "") or str(target_user.id))}</a>'
+    user_display = target_user.mention_html() or html.escape(getattr(target_user, 'full_name', '') or f"<code>{target_user.id}</code>")
     
     if chat.type != ChatType.PRIVATE:
         try:
@@ -2976,7 +2976,7 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not target_user:
         await message.reply_text("Could not identify the user to ungban."); return
 
-    user_display = target_user.mention_html() or f'<a href="tg://user?id={target_user.id}">{html.escape(getattr(target_user, "full_name", "") or getattr(target_user, "first_name", "") or str(target_user.id))}</a>'
+    user_display = target_user.mention_html() or html.escape(getattr(target_user, 'full_name', '') or f"<code>{target_user.id}</code>")
 
     if not get_gban_reason(target_user.id):
         await message.reply_html(f"User {user_display} is not globally banned.")
@@ -3198,7 +3198,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text("Other bots do not need sudo access.")
         return
 
-    user_display = target_user.mention_html() or f'<a href="tg://user?id={target_user.id}">{html.escape(getattr(target_user, "full_name", "") or getattr(target_user, "first_name", "") or str(target_user.id))}</a>'
+    user_display = target_user.mention_html() or html.escape(getattr(target_user, 'full_name', '') or f"<code>{target_user.id}</code>")
     
     if is_sudo_user(target_user.id):
         await update.message.reply_html(f"User {user_display} already has sudo powers.")
@@ -3270,7 +3270,7 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text("The Owner's powers are inherent and cannot be revoked.")
         return
     
-    user_display = target_user.mention_html() or f'<a href="tg://user?id={target_user.id}">{html.escape(getattr(target_user, "full_name", "") or getattr(target_user, "first_name", "") or str(target_user.id))}</a>'
+    user_display = target_user.mention_html() or html.escape(getattr(target_user, 'full_name', '') or f"<code>{target_user.id}</code>")
 
     if not is_sudo_user(target_user.id):
         await update.message.reply_html(f"User {user_display} does not have sudo powers.")
