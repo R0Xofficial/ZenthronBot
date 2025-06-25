@@ -3288,7 +3288,6 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
             
             log_user_display = user_display
-            username_for_log = f"@{html.escape(target_user.username)}" if target_user.username else "N/A"
 
             log_message_to_send = (
                 f"<b>#UNSUDO</b>\n\n"
