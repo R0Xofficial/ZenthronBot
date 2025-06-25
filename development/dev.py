@@ -729,17 +729,6 @@ async def get_themed_gif(context: ContextTypes.DEFAULT_TYPE, search_terms: list[
     
     return None
 
-def create_user_html_link(user: User) -> str:
-    display_text = getattr(user, 'full_name', '').strip()
-    
-    if not display_text:
-        display_text = getattr(user, 'first_name', '').strip()
-    
-    if not display_text:
-        display_text = str(user.id)
-        
-    return f'<a href="tg://user?id={user.id}">{html.escape(display_text)}</a>'
-
 # --- Command Handlers ---
 HELP_TEXT = """
 <b>Here are the commands you can use:</b>
