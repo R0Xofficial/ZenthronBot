@@ -3216,12 +3216,11 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
             
             log_user_display = user_display
-            username_for_log = f"@{html.escape(target_user.username)}" if target_user.username else 'N/A'
 
             log_message_to_send = (
                 f"<b>#SUDO</b>\n\n"
-                f"<b>User:</b> {log_user_display} (<code>{target_user.id}</code>)\n"
-                f"<b>Username:</b> {username_for_log}\n"
+                f"<b>User:</b> {log_user_display}\n"
+                f"<b>User ID:</b> {username_for_log}\n"
                 f"<b>Date:</b> <code>{current_time}</code>"
             )
             await send_operational_log(context, log_message_to_send)
@@ -3293,8 +3292,8 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
             log_message_to_send = (
                 f"<b>#UNSUDO</b>\n\n"
-                f"<b>User:</b> {log_user_display} (<code>{target_user.id}</code>)\n"
-                f"<b>Username:</b> {username_for_log}\n"
+                f"<b>User:</b> {log_user_display}\n"
+                f"<b>User ID:</b> <code>{target_user.id}</code>\n"
                 f"<b>Date:</b> <code>{current_time}</code>"
             )
             await send_operational_log(context, log_message_to_send)
