@@ -507,44 +507,69 @@ async def _can_user_perform_action(
 
 # --- Utility Functions ---
 def telethon_entity_to_ptb_user(entity: 'TelethonUser') -> User | None:
-    if not isinstance(entity, TelethonUser): return None
-    return User(id=entity.id, first_name=entity.first_name or "", is_bot=entity.bot or False,
-                last_name=entity.last_name, username=entity.username, language_code=getattr(entity, 'lang_code', None))
-
-async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_input: str) -> User | None:
-    resolved_user: User | None = None
+    if not isinstance(entity, TelethonUser):
+        return None
     
+    return User(
+        id=entity.id,
+        first_name=entity.first_name or "",
+        is_bot=entity.bot or False,
+        last_name=entity.last_name,
+        username=entity.username,
+        language_code=getattr(entity, 'lang_code', None)
+    )
+
+async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_input: str) -> User | Chat | None:
+    identifier: str | int = target_input
     try:
-        user_id = int(target_input)
-        resolved_user = get_user_from_db_by_id(user_id)
-        if resolved_user:
-            return resolved_user
+        identifier = int(target_input)
     except ValueError:
-        if target_input.startswith('@'):
-            resolved_user = get_user_from_db_by_username(target_input)
-            if resolved_user:
-                return resolved_user
+        pass
+
+    if isinstance(identifier, int):
+        entity_from_db = get_user_from_db_by_id(identifier)
+    else:
+        entity_from_db = get_user_from_db_by_username(identifier)
+    
+    if entity_from_db:
+        return entity_from_db
+
+    try:
+        logger.info(f"Trying to resolve '{target_input}' with PTB")
+        ptb_entity = await context.bot.get_chat(target_input)
+        if ptb_entity:
+            if isinstance(ptb_entity, User):
+                update_user_in_db(ptb_entity)
+            elif isinstance(ptb_entity, Chat):
+                add_chat_to_db(ptb_entity.id, ptb_entity.title)
+            return ptb_entity
+    except Exception as e:
+        logger.warning(f"PTB failed for '{target_input}': {e}. Trying Telethon...")
 
     if 'telethon_client' not in context.bot_data:
-        logger.error("Telethon client not available for advanced resolving.")
         return None
     
     telethon_client: 'TelegramClient' = context.bot_data['telethon_client']
     try:
-        logger.info(f"Resolving '{target_input}' using Telethon as fallback...")
-        entity = await telethon_client.get_entity(target_input)
+        logger.info(f"Resolving '{target_input}' using Telethon...")
+        entity_from_telethon = await telethon_client.get_entity(target_input)
         
-        if entity and isinstance(entity, TelethonUser):
-            ptb_user = telethon_entity_to_ptb_user(entity)
+        if isinstance(entity_from_telethon, TelethonUser):
+            ptb_user = telethon_entity_to_ptb_user(entity_from_telethon)
             if ptb_user:
-                logger.info(f"Telethon resolved '{target_input}' to user {ptb_user.id}. Saving to DB.")
                 update_user_in_db(ptb_user)
                 return ptb_user
+        
+        elif isinstance(entity_from_telethon, (TelethonChannel)):
+            ptb_chat = await context.bot.get_chat(entity_from_telethon.id)
+            add_chat_to_db(ptb_chat.id, ptb_chat.title)
+            return ptb_chat
+
     except Exception as e:
-        logger.warning(f"Telethon resolver also failed for '{target_input}': {e}.")
+        logger.error(f"All methods failed for '{target_input}'. Final Telethon error: {e}")
 
     return None
-
+    
 def get_readable_time_delta(delta: timedelta) -> str:
     total_seconds = int(delta.total_seconds())
     if total_seconds < 0: 
@@ -929,24 +954,20 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         target_entity = update.message.reply_to_message.sender_chat or update.message.reply_to_message.from_user
     elif context.args:
         target_input = context.args[0]
+        
         target_entity = await resolve_user_with_telethon(context, target_input)
         
-        if not target_entity and (target_input.isdigit() or (target_input.startswith('-') and target_input[1:].isdigit())):
+        if not target_entity:
             try:
-                target_entity = await context.bot.get_chat(int(target_input))
+                target_entity = await context.bot.get_chat(target_input)
             except Exception:
-                logger.warning(f"PTB also failed to get_chat for ID {target_input}. Creating a minimal object.")
-                try:
-                    target_entity = User(id=int(target_input), first_name=f"{target_input}", is_bot=False)
-                except ValueError:
-                    await update.message.reply_text(f"Error: Invalid ID format '{html.escape(target_input)}'.")
-                    return
-
+                await update.message.reply_text(f"Error: Could not find user. Make sure you entered the details correctly or if I've seen him before")
+                return
     else:
-        target_entity = update.effective_user
+        target_entity = update.message.sender_chat or update.effective_user
 
     if not target_entity:
-        await update.message.reply_text("Error: Could not find or resolve the specified user/entity.")
+        await update.message.reply_text("Error: Could not determine what to get info for.")
         return
 
     if isinstance(target_entity, User):
@@ -964,7 +985,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             member_status_in_current_chat_str = chat_member.status
         except TelegramError:
             member_status_in_current_chat_str = "not_a_member"
-            
+
     info_message = format_entity_info(
         entity=target_entity,
         chat_member_status_str=member_status_in_current_chat_str,
@@ -2731,7 +2752,7 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
             log_user_display = user_display
-            pm_message = (f"<b>#BLACKLISTED</b>\n\n<b>User:</b> {log_user_display} (<code>{target_user.id}</code>)\n<b>Username:</b> @{html.escape(target_user.username) if target_user.username else 'N/A'}\n<b>Reason:</b> {html.escape(reason)}\n<b>Admin:</b> {user.mention_html()}\n<b>Date:</b> <code>{current_time}</code>")
+            pm_message = (f"<b>#BLACKLISTED</b>\n\n<b>User:</b> {log_user_display}\n<b>User ID:</b> <code>{target_user.id}</code>\n<b>Reason:</b> {html.escape(reason)}\n<b>Admin:</b> {user.mention_html()}\n<b>Date:</b> <code>{current_time}</code>")
             await send_operational_log(context, pm_message)
         except Exception as e:
             logger.error(f"Error preparing/sending #BLACKLISTED operational log: {e}", exc_info=True)
@@ -2791,7 +2812,7 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
             log_user_display = user_display
-            log_message_to_send = (f"<b>#UNBLACKLISTED</b>\n\n<b>User:</b> {log_user_display} (<code>{target_user.id}</code>)\n<b>Username:</b> @{html.escape(target_user.username) if target_user.username else 'N/A'}\n<b>Admin:</b> {user.mention_html()}\n<b>Date:</b> <code>{current_time}</code>")
+            log_message_to_send = (f"<b>#UNBLACKLISTED</b>\n\n<b>User:</b> {log_user_display}\n<b>User ID:</b> <code>{target_user.id}</code>\n<b>Admin:</b> {user.mention_html()}\n<b>Date:</b> <code>{current_time}</code>")
             await send_operational_log(context, log_message_to_send)
         except Exception as e:
             logger.error(f"Error preparing/sending #UNBLACKLISTED operational log: {e}", exc_info=True)
@@ -2903,7 +2924,6 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     try:
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         
-        target_username = f"@{html.escape(target_user.username)}" if target_user.username else "N/A"
         log_user_display = user_display
         
         chat_name_display = html.escape(chat.title or f"PM with {user_who_gbans.first_name}")
@@ -2916,8 +2936,8 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         log_message = (
             f"<b>#GBANNED</b>\n"
             f"<b>Initiated From:</b> {chat_name_display} (<code>{chat.id}</code>)\n\n"
-            f"<b>User:</b> {log_user_display} (<code>{target_user.id}</code>)\n"
-            f"<b>Username:</b> {target_username}\n"
+            f"<b>User:</b> {log_user_display}\n"
+            f"<b>User ID:</b> <code>{target_user.id}</code>\n"
             f"<b>Reason:</b> {reason_display}\n"
             f"<b>Admin:</b> {user_who_gbans.mention_html()}\n"
             f"<b>Date:</b> <code>{current_time}</code>"
@@ -2981,14 +3001,12 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         chat_name = chat.title or f"PM with {user_who_ungbans.first_name}"
         log_user_display = user_display
-        
-        username_for_log = f"@{html.escape(target_user.username)}" if target_user.username else "N/A"
 
         log_message = (
             f"<b>#UNGBANNED</b>\n"
             f"<b>Initiated From:</b> {html.escape(chat_name)} (<code>{chat.id}</code>)\n\n"
-            f"<b>User:</b> {log_user_display} (<code>{target_user.id}</code>)\n"
-            f"<b>Username:</b> {username_for_log}\n"
+            f"<b>User:</b> {log_user_display}\n"
+            f"<b>User ID:</b> <code>{target_user.id}</code>\n"
             f"<b>Admin:</b> {user_who_ungbans.mention_html()}\n"
             f"<b>Date:</b> <code>{current_time}</code>"
         )
