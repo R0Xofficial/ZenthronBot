@@ -960,7 +960,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     elif context.args:
         target_input = context.args[0]
         
-        target_entity = await resolve_user_with_telethon(context, target_input)
+        target_entity = await resolve_user_with_telethon(context, target_input, update)
         
         if not target_entity:
             try:
