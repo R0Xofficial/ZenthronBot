@@ -545,7 +545,7 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
                 add_chat_to_db(ptb_entity.id, ptb_entity.title)
             return ptb_entity
     except Exception as e:
-        logger.warning(f"PTB failed for '{target_input}': {e}. Trying Telethon...")
+        logger.warning(f"PTB failed for '{target_input}': {e}.")
 
     if not is_privileged_user(update.effective_user.id):
         logger.warning(f"User {update.effective_user.id} is not privileged to use Telethon search.")
