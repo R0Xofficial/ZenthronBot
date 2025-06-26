@@ -1859,7 +1859,7 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     try:
         reporter_member = await chat.get_member(reporter.id)
-        if reporter_member.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR]:
+        if reporter_member.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
             logger.info(f"Report command ignored: used by admin {reporter.id} in chat {chat.id}.")
             return
     except TelegramError as e:
@@ -1882,7 +1882,7 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     try:
         target_member = await chat.get_member(target_entity.id)
-        if target_member.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR]:
+        if target_member.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
             logger.info(f"Report command ignored: target {target_entity.id} is an admin in chat {chat.id}.")
             return
     except TelegramError as e:
