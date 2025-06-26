@@ -1855,8 +1855,15 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     message = update.message
 
     if not message or chat.type == ChatType.PRIVATE:
-        await message.reply_text("This command can only be used in groups.")
         return
+
+    try:
+        reporter_member = await chat.get_member(reporter.id)
+        if reporter_member.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR]:
+            logger.info(f"Report command ignored: used by admin {reporter.id} in chat {chat.id}.")
+            return
+    except TelegramError as e:
+        logger.warning(f"Could not get status for reporter {reporter.id} in /report: {e}")
 
     target_entity: Chat | User | None = None
     args_for_reason = list(context.args)
@@ -1866,40 +1873,42 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     elif context.args:
         target_input = context.args[0]
         args_for_reason = list(context.args[1:])
-        
         target_entity = await resolve_user_with_telethon(context, target_input, update)
-        
-        if not target_entity and (target_input.isdigit() or (target_input.startswith('-') and target_input[1:].isdigit())):
-            try:
-                target_entity = await context.bot.get_chat(int(target_input))
-            except:
-                logger.warning(f"Could not resolve full profile for ID {target_input} in REPORT. Cannot create a minimal object for this command.")
     
     if not target_entity:
-        await message.reply_text("Usage: /report <ID/@username/reply> [reason]")
         return
         
     reason = " ".join(args_for_reason) if args_for_reason else "No specific reason provided."
-    
+
+    try:
+        target_member = await chat.get_member(target_entity.id)
+        if target_member.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR]:
+            logger.info(f"Report command ignored: target {target_entity.id} is an admin in chat {chat.id}.")
+            return
+    except TelegramError as e:
+        if "user not found" not in str(e).lower():
+            logger.warning(f"Could not get status for target {target_entity.id} in /report: {e}")
+
     reporter_mention = create_user_html_link(reporter)
     
-    is_user = isinstance(target_entity, User) or (isinstance(target_entity, Chat) and target_entity.type == ChatType.PRIVATE)
-    
-    if is_user:
+    if isinstance(target_entity, User) or (isinstance(target_entity, Chat) and target_entity.type == ChatType.PRIVATE):
         target_display = create_user_html_link(target_entity)
-        entity_type_label = "User"
     else:
-        target_display = html.escape(target_entity.title or f"Entity {target_entity.id}")
-        entity_type_label = target_entity.type.capitalize()
+        target_display = html.escape(target_entity.title or f"{target_entity.id}")
 
     report_message = (
-        f"📢 <b>Report for Administrators</b>\n\n"
-        f"<b>Reported {entity_type_label}:</b> {target_display} (<code>{target_entity.id}</code>)\n"
+        f"📢 <b>Report for @admins</b>\n\n"
+        f"<b>Reported User:</b> {target_display} (<code>{target_entity.id}</code>)\n"
         f"<b>Reason:</b> {html.escape(reason)}\n"
         f"<b>Reported by:</b> {reporter_mention}"
     )
 
-    await send_safe_reply(update, context, text=report_message, parse_mode=ParseMode.HTML)
+    await context.bot.send_message(chat_id=chat.id, text=report_message, parse_mode=ParseMode.HTML)
+
+    try:
+        await message.delete()
+    except Exception:
+        logger.warning(f"Could not delete report command message in chat {chat.id}.")
     
 async def _handle_action_command(update, context, texts, gifs, name, req_target=True, msg=""):
     target_mention = None
