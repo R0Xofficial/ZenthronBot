@@ -33,7 +33,7 @@ from telegram.request import HTTPXRequest
 from datetime import datetime, timezone, timedelta
 from texts import (
     KILL_TEXTS, SLAP_TEXTS, PUNCH_TEXTS,
-    OWNER_WELCOME_TEXTS, LEAVE_TEXTS,
+    PAT_TEXTS, BONK_TEXTS, OWNER_WELCOME_TEXTS, LEAVE_TEXTS,
     CANT_TARGET_OWNER_TEXTS, CANT_TARGET_SELF_TEXTS
 )
 
@@ -790,6 +790,8 @@ HELP_TEXT = """
 /kill &lt;@user/reply&gt; - Metaphorically eliminate someone.
 /punch &lt;user/reply&gt; - Deliver a textual punch.
 /slap &lt;@user/reply&gt; - Administer a swift slap.
+/pat &lt;@user/reply&gt; - Gently pats the user to show kindness or comfort.
+/bonk &lt;@user/reply&gt; - Playfully reprimand someone with a bonk.
 """
 
 SUDO_COMMANDS_TEXT = """
@@ -1931,9 +1933,11 @@ async def _handle_action_command(update, context, texts, gifs, name, req_target=
         else: await update.message.reply_html(text)
     except Exception as e: logger.error(f"Error sending {name} action: {e}"); await update.message.reply_html(text)
 
-async def kill(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, KILL_TEXTS, ["gun", "gun shoting"], "kill", True, "Who to 'kill'?")
-async def punch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, PUNCH_TEXTS, ["punch", "hit"], "punch", True, "Who to 'punch'?")
-async def slap(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, SLAP_TEXTS, ["huge slap", "smack"], "slap", True, "Who to slap?")
+async def kill(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, KILL_TEXTS, ["gun", "gun shoting", "anime gun"], "kill", True, "Who to 'kill'?")
+async def punch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, PUNCH_TEXTS, ["punch", "hit", "anime punch"], "punch", True, "Who to 'punch'?")
+async def slap(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, SLAP_TEXTS, ["huge slap", "smack", "anime slap"], "slap", True, "Who to slap?")
+async def pat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, PAT_TEXTS, ["pat", "pat anime", "anime pat"], "pat", True, "Who to pat?")
+async def bonk(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, BONK_TEXTS, ["bonk", "anime bonk"], "bonk", True, "Who to bonk?")
 
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
@@ -3383,6 +3387,8 @@ async def main() -> None:
         application.add_handler(CommandHandler("kill", kill))
         application.add_handler(CommandHandler("punch", punch))
         application.add_handler(CommandHandler("slap", slap))
+        application.add_handler(CommandHandler("pat", pat))
+        application.add_handler(CommandHandler("bonk", bonk))
         application.add_handler(CommandHandler("status", status))
         application.add_handler(CommandHandler("say", say))
         application.add_handler(CommandHandler("leave", leave_chat))
