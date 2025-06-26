@@ -408,6 +408,19 @@ def get_all_sudo_users_from_db() -> List[Tuple[int, str]]:
             conn.close()
     return sudo_list
 
+async def damnbroski(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    special_message = "💀Bro..."
+    
+    await _handle_action_command(
+        update,
+        context,
+        [special_message],
+        ["caught in 4k", "caught in 4k meme"],
+        "damnbroski",
+        False,
+        ""
+    )
+
 def parse_duration_to_timedelta(duration_str: str | None) -> timedelta | None:
     if not duration_str:
         return None
@@ -3389,6 +3402,7 @@ async def main() -> None:
         application.add_handler(CommandHandler("slap", slap))
         application.add_handler(CommandHandler("pat", pat))
         application.add_handler(CommandHandler("bonk", bonk))
+        application.add_handler(CommandHandler("touch", damnbroski))
         application.add_handler(CommandHandler("status", status))
         application.add_handler(CommandHandler("say", say))
         application.add_handler(CommandHandler("leave", leave_chat))
