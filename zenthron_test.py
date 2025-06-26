@@ -2700,21 +2700,26 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         await message.reply_text("Usage: /blist <ID/@user/reply> [reason]"); return
     
     if not target_entity:
-        await message.reply_text("Could not find or resolve the specified user/entity."); return
+        await message.reply_text("Could not identify the user to blacklist.")
+        return
 
     if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
-        await message.reply_text("This action can only be applied to users."); return
+        await message.reply_text("This action can only be applied to users.")
+        return
     if is_privileged_user(target_entity.id) or target_entity.id == context.bot.id:
-        await message.reply_text("This user cannot be blacklisted."); return
+        await message.reply_text("This user cannot be blacklisted.")
+        return
 
     user_display = create_user_html_link(target_entity)
 
     if is_user_blacklisted(target_entity.id):
+        user_display = create_user_html_link(target_entity)
         await message.reply_html(f"ℹ️ User {user_display} is already on the blacklist.")
         return
 
     if add_to_blacklist(target_entity.id, user.id, reason):
-        await message.reply_html(f"✅ User {user_display} has been added to the blacklist.\nReason: {html.escape(reason)}")
+        user_display = create_user_html_link(target_entity)
+        await message.reply_html(f"✅ User {user_display} has been added to the blacklist.\n<b>Reason:</b> {html.escape(reason)}")
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -2860,12 +2865,19 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await message.reply_text("Usage: /gban <ID/@username/reply> [reason]"); return
     
     if not target_entity:
-        await message.reply_text(f"Could not find or resolve the specified user/entity."); return
+        await message.reply_text(f"Could not find or resolve the specified user/entity.");
+        return
 
     if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
-        await message.reply_text("This action can only be applied to users."); return
-    if is_privileged_user(target_entity.id) or target_entity.id == context.bot.id or get_gban_reason(target_entity.id):
-        await message.reply_text("This user is already globally banned or cannot be banned."); return
+        await message.reply_text("This action can only be applied to users.")
+        return
+    if is_privileged_user(target_entity.id) or target_entity.id == context.bot.id:
+        await message.reply_text("This user cannot be globally banned.")
+        return
+    if get_gban_reason(target_entity.id):
+        user_display = create_user_html_link(target_entity)
+        await message.reply_html(f"User {user_display} is already globally banned.")
+        return    
 
     add_to_gban(target_entity.id, user_who_gbans.id, reason)
     user_display = create_user_html_link(target_entity)
