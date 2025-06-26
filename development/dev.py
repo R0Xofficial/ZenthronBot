@@ -1137,7 +1137,11 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         if reason_list: reason = " ".join(reason_list)
 
     if not target_user: await send_safe_reply(update, context, text="Could not identify user to ban."); return
-    if not isinstance(target_user, User): await send_safe_reply(update, context, text="Ban can only be applied to users."); return
+    is_user = hasattr(target_user, 'is_bot')
+    is_channel = isinstance(target_user, Chat) and target_user.type == ChatType.CHANNEL
+    if not (is_user or is_channel):
+        await send_safe_reply(update, context, text="This action can only be applied to users or channels.")
+        return
     if target_user.id == context.bot.id: await send_safe_reply(update, context, text="I can't ban myself!"); return
     if target_user.id == user_who_bans.id: await send_safe_reply(update, context, text="You can't ban yourself."); return
 
@@ -2721,8 +2725,8 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         await message.reply_text("Could not identify the user to blacklist.")
         return
 
-    if not isinstance(target_user, User):
-        await message.reply_text("Blacklist can only be applied to users.")
+    if getattr(target_user, 'is_bot', None) is None:
+        await message.reply_text("This action can only be applied to users, not channels or groups.")
         return
 
     if target_user.id == OWNER_ID:
@@ -2796,8 +2800,8 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
         await update.message.reply_text("Could not identify the user to unblacklist.")
         return
     
-    if not isinstance(target_user, User):
-        await update.message.reply_text("Unblacklist can only be applied to individual users.")
+    if getattr(target_user, 'is_bot', None) is None:
+        await message.reply_text("This action can only be applied to users, not channels or groups.")
         return
 
     if target_user.id == OWNER_ID:
@@ -2903,8 +2907,9 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     if not target_user:
         await message.reply_text("Could not identify the user to gban."); return
-    if not isinstance(target_user, User):
-        await message.reply_text("Global bans can only be applied to users."); return
+    if getattr(target_user, 'is_bot', None) is None:
+        await message.reply_text("This action can only be applied to users, not channels or groups.")
+        return
             
     if is_privileged_user(target_user.id) or target_user.id == context.bot.id:
         await message.reply_text("This user cannot be globally banned."); return
@@ -2979,6 +2984,10 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         
     if not target_user:
         await message.reply_text("Could not identify the user to ungban."); return
+
+    if getattr(target_user, 'is_bot', None) is None:
+        await message.reply_text("This action can only be applied to users, not channels or groups.")
+        return
 
     user_display = target_user.mention_html() or html.escape(getattr(target_user, 'full_name', '') or f"<code>{target_user.id}</code>")
 
@@ -3188,8 +3197,8 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text("Could not identify the user to add to sudo.")
         return
     
-    if not isinstance(target_user, User):
-        await update.message.reply_text("Sudo can only be granted to users.")
+    if getattr(target_user, 'is_bot', None) is None:
+        await message.reply_text("This action can only be applied to users, not channels or groups.")
         return
 
     if target_user.id == OWNER_ID:
@@ -3266,8 +3275,8 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text("Could not identify the user to remove from sudo.")
         return
 
-    if not isinstance(target_user, User):
-        await update.message.reply_text("Sudo can only be revoked from users.")
+    if getattr(target_user, 'is_bot', None) is None:
+        await message.reply_text("This action can only be applied to users, not channels or groups.")
         return
 
     if target_user.id == OWNER_ID:
