@@ -732,10 +732,19 @@ async def get_themed_gif(context: ContextTypes.DEFAULT_TYPE, search_terms: list[
     return None
 
 def create_user_html_link(user: User) -> str:
-    display_text = getattr(user, 'full_name', '').strip()
     
-    if not display_text:
-        display_text = getattr(user, 'first_name', '').strip()
+    full_name = getattr(user, 'full_name', None)
+    first_name = getattr(user, 'first_name', None)
+    
+    display_text = ""
+    if full_name:
+        display_text = full_name
+    elif first_name:
+        display_text = first_name
+    else:
+        display_text = str(user.id)
+        
+    display_text = display_text.strip()
     
     if not display_text:
         display_text = str(user.id)
