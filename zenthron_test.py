@@ -926,19 +926,19 @@ def format_entity_info(entity: Chat | User,
             info_lines.append(f"<b>• Status:</b> {display_status}\n")
 
         if is_target_owner:
-            info_lines.append(f"<b>• Bot Owner:</b> <code>Yes</code>")
+            info_lines.append(f"<b>• Bot Owner:</b> <code>Yes</code>\n")
         elif is_target_sudo:
-            info_lines.append(f"<b>• Bot Sudo:</b> <code>Yes</code>")
+            info_lines.append(f"<b>• Bot Sudo:</b> <code>Yes</code>\n")
             
         if blacklist_reason_str is not None:
             info_lines.append(f"<b>• Blacklisted:</b> <code>Yes</code>")
-            info_lines.append(f"<b>Reason:</b> {html.escape(blacklist_reason_str)}")
+            info_lines.append(f"<b>Reason:</b> {html.escape(blacklist_reason_str)}\n")
         else:
-            info_lines.append(f"<b>• Blacklisted:</b> <code>No</code>")
+            info_lines.append(f"<b>• Blacklisted:</b> <code>No</code>\n")
 
         if gban_reason_str is not None:
             info_lines.append(f"<b>• Globally Banned:</b> <code>Yes</code>")
-            info_lines.append(f"<b>Reason:</b> {html.escape(gban_reason_str)}")
+            info_lines.append(f"<b>Reason:</b> {html.escape(gban_reason_str)}\n")
         else:
             info_lines.append(f"<b>• Globally Banned:</b> <code>No</code>")
 
