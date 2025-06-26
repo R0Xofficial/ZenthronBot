@@ -2872,7 +2872,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         
         log_user_display = create_user_html_link(target_entity)
         
-        chat_name_display = html.escape(chat.title or f"PM with {user_who_gbans.first_name}")
+        chat_name_display = html.escape(chat.title or f"{user_who_gbans.first_name}")
         if chat.type != ChatType.PRIVATE and chat.username:
             message_link = f"https://t.me/{chat.username}/{message.message_id}"
             chat_name_display = f"<a href='{message_link}'>{html.escape(chat.title)}</a>"
@@ -2936,7 +2936,7 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         
         log_user_display = create_user_html_link(target_entity)
         
-        chat_name_display = html.escape(chat.title or f"PM with {user_who_ungbans.first_name}")
+        chat_name_display = html.escape(chat.title or f"{user_who_ungbans.first_name}")
         admin_link = create_user_html_link(user_who_ungbans)
 
         log_message = (
