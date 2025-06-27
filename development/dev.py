@@ -416,7 +416,7 @@ async def log_user_from_interaction(update: Update, context: ContextTypes.DEFAUL
 
         if chat.id not in context.bot_data['known_chats']:
             logger.info(f"Passively discovered and adding new chat to DB: {chat.title} ({chat.id})")
-            add_entity_to_db(chat.id, chat.title or f"Untitled Chat {chat.id}")
+            add_chat_to_db(chat.id, chat.title or f"Untitled Chat {chat.id}")
             context.bot_data['known_chats'].add(chat.id)
 
 def get_all_sudo_users_from_db() -> List[Tuple[int, str]]:
