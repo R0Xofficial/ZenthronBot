@@ -1,11 +1,9 @@
-
 # ZenthronBot - Bot texts
 # Copyright (C) 2025 R0X
 # Licensed under the GNU General Public License v3.0
 # See the LICENSE file for details.
 
 # --- ACTION COMMANDS TEXTS ---
-
 KILL_TEXTS = [
     "Unleashed a script of fury upon {target}. They have been *deleted*. ☠️ R.I.P.",
     "Executed the forbidden 'force_delete' protocol on {target}. They won't be bothering this chat again. 👻",
@@ -227,7 +225,6 @@ LEAVE_TEXTS = [
 ]
 
 # --- REFUSAL TEXTS ---
-
 CANT_TARGET_OWNER_TEXTS = [
     "Access Denied. The Bot Owner is a protected user and cannot be targeted by this command. 🛡️",
     "Action forbidden by core programming. The Owner is a restricted target. 📜🚫",
