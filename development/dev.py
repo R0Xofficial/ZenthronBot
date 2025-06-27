@@ -23,6 +23,7 @@ import asyncio
 import re
 import io
 import telegram
+import time
 from typing import List, Tuple
 from telethon import TelegramClient
 from telethon.tl.types import User as TelethonUser, Channel as TelethonChannel
@@ -3422,7 +3423,6 @@ async def main() -> None:
         application.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, handle_left_group_member))
 
         async def send_startup_log(context: ContextTypes.DEFAULT_TYPE) -> None:
-            """Wysyła wiadomość startową do kanału logów."""
             startup_message_text = "<i>Bot Started...</i>"
             target_id_for_log = LOG_CHAT_ID or OWNER_ID
             
@@ -3462,12 +3462,22 @@ async def main() -> None:
 
 # --- Script Execution ---
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        logger.info("Bot stopped by user (Ctrl+C).")
-        print("\nBot stopped by user.")
-    except Exception as e:
-        logger.critical(f"CRITICAL: Bot crashed unexpectedly at top level: {e}", exc_info=True)
-        print(f"\n--- FATAL ERROR ---\nBot crashed: {e}")
-        exit(1)
+    while True:
+        try:
+            logger.info("Starting a new bot session...")
+            asyncio.run(main())
+            
+            logger.info("Bot session finished cleanly. Shutting down.")
+            break 
+
+        except (KeyboardInterrupt, SystemExit):
+            logger.info("Bot stopped by user (Ctrl+C). Shutting down.")
+            break
+
+        except Exception as e:
+            logger.critical(f"--- BOT CRASHED ---", exc_info=True)
+            logger.critical(f"RESTARTING IN 60 SECONDS...")
+            print("\n--- FATAL ERROR, RESTARTING IN 60 SECONDS ---")
+            print(f"Error details: {e}")
+            
+            time.sleep(60)
