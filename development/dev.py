@@ -3450,7 +3450,7 @@ async def del_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     response_lines = []
     if deleted_chats:
-        response_lines.append(f"✅ Successfully removed {len(deleted_chats)} entries from the chat cache:")
+        response_lines.append(f"✅ Successfully removed <code>{len(deleted_chats)}</code> entries from the chat cache:")
         response_lines.append(", ".join(deleted_chats))
     
     if failed_chats:
@@ -3504,7 +3504,6 @@ async def clean_groups_command(update: Update, context: ContextTypes.DEFAULT_TYP
             checked_chats_count += 1
             await asyncio.sleep(0.2)
 
-    # Końcowy raport
     final_report = (
         f"✅ Cleanup complete!\n\n"
         f"- Checked: <code>{checked_chats_count}</code> chats\n"
