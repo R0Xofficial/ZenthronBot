@@ -3383,7 +3383,7 @@ async def list_sudo_users_command(update: Update, context: ContextTypes.DEFAULT_
 
     await update.message.reply_html(message_text, disable_web_page_preview=True)
 
-async def list_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def list_chats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_user.id != OWNER_ID:
         logger.warning(f"Unauthorized /listgroups attempt by user {update.effective_user.id}.")
         return
@@ -3420,7 +3420,7 @@ async def list_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     if final_message:
         await update.message.reply_html(final_message, disable_web_page_preview=True)
 
-async def del_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def del_chat_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_user.id != OWNER_ID:
         return
 
@@ -3457,7 +3457,7 @@ async def del_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     await update.message.reply_html("\n".join(response_lines))
 
-async def clean_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def clean_chats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_user.id != OWNER_ID:
         return
 
@@ -3572,9 +3572,9 @@ async def main() -> None:
         application.add_handler(CommandHandler("ungban", ungban_command))
         application.add_handler(CommandHandler("enforcegban", enforce_gban_command))
         application.add_handler(CommandHandler("listsudo", list_sudo_users_command))
-        application.add_handler(CommandHandler("listgroups", list_groups_command))
-        application.add_handler(CommandHandler("delgroup", del_groups_command))
-        application.add_handler(CommandHandler("cleangroups", clean_groups_command))
+        application.add_handler(CommandHandler("listchats", list_chats_command))
+        application.add_handler(CommandHandler("delchat", del_chat_command))
+        application.add_handler(CommandHandler("cleanchats", clean_chats_command))
         application.add_handler(CommandHandler("sudocmds", sudo_commands_command))
         application.add_handler(CommandHandler("addsudo", addsudo_command))
         application.add_handler(CommandHandler("delsudo", delsudo_command))
