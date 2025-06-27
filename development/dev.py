@@ -149,9 +149,17 @@ def init_db():
                 enforce_gban INTEGER DEFAULT 1 NOT NULL 
             )
         """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS entity (
+                chat_id INTEGER PRIMARY KEY,
+                chat_title TEXT,
+                added_at TEXT NOT NULL
+            )
+        """)
         
         conn.commit()
-        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, sudo_users, global_bans, bot_chats ensured).")
+        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, sudo_users, global_bans, bot_chats, entity ensured).")
     except sqlite3.Error as e:
         logger.error(f"SQLite error during DB initialization: {e}", exc_info=True)
     finally:
@@ -408,7 +416,7 @@ async def log_user_from_interaction(update: Update, context: ContextTypes.DEFAUL
 
         if chat.id not in context.bot_data['known_chats']:
             logger.info(f"Passively discovered and adding new chat to DB: {chat.title} ({chat.id})")
-            add_chat_to_db(chat.id, chat.title or f"Untitled Chat {chat.id}")
+            add_entity_to_db(chat.id, chat.title or f"Untitled Chat {chat.id}")
             context.bot_data['known_chats'].add(chat.id)
 
 def get_all_sudo_users_from_db() -> List[Tuple[int, str]]:
@@ -595,7 +603,7 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
             if isinstance(ptb_entity, User):
                 update_user_in_db(ptb_entity)
             elif isinstance(ptb_entity, Chat):
-                add_chat_to_db(ptb_entity.id, ptb_entity.title)
+                add_entity_to_db(ptb_entity.id, ptb_entity.title)
             return ptb_entity
     except Exception as e:
         logger.warning(f"PTB failed for '{target_input}': {e}.")
@@ -620,7 +628,7 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
         
         elif isinstance(entity_from_telethon, (TelethonChannel)):
             ptb_chat = await context.bot.get_chat(entity_from_telethon.id)
-            add_chat_to_db(ptb_chat.id, ptb_chat.title)
+            add_entity_to_db(ptb_chat.id, ptb_chat.title)
             return ptb_chat
 
     except Exception as e:
@@ -695,6 +703,18 @@ def add_chat_to_db(chat_id: int, chat_title: str):
             )
     except sqlite3.Error as e:
         logger.error(f"Failed to add chat {chat_id} to DB: {e}")
+
+def add_entity_to_db(chat_id: int, chat_title: str):
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            timestamp = datetime.now(timezone.utc).isoformat()
+            cursor.execute(
+                "INSERT OR REPLACE INTO entity (chat_id, chat_title, added_at) VALUES (?, ?, ?)",
+                (chat_id, chat_title, timestamp)
+            )
+    except sqlite3.Error as e:
+        logger.error(f"Failed to add channel {chat_id} to DB: {e}")
 
 def remove_chat_from_db(chat_id: int):
     try:
