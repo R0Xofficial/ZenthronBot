@@ -428,6 +428,16 @@ def get_all_sudo_users_from_db() -> List[Tuple[int, str]]:
             conn.close()
     return sudo_list
 
+def get_all_bot_chats_from_db() -> List[Tuple[int, str, str]]:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT chat_id, chat_title, added_at FROM bot_chats ORDER BY added_at DESC")
+            return cursor.fetchall()
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error fetching all bot chats: {e}", exc_info=True)
+        return []
+
 async def damnbroski(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     special_message = "💀Bro..."
     
@@ -3366,6 +3376,43 @@ async def list_sudo_users_command(update: Update, context: ContextTypes.DEFAULT_
         logger.info(f"Sudo list too long, truncated for display. Total: {len(sudo_user_tuples)}")
 
     await update.message.reply_html(message_text, disable_web_page_preview=True)
+
+async def list_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_user.id != OWNER_ID:
+        logger.warning(f"Unauthorized /listgroups attempt by user {update.effective_user.id}.")
+        return
+
+    bot_chats = get_all_bot_chats_from_db()
+
+    if not bot_chats:
+        await update.message.reply_text("The bot is not currently in any known groups.")
+        return
+
+    response_lines = [f"<b>📊 List of all known groups; <code>{len(bot_chats)}</code> total:</b>\n"]
+    
+    for chat_id, chat_title, added_at_str in bot_chats:
+        display_title = html.escape(chat_title or "Untitled Group")
+        
+        try:
+            dt_obj = datetime.fromisoformat(added_at_str.replace("Z", "+00:00"))
+            formatted_added_time = dt_obj.strftime('%Y-%m-%d %H:%M')
+        except (ValueError, TypeError):
+            formatted_added_time = added_at_str[:16] if added_at_str else "N/A"
+
+        response_lines.append(
+            f"• <b>{display_title}</b> (<code>{chat_id}</code>)\n"
+            f"<b>Added:</b> <code>{formatted_added_time}</code>"
+        )
+
+    final_message = ""
+    for line in response_lines:
+        if len(final_message) + len(line) > 4096:
+            await update.message.reply_html(final_message, disable_web_page_preview=True)
+            final_message = ""
+        final_message += line
+
+    if final_message:
+        await update.message.reply_html(final_message, disable_web_page_preview=True)
 
 # --- Main Function ---
 async def main() -> None:
