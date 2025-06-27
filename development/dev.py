@@ -3389,7 +3389,7 @@ async def list_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("The bot is not currently in any known groups.")
         return
 
-    response_lines = [f"<b>📊 List of all known groups; <code>{len(bot_chats)}</code> total:</b>\n"]
+    response_lines = [f"<b>📊 List of all known groups; <code>{len(bot_chats)}</code> total:</b>\n\n"]
     
     for chat_id, chat_title, added_at_str in bot_chats:
         display_title = html.escape(chat_title or "Untitled Group")
