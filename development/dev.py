@@ -854,6 +854,7 @@ OWNER_COMMANDS_TEXT = """
 <b>Owner Commands:</b>
 /leave [Optional chat ID] - Make the bot leave a chat.
 /speedtest - Perform an internet speed test.
+/listgroups - List all known by bot groups.
 /listsudo - List all users with sudo privileges.
 /addsudo &lt;ID/@user/reply&gt; - Grant SUDO (bot admin) permissions to a user.
 /delsudo &lt;ID/@user/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
@@ -3474,6 +3475,7 @@ async def main() -> None:
         application.add_handler(CommandHandler("ungban", ungban_command))
         application.add_handler(CommandHandler("enforcegban", enforce_gban_command))
         application.add_handler(CommandHandler("listsudo", list_sudo_users_command))
+        application.add_handler(CommandHandler("listgroups", list_groups_command))
         application.add_handler(CommandHandler("sudocmds", sudo_commands_command))
         application.add_handler(CommandHandler("addsudo", addsudo_command))
         application.add_handler(CommandHandler("delsudo", delsudo_command))
