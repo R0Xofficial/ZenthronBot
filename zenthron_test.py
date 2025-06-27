@@ -593,8 +593,6 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
         if ptb_entity:
             if isinstance(ptb_entity, User):
                 update_user_in_db(ptb_entity)
-            elif isinstance(ptb_entity, Chat):
-                add_chat_to_db(ptb_entity.id, ptb_entity.title)
             return ptb_entity
     except Exception as e:
         logger.warning(f"PTB failed for '{target_input}': {e}.")
@@ -616,11 +614,6 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
             if ptb_user:
                 update_user_in_db(ptb_user)
                 return ptb_user
-        
-        elif isinstance(entity_from_telethon, (TelethonChannel)):
-            ptb_chat = await context.bot.get_chat(entity_from_telethon.id)
-            add_chat_to_db(ptb_chat.id, ptb_chat.title)
-            return ptb_chat
 
     except Exception as e:
         logger.error(f"All methods failed for '{target_input}'. Final Telethon error: {e}")
