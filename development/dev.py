@@ -866,7 +866,8 @@ OWNER_COMMANDS_TEXT = """
 /leave [Optional chat ID] - Make the bot leave a chat.
 /speedtest - Perform an internet speed test.
 /listgroups - List all known by bot groups.
-/delchat &lt;ID_1&gt; [ID_2] - Remove groups from database/cache
+/delchat &lt;ID_1&gt; [ID_2] - Remove groups from database
+/cleangroups - Remove cached groups from database automatically.
 /listsudo - List all users with sudo privileges.
 /addsudo &lt;ID/@user/reply&gt; - Grant SUDO (bot admin) permissions to a user.
 /delsudo &lt;ID/@user/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
@@ -3468,7 +3469,7 @@ async def clean_groups_command(update: Update, context: ContextTypes.DEFAULT_TYP
     if update.effective_user.id != OWNER_ID:
         return
 
-    status_message = await update.message.reply_text("🧹 Starting group cache cleanup... This may take a while. Please wait.")
+    status_message = await update.message.reply_html("🧹 Starting group cache cleanup... This may take a while. Please wait.")
 
     all_chat_ids_from_db = [chat[0] for chat in get_all_bot_chats_from_db()]
     
@@ -3508,8 +3509,9 @@ async def clean_groups_command(update: Update, context: ContextTypes.DEFAULT_TYP
         f"✅ Cleanup complete!\n\n"
         f"- Checked: <code>{checked_chats_count}</code> chats\n"
         f"- Removed: <code>{removed_chats_count}</code> inactive/invalid entries"
+        parse_mode=ParseMode.HTML
     )
-    await status_message.edit_text(final_report)
+    await status_message.edit_text(final_report, parse_mode=ParseMode.HTML)
 
 # --- Main Function ---
 async def main() -> None:
