@@ -22,6 +22,7 @@ import asyncio
 import re
 import io
 import telegram
+import time
 from typing import List, Tuple
 from telethon import TelegramClient
 from telethon.tl.types import User as TelethonUser, Channel as TelethonChannel
@@ -155,6 +156,24 @@ def init_db():
     finally:
         if conn:
             conn.close()
+
+# --- Start Message ---
+async def send_startup_log(context: ContextTypes.DEFAULT_TYPE) -> None:
+    startup_message_text = "<i>Bot Started...</i>"
+    target_id_for_log = LOG_CHAT_ID or OWNER_ID
+    
+    if target_id_for_log:
+        try:
+            await context.bot.send_message(
+                chat_id=target_id_for_log,
+                text=startup_message_text,
+                parse_mode=ParseMode.HTML
+            )
+            logger.info(f"Sent startup notification to {target_id_for_log}.")
+        except Exception as e:
+            logger.error(f"Failed to send startup message to {target_id_for_log}: {e}")
+    else:
+        logger.warning("No target (LOG_CHAT_ID or OWNER_ID) to send startup message.")
 
 # --- Blacklist Helper Functions ---
 def add_to_blacklist(user_id: int, banned_by_id: int, reason: str | None = "No reason provided.") -> bool:
@@ -407,6 +426,27 @@ def get_all_sudo_users_from_db() -> List[Tuple[int, str]]:
         if conn:
             conn.close()
     return sudo_list
+
+def get_all_bot_chats_from_db() -> List[Tuple[int, str, str]]:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT chat_id, chat_title, added_at FROM bot_chats ORDER BY added_at DESC")
+            return cursor.fetchall()
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error fetching all bot chats: {e}", exc_info=True)
+        return []
+
+def remove_chat_from_db_by_id(chat_id: int) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM bot_chats WHERE chat_id = ?", (chat_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error removing chat {chat_id} from DB: {e}", exc_info=True)
+        return False
 
 async def damnbroski(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     special_message = "💀Bro..."
@@ -824,6 +864,9 @@ OWNER_COMMANDS_TEXT = """
 <b>Owner Commands:</b>
 /leave [Optional chat ID] - Make the bot leave a chat.
 /speedtest - Perform an internet speed test.
+/listgroups - List all known by bot groups.
+/delchat &lt;ID_1&gt; [ID_2] - Remove groups from database
+/cleangroups - Remove cached groups from database automatically.
 /listsudo - List all users with sudo privileges.
 /addsudo &lt;ID/@user/reply&gt; - Grant SUDO (bot admin) permissions to a user.
 /delsudo &lt;ID/@user/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
@@ -3347,6 +3390,135 @@ async def list_sudo_users_command(update: Update, context: ContextTypes.DEFAULT_
 
     await update.message.reply_html(message_text, disable_web_page_preview=True)
 
+async def list_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_user.id != OWNER_ID:
+        logger.warning(f"Unauthorized /listgroups attempt by user {update.effective_user.id}.")
+        return
+
+    bot_chats = get_all_bot_chats_from_db()
+
+    if not bot_chats:
+        await update.message.reply_text("The bot is not currently in any known groups.")
+        return
+
+    response_lines = [f"<b>📊 List of all known groups; <code>{len(bot_chats)}</code> total:</b>\n\n"]
+    
+    for chat_id, chat_title, added_at_str in bot_chats:
+        display_title = html.escape(chat_title or "Untitled Group")
+        
+        try:
+            dt_obj = datetime.fromisoformat(added_at_str.replace("Z", "+00:00"))
+            formatted_added_time = dt_obj.strftime('%Y-%m-%d %H:%M')
+        except (ValueError, TypeError):
+            formatted_added_time = added_at_str[:16] if added_at_str else "N/A"
+
+        response_lines.append(
+            f"• <b>{display_title}</b> (<code>{chat_id}</code>)\n"
+            f"<b>Added:</b> <code>{formatted_added_time}</code>\n\n"
+        )
+
+    final_message = ""
+    for line in response_lines:
+        if len(final_message) + len(line) > 4096:
+            await update.message.reply_html(final_message, disable_web_page_preview=True)
+            final_message = ""
+        final_message += line
+
+    if final_message:
+        await update.message.reply_html(final_message, disable_web_page_preview=True)
+
+async def del_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_user.id != OWNER_ID:
+        return
+
+    if not context.args:
+        await update.message.reply_text("Usage: /delchat <ID_1> [ID_2] ...")
+        return
+
+    deleted_chats = []
+    failed_chats = []
+
+    for chat_id_str in context.args:
+        try:
+            chat_id_to_delete = int(chat_id_str)
+            if remove_chat_from_db_by_id(chat_id_to_delete):
+                deleted_chats.append(f"<code>{chat_id_to_delete}</code>")
+            else:
+                failed_chats.append(f"<code>{chat_id_to_delete}</code> (not found)")
+        except ValueError:
+            failed_chats.append(f"<i>{html.escape(chat_id_str)}</i> (invalid ID)")
+
+    response_lines = []
+    if deleted_chats:
+        response_lines.append(f"✅ Successfully removed <code>{len(deleted_chats)}</code> entries from the chat cache:")
+        response_lines.append(", ".join(deleted_chats))
+    
+    if failed_chats:
+        if response_lines: response_lines.append("")
+        response_lines.append(f"❌ Failed to remove <code>{len(failed_chats)}</code> entries:")
+        response_lines.append(", ".join(failed_chats))
+    
+    if not response_lines:
+        await update.message.reply_text("No valid IDs were provided.")
+        return
+
+    await update.message.reply_html("\n".join(response_lines))
+
+async def clean_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_user.id != OWNER_ID:
+        return
+
+    status_message = await update.message.reply_html("🧹 Starting group cache cleanup... This may take a while. Please wait.")
+
+    all_chat_ids_from_db = [chat[0] for chat in get_all_bot_chats_from_db()]
+    
+    if not all_chat_ids_from_db:
+        await status_message.edit_text("✅ Chat cache is already empty. Nothing to do.")
+        return
+
+    logger.info(f"Starting cleanup for {len(all_chat_ids_from_db)} chats...")
+    
+    removed_chats_count = 0
+    checked_chats_count = 0
+    
+    chunk_size = 50 
+    for i in range(0, len(all_chat_ids_from_db), chunk_size):
+        chunk = all_chat_ids_from_db[i:i + chunk_size]
+        
+        status_text = (
+            f"🧹 Checking chats <code>{checked_chats_count+1}-{checked_chats_count+len(chunk)} / {len(all_chat_ids_from_db)}</code>\n"
+            f"🗑️ Removed so far: <code>{removed_chats_count}</code>"
+        )
+        try:
+            await status_message.edit_text(status_text, parse_mode=ParseMode.HTML)
+        except Exception as e:
+            logger.warning(f"Could not edit status message: {e}")
+
+        for chat_id in chunk:
+            try:
+                await context.bot.get_chat(chat_id)
+            except TelegramError as e:
+                if "not found" in str(e).lower() or "forbidden" in str(e).lower() or "chat not found" in str(e).lower():
+                    logger.info(f"Chat {chat_id} not found or access is forbidden. Removing from cache.")
+                    if remove_chat_from_db_by_id(chat_id):
+                        removed_chats_count += 1
+                else:
+                    logger.warning(f"Unexpected API error while checking chat {chat_id}: {e}")
+            
+            checked_chats_count += 1
+            await asyncio.sleep(0.2)
+
+    final_report = (
+        f"✅ <b>Cleanup complete!</b>\n\n"
+        f"• Checked: <code>{checked_chats_count}</code> chats\n"
+        f"• Removed: <code>{removed_chats_count}</code> inactive/invalid entries"
+    )
+    
+    try:
+        await status_message.edit_text(final_report, parse_mode=ParseMode.HTML)
+    except Exception as e:
+        logger.error(f"Could not edit final report message: {e}")
+
 # --- Main Function ---
 async def main() -> None:
     init_db()
@@ -3367,14 +3539,8 @@ async def main() -> None:
         logger.info("Telethon client has been injected into bot_data.")
 
         application.add_handler(MessageHandler(filters.COMMAND, check_blacklist_handler), group=-1)
-        application.add_handler(MessageHandler(
-            filters.ALL & (~filters.UpdateType.EDITED_MESSAGE),
-            log_user_from_interaction
-        ), group=10)
-        application.add_handler(MessageHandler(
-            filters.TEXT & (~filters.COMMAND) & filters.ChatType.GROUPS,
-            check_gban_on_message
-        ), group=-2)
+        application.add_handler(MessageHandler(filters.ALL & (~filters.UpdateType.EDITED_MESSAGE), log_user_from_interaction), group=10)
+        application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND) & filters.ChatType.GROUPS, check_gban_on_message), group=-2)
         
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("help", help_command))
@@ -3413,30 +3579,15 @@ async def main() -> None:
         application.add_handler(CommandHandler("ungban", ungban_command))
         application.add_handler(CommandHandler("enforcegban", enforce_gban_command))
         application.add_handler(CommandHandler("listsudo", list_sudo_users_command))
+        application.add_handler(CommandHandler("listgroups", list_groups_command))
+        application.add_handler(CommandHandler("delgroup", del_groups_command))
+        application.add_handler(CommandHandler("cleangroups", clean_groups_command))
         application.add_handler(CommandHandler("sudocmds", sudo_commands_command))
         application.add_handler(CommandHandler("addsudo", addsudo_command))
         application.add_handler(CommandHandler("delsudo", delsudo_command))
 
         application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_group_members))
         application.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, handle_left_group_member))
-
-        async def send_startup_log(context: ContextTypes.DEFAULT_TYPE) -> None:
-            """Wysyła wiadomość startową do kanału logów."""
-            startup_message_text = "<i>Bot Started...</i>"
-            target_id_for_log = LOG_CHAT_ID or OWNER_ID
-            
-            if target_id_for_log:
-                try:
-                    await context.bot.send_message(
-                        chat_id=target_id_for_log,
-                        text=startup_message_text,
-                        parse_mode=ParseMode.HTML
-                    )
-                    logger.info(f"Sent startup notification to {target_id_for_log}.")
-                except Exception as e:
-                    logger.error(f"Failed to send startup message to {target_id_for_log}: {e}")
-            else:
-                logger.warning("No target (LOG_CHAT_ID or OWNER_ID) to send startup message.")
 
         if application.job_queue:
             application.job_queue.run_once(send_startup_log, when=1)
