@@ -158,6 +158,24 @@ def init_db():
         if conn:
             conn.close()
 
+# --- Start Message ---
+async def send_startup_log(context: ContextTypes.DEFAULT_TYPE) -> None:
+    startup_message_text = "<i>Bot Started...</i>"
+    target_id_for_log = LOG_CHAT_ID or OWNER_ID
+    
+    if target_id_for_log:
+        try:
+            await context.bot.send_message(
+                chat_id=target_id_for_log,
+                text=startup_message_text,
+                parse_mode=ParseMode.HTML
+            )
+            logger.info(f"Sent startup notification to {target_id_for_log}.")
+        except Exception as e:
+            logger.error(f"Failed to send startup message to {target_id_for_log}: {e}")
+    else:
+        logger.warning("No target (LOG_CHAT_ID or OWNER_ID) to send startup message.")
+
 # --- Blacklist Helper Functions ---
 def add_to_blacklist(user_id: int, banned_by_id: int, reason: str | None = "No reason provided.") -> bool:
     conn = None
@@ -3352,132 +3370,109 @@ async def list_sudo_users_command(update: Update, context: ContextTypes.DEFAULT_
 # --- Main Function ---
 async def main() -> None:
     init_db()
-    
-    async with TelegramClient(SESSION_NAME, API_ID, API_HASH) as telethon_client:
-        logger.info("Telethon client started.")
-    
-        custom_request_settings = HTTPXRequest(connect_timeout=20.0, read_timeout=80.0, write_timeout=80.0, pool_timeout=20.0)
-        application = (
-            Application.builder()
-            .token(BOT_TOKEN)
-            .request(custom_request_settings)
-            .job_queue(JobQueue())
-            .build()
-        )
 
-        application.bot_data['telethon_client'] = telethon_client
-        logger.info("Telethon client has been injected into bot_data.")
+    while True:
+            application = None
+            try:
+                logger.info("Bot session starting...")
 
-        application.add_handler(MessageHandler(filters.COMMAND, check_blacklist_handler), group=-1)
-        application.add_handler(MessageHandler(
-            filters.ALL & (~filters.UpdateType.EDITED_MESSAGE),
-            log_user_from_interaction
-        ), group=10)
-        application.add_handler(MessageHandler(
-            filters.TEXT & (~filters.COMMAND) & filters.ChatType.GROUPS,
-            check_gban_on_message
-        ), group=-2)
-        
-        application.add_handler(CommandHandler("start", start))
-        application.add_handler(CommandHandler("help", help_command))
-        application.add_handler(CommandHandler("github", github))
-        application.add_handler(CommandHandler("owner", owner_info))
-        application.add_handler(CommandHandler("info", entity_info_command))
-        application.add_handler(CommandHandler("chatstat", chat_stat_command))
-        application.add_handler(CommandHandler("cinfo", chat_info_command))
-        application.add_handler(CommandHandler("ban", ban_command))
-        application.add_handler(CommandHandler("unban", unban_command))
-        application.add_handler(CommandHandler("mute", mute_command))
-        application.add_handler(CommandHandler("unmute", unmute_command))
-        application.add_handler(CommandHandler("kick", kick_command))
-        application.add_handler(CommandHandler("kickme", kickme_command))
-        application.add_handler(CommandHandler("promote", promote_command))
-        application.add_handler(CommandHandler("demote", demote_command))
-        application.add_handler(CommandHandler("pin", pin_message_command))
-        application.add_handler(CommandHandler("unpin", unpin_message_command))
-        application.add_handler(CommandHandler("purge", purge_messages_command))
-        application.add_handler(CommandHandler("report", report_command))
-        application.add_handler(CommandHandler("listadmins", list_admins_command))
-        application.add_handler(CommandHandler("admins", list_admins_command))
-        application.add_handler(CommandHandler("kill", kill))
-        application.add_handler(CommandHandler("punch", punch))
-        application.add_handler(CommandHandler("slap", slap))
-        application.add_handler(CommandHandler("pat", pat))
-        application.add_handler(CommandHandler("bonk", bonk))
-        application.add_handler(CommandHandler("touch", damnbroski))
-        application.add_handler(CommandHandler("status", status))
-        application.add_handler(CommandHandler("say", say))
-        application.add_handler(CommandHandler("leave", leave_chat))
-        application.add_handler(CommandHandler("speedtest", speedtest_command))
-        application.add_handler(CommandHandler("blist", blacklist_user_command))
-        application.add_handler(CommandHandler("unblist", unblacklist_user_command))
-        application.add_handler(CommandHandler("gban", gban_command))
-        application.add_handler(CommandHandler("ungban", ungban_command))
-        application.add_handler(CommandHandler("enforcegban", enforce_gban_command))
-        application.add_handler(CommandHandler("listsudo", list_sudo_users_command))
-        application.add_handler(CommandHandler("sudocmds", sudo_commands_command))
-        application.add_handler(CommandHandler("addsudo", addsudo_command))
-        application.add_handler(CommandHandler("delsudo", delsudo_command))
-
-        application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_group_members))
-        application.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, handle_left_group_member))
-
-        async def send_startup_log(context: ContextTypes.DEFAULT_TYPE) -> None:
-            startup_message_text = "<i>Bot Started...</i>"
-            target_id_for_log = LOG_CHAT_ID or OWNER_ID
-            
-            if target_id_for_log:
-                try:
-                    await context.bot.send_message(
-                        chat_id=target_id_for_log,
-                        text=startup_message_text,
-                        parse_mode=ParseMode.HTML
+                async with TelegramClient(SESSION_NAME, API_ID, API_HASH) as telethon_client:
+                    logger.info("Telethon client started.")
+                
+                    custom_request_settings = HTTPXRequest(connect_timeout=20.0, read_timeout=80.0, write_timeout=80.0, pool_timeout=20.0)
+                    application = (
+                        Application.builder()
+                        .token(BOT_TOKEN)
+                        .request(custom_request_settings)
+                        .job_queue(JobQueue())
+                        .build()
                     )
-                    logger.info(f"Sent startup notification to {target_id_for_log}.")
-                except Exception as e:
-                    logger.error(f"Failed to send startup message to {target_id_for_log}: {e}")
-            else:
-                logger.warning("No target (LOG_CHAT_ID or OWNER_ID) to send startup message.")
-
-        if application.job_queue:
-            application.job_queue.run_once(send_startup_log, when=1)
-            logger.info("Startup message job scheduled to run in 1 second.")
-        else:
-            logger.warning("JobQueue not available, cannot schedule startup message.")
-        
-        logger.info(f"Bot starting polling... Owner ID: {OWNER_ID}")
-        print(f"Bot starting polling... Owner ID: {OWNER_ID}")
-        
-        await application.initialize()
-        await application.start()
-        await application.updater.start_polling(allowed_updates=Update.ALL_TYPES)
-
-        await telethon_client.run_until_disconnected()
-
-        await application.updater.stop()
-        await application.stop()
-        logger.info("Bot shutdown process completed.")
-        print("Bot shut down.")
-
+            
+                    application.bot_data['telethon_client'] = telethon_client
+                    logger.info("Telethon client has been injected into bot_data.")
+            
+                    application.add_handler(MessageHandler(filters.COMMAND, check_blacklist_handler), group=-1)
+                    application.add_handler(MessageHandler(filters.ALL & (~filters.UpdateType.EDITED_MESSAGE), log_user_from_interaction), group=10)
+                    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND) & filters.ChatType.GROUPS, check_gban_on_message), group=-2)
+                    
+                    application.add_handler(CommandHandler("start", start))
+                    application.add_handler(CommandHandler("help", help_command))
+                    application.add_handler(CommandHandler("github", github))
+                    application.add_handler(CommandHandler("owner", owner_info))
+                    application.add_handler(CommandHandler("info", entity_info_command))
+                    application.add_handler(CommandHandler("chatstat", chat_stat_command))
+                    application.add_handler(CommandHandler("cinfo", chat_info_command))
+                    application.add_handler(CommandHandler("ban", ban_command))
+                    application.add_handler(CommandHandler("unban", unban_command))
+                    application.add_handler(CommandHandler("mute", mute_command))
+                    application.add_handler(CommandHandler("unmute", unmute_command))
+                    application.add_handler(CommandHandler("kick", kick_command))
+                    application.add_handler(CommandHandler("kickme", kickme_command))
+                    application.add_handler(CommandHandler("promote", promote_command))
+                    application.add_handler(CommandHandler("demote", demote_command))
+                    application.add_handler(CommandHandler("pin", pin_message_command))
+                    application.add_handler(CommandHandler("unpin", unpin_message_command))
+                    application.add_handler(CommandHandler("purge", purge_messages_command))
+                    application.add_handler(CommandHandler("report", report_command))
+                    application.add_handler(CommandHandler("listadmins", list_admins_command))
+                    application.add_handler(CommandHandler("admins", list_admins_command))
+                    application.add_handler(CommandHandler("kill", kill))
+                    application.add_handler(CommandHandler("punch", punch))
+                    application.add_handler(CommandHandler("slap", slap))
+                    application.add_handler(CommandHandler("pat", pat))
+                    application.add_handler(CommandHandler("bonk", bonk))
+                    application.add_handler(CommandHandler("touch", damnbroski))
+                    application.add_handler(CommandHandler("status", status))
+                    application.add_handler(CommandHandler("say", say))
+                    application.add_handler(CommandHandler("leave", leave_chat))
+                    application.add_handler(CommandHandler("speedtest", speedtest_command))
+                    application.add_handler(CommandHandler("blist", blacklist_user_command))
+                    application.add_handler(CommandHandler("unblist", unblacklist_user_command))
+                    application.add_handler(CommandHandler("gban", gban_command))
+                    application.add_handler(CommandHandler("ungban", ungban_command))
+                    application.add_handler(CommandHandler("enforcegban", enforce_gban_command))
+                    application.add_handler(CommandHandler("listsudo", list_sudo_users_command))
+                    application.add_handler(CommandHandler("sudocmds", sudo_commands_command))
+                    application.add_handler(CommandHandler("addsudo", addsudo_command))
+                    application.add_handler(CommandHandler("delsudo", delsudo_command))
+            
+                    application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_group_members))
+                    application.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, handle_left_group_member))
+            
+                    if application.job_queue:
+                        application.job_queue.run_once(send_startup_log, when=1)
+                        logger.info("Startup message job scheduled to run in 1 second.")
+                    else:
+                        logger.warning("JobQueue not available, cannot schedule startup message.")
+                    
+                    logger.info(f"Bot starting polling... Owner ID: {OWNER_ID}")
+                    print(f"Bot starting polling... Owner ID: {OWNER_ID}")
+                    
+                    await application.initialize()
+                    await application.start()
+                    await application.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+            
+                    await telethon_client.run_until_disconnected()
+    
+            except (KeyboardInterrupt, SystemExit):
+                        logger.info("Shutdown signal received. Exiting...")
+                        break
+            
+            except Exception as e:
+                        logger.critical("--- BOT CRASHED ---", exc_info=True)
+                        logger.info("Restarting in 60 seconds...")
+                        await asyncio.sleep(60)
+                    
+            finally:
+                if application and application.updater and application.updater.is_running():
+                    logger.info("Stopping PTB application...")
+                    await application.updater.stop()
+                    await application.stop()
+                logger.info("Bot session cleanup complete.")
 
 # --- Script Execution ---
 if __name__ == "__main__":
-    while True:
-        try:
-            logger.info("Starting a new bot session...")
-            asyncio.run(main())
-            
-            logger.info("Bot session finished cleanly. Shutting down.")
-            break 
-
-        except (KeyboardInterrupt, SystemExit):
-            logger.info("Bot stopped by user (Ctrl+C). Shutting down.")
-            break
-
-        except Exception as e:
-            logger.critical(f"--- BOT CRASHED ---", exc_info=True)
-            logger.critical(f"RESTARTING IN 60 SECONDS...")
-            print("\n--- FATAL ERROR, RESTARTING IN 60 SECONDS ---")
-            print(f"Error details: {e}")
-            
-            time.sleep(60)
+    try:
+        asyncio.run(main())
+    except Exception as e:
+        print(f"A critical error occurred that the main loop could not handle: {e}")
