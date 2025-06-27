@@ -3477,20 +3477,24 @@ async def clean_groups_command(update: Update, context: ContextTypes.DEFAULT_TYP
         await status_message.edit_text("✅ Chat cache is already empty. Nothing to do.")
         return
 
-    logger.info(f"Starting cleanup for <code>{len(all_chat_ids_from_db)}</code> chats...")
+    logger.info(f"Starting cleanup for {len(all_chat_ids_from_db)} chats...")
     
     removed_chats_count = 0
     checked_chats_count = 0
-
+    
     chunk_size = 50 
     for i in range(0, len(all_chat_ids_from_db), chunk_size):
         chunk = all_chat_ids_from_db[i:i + chunk_size]
         
-        await status_message.edit_html(
-            f"🧹 Checking chats <code>{checked_chats_count+1}-{checked_chats_count+len(chunk)}</code> / <code>{len(all_chat_ids_from_db)}</code>\n"
+        status_text = (
+            f"🧹 Checking chats <code>{checked_chats_count+1}-{checked_chats_count+len(chunk)} / {len(all_chat_ids_from_db)}</code>\n"
             f"🗑️ Removed so far: <code>{removed_chats_count}</code>"
         )
-        
+        try:
+            await status_message.edit_text(status_text, parse_mode=ParseMode.HTML)
+        except Exception as e:
+            logger.warning(f"Could not edit status message: {e}")
+
         for chat_id in chunk:
             try:
                 await context.bot.get_chat(chat_id)
@@ -3506,11 +3510,15 @@ async def clean_groups_command(update: Update, context: ContextTypes.DEFAULT_TYP
             await asyncio.sleep(0.2)
 
     final_report = (
-        f"✅ Cleanup complete!\n\n"
+        f"✅ <b>Cleanup complete!</b>\n\n"
         f"• Checked: <code>{checked_chats_count}</code> chats\n"
         f"• Removed: <code>{removed_chats_count}</code> inactive/invalid entries"
     )
-    await status_message.edit_text(final_report, parse_mode=ParseMode.HTML)
+    
+    try:
+        await status_message.edit_text(final_report, parse_mode=ParseMode.HTML)
+    except Exception as e:
+        logger.error(f"Could not edit final report message: {e}")
 
 # --- Main Function ---
 async def main() -> None:
