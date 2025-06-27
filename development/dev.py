@@ -3402,7 +3402,7 @@ async def list_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
         response_lines.append(
             f"• <b>{display_title}</b> (<code>{chat_id}</code>)\n"
-            f"<b>Added:</b> <code>{formatted_added_time}</code>"
+            f"<b>Added:</b> <code>{formatted_added_time}</code>\n\n"
         )
 
     final_message = ""
