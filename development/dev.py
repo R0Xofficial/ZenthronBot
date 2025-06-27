@@ -3486,7 +3486,7 @@ async def clean_groups_command(update: Update, context: ContextTypes.DEFAULT_TYP
     for i in range(0, len(all_chat_ids_from_db), chunk_size):
         chunk = all_chat_ids_from_db[i:i + chunk_size]
         
-        await status_message.edit_text(
+        await status_message.edit_html(
             f"🧹 Checking chats <code>{checked_chats_count+1}-{checked_chats_count+len(chunk)}</code> / <code>{len(all_chat_ids_from_db)}</code>\n"
             f"🗑️ Removed so far: <code>{removed_chats_count}</code>"
         )
