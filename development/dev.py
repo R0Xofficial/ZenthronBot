@@ -3507,9 +3507,8 @@ async def clean_groups_command(update: Update, context: ContextTypes.DEFAULT_TYP
 
     final_report = (
         f"✅ Cleanup complete!\n\n"
-        f"- Checked: <code>{checked_chats_count}</code> chats\n"
-        f"- Removed: <code>{removed_chats_count}</code> inactive/invalid entries"
-        parse_mode=ParseMode.HTML
+        f"• Checked: <code>{checked_chats_count}</code> chats\n"
+        f"• Removed: <code>{removed_chats_count}</code> inactive/invalid entries"
     )
     await status_message.edit_text(final_report, parse_mode=ParseMode.HTML)
 
