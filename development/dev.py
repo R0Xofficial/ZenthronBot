@@ -1205,26 +1205,22 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         else:
             reason = " ".join(args_after_target)
     if not reason.strip(): reason = "No reason provided."
-
-    is_user = isinstance(target_entity, User) or (isinstance(target_entity, Chat) and target_entity.type == ChatType.PRIVATE)
-    is_channel = isinstance(target_entity, Chat) and target_entity.type == ChatType.CHANNEL
-
-    if not (is_user or is_channel):
-        await send_safe_reply(update, context, text="🧐 This action can only be applied to users or channels.")
-        return
     
     if target_entity.id == context.bot.id or target_entity.id == user_who_bans.id:
         await send_safe_reply(update, context, text="Nuh uh... This user cannot be banned."); return
 
-    if is_user:
+    is_user_to_check = isinstance(target_entity, User) or \
+                       (isinstance(target_entity, Chat) and target_entity.type == ChatType.PRIVATE)
+
+    if is_user_to_check:
         try:
-            target_entity_member = await context.bot.get_chat_member(chat.id, target_entity.id)
-            if target_entity_member.status in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
-                await send_safe_reply(update, context, text="WHAT? Chat Creator and Administrators cannot be banned.")
+            target_member = await context.bot.get_chat_member(chat.id, target_entity.id)
+            if target_member.status in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
+                await send_safe_reply(update, context, text="Administrators and creators cannot be banned by this command.")
                 return
         except TelegramError as e:
             if "user not found" not in str(e).lower():
-                logger.warning(f"Could not get target's chat member status for /ban: {e}")
+                logger.warning(f"Could not get member status for /ban: {e}")
     
     try:
         if is_user:
