@@ -1162,7 +1162,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if chat.type == ChatType.PRIVATE:
         await send_safe_reply(update, context, text="Huh? You can't ban in private chat...")
         return
-    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a disadvantaged person here?"):
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
     target_entity: User | Chat | None = None
@@ -1261,7 +1261,7 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await send_safe_reply(update, context, text="Huh? You can't unban in private chat...")
         return
 
-    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a disadvantaged person here?"):
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
     target_user: User | None = None
@@ -1321,7 +1321,7 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await send_safe_reply(update, context, text="Huh? You can't mute in private chat...")
         return
 
-    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a disadvantaged person here?"):
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
     target_user: User | None = None
@@ -1411,7 +1411,7 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await send_safe_reply(update, context, text="Huh? You can't unmute in private chat...")
         return
 
-    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a disadvantaged person here?"):
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
     target_user: User | None = None
@@ -1465,7 +1465,7 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await send_safe_reply(update, context, text="Huh? You can't kick in private chat...")
         return
 
-    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a disadvantaged person here?"):
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
     target_user: User | None = None
@@ -1594,7 +1594,7 @@ async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await message.reply_text("Huh? You can't promote in private chat....")
         return
 
-    if not await _can_user_perform_action(update, context, 'can_promote_members', "Hold Up! You need admin rights with 'Promote Members' permission.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_promote_members', "Why should I listen to a person with no privileges for this? You need 'can_promote_members' permission.", allow_bot_privileged_override=False):
         return
 
     target_user: User | None = None
@@ -1677,7 +1677,7 @@ async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await message.reply_text("Huh? You can't demote in private chat...")
         return
 
-    if not await _can_user_perform_action(update, context, 'can_promote_members', "Hold Up! You need admin rights with 'Promote Members' permission.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_promote_members', "Why should I listen to a person with no privileges for this? You need 'can_promote_members' permission.", allow_bot_privileged_override=False):
         return
     
     target_user: User | None = None
@@ -1752,14 +1752,14 @@ async def pin_message_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     try:
         bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
         if not (bot_member.status == "administrator" and getattr(bot_member, 'can_pin_messages', False)):
-            await update.message.reply_text("Error: I need to be an admin with the 'Pin Messages' permission in this chat to do that.")
+            await update.message.reply_text("Error: I need to be an admin with the 'can_pin_messages' permission in this chat.")
             return
     except TelegramError as e:
         logger.error(f"Error checking bot's own permissions in /pin for chat {chat.id}: {e}")
         await update.message.reply_text("Error: Couldn't verify my own permissions in this chat.")
         return
         
-    if not await _can_user_perform_action(update, context, 'can_pin_messages', "Error: You need to be an admin with 'Pin Messages' permission in this chat to use this command."):
+    if not await _can_user_perform_action(update, context, 'can_pin_messages', "Why should I listen to a person with no privileges for this? You need 'can_pin_messages' permission."):
         return
 
     disable_notification = True
@@ -1811,14 +1811,14 @@ async def unpin_message_command(update: Update, context: ContextTypes.DEFAULT_TY
     try:
         bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
         if not (bot_member.status == ChatMemberStatus.ADMINISTRATOR and getattr(bot_member, 'can_pin_messages', False)):
-            await update.message.reply_text("Error: I need to be an admin with the 'Pin Messages' permission to do that.")
+            await update.message.reply_text("Error: I need to be an admin with 'can_pin_messages' permission in this chat.")
             return
     except TelegramError as e:
         logger.error(f"Error checking bot's own permissions in /unpin for chat {chat.id}: {e}")
         await update.message.reply_text("Error: Couldn't verify my own permissions in this chat.")
         return
 
-    if not await _can_user_perform_action(update, context, 'can_pin_messages', "Error: You need to be an admin with 'Pin Messages' permission to use this command."):
+    if not await _can_user_perform_action(update, context, 'can_pin_messages', "Why should I listen to a person with no privileges for this? You need 'can_pin_messages' permission."):
         return
 
     try:
@@ -1856,14 +1856,14 @@ async def purge_messages_command(update: Update, context: ContextTypes.DEFAULT_T
     try:
         bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
         if not (bot_member.status == "administrator" and getattr(bot_member, 'can_delete_messages', False)):
-            await context.bot.send_message(chat.id, "Error: I need to be an admin with the 'Delete Messages' permission in this chat.")
+            await context.bot.send_message(chat.id, "Error: I need to be an admin with the 'can_delete_messages' permission in this chat.")
             return
     except TelegramError as e:
         logger.error(f"Error checking bot's own permissions in /purge for chat {chat.id}: {e}")
         await context.bot.send_message(chat.id, "Error: Couldn't verify my own permissions in this chat.")
         return
 
-    if not await _can_user_perform_action(update, context, 'can_delete_messages', "Error: You do not have permission to use this command."):
+    if not await _can_user_perform_action(update, context, 'can_delete_messages', "Why should I listen to a person with no privileges for this? You need 'can_delete_messages' permission."):
         return
 
     is_silent_purge = False
