@@ -918,7 +918,7 @@ async def owner_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         try: owner_chat = await context.bot.get_chat(OWNER_ID); owner_mention = owner_chat.mention_html(); owner_name = owner_chat.full_name or owner_chat.username or owner_name
         except TelegramError as e: logger.warning(f"Could not fetch owner info ({OWNER_ID}): {e}")
         except Exception as e: logger.warning(f"Unexpected error fetching owner info: {e}")
-        message = (f"The bot owner is: 👤 <b>{html.escape(owner_name)}</b> ({owner_mention})")
+        message = (f"My God is: 👤 <b>{html.escape(owner_name)}</b> ({owner_mention})")
         await update.message.reply_html(message)
     else: await update.message.reply_text("Error: Owner information is not configured.")
 
@@ -977,9 +977,9 @@ def format_entity_info(entity: Chat | User,
             info_lines.append(f"<b>• Status:</b> {display_status}\n")
 
         if is_target_owner:
-            info_lines.append(f"<b>• Bot Owner:</b> <code>Yes</code>\n")
+            info_lines.append(f"<b>• User Level:</b> <code>God</code>\n")
         elif is_target_sudo:
-            info_lines.append(f"<b>• Bot Sudo:</b> <code>Yes</code>\n")
+            info_lines.append(f"<b>• User Level:</b> <code>Sudo</code>\n")
             
         if blacklist_reason_str is not None:
             info_lines.append(f"<b>• Blacklisted:</b> <code>Yes</code>")
@@ -1036,13 +1036,13 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             try:
                 target_entity = await context.bot.get_chat(target_input)
             except Exception:
-                await update.message.reply_text(f"Error: Could not find user. Make sure you entered the details correctly or if I've seen him before")
+                await update.message.reply_text(f"Skrrrt... I couldn't find the user. Most likely I've never seen him.")
                 return
     else:
         target_entity = update.message.sender_chat or update.effective_user
 
     if not target_entity:
-        await update.message.reply_text("Error: Could not determine what to get info for.")
+        await update.message.reply_text("Skrrrt... I don't know what I'm looking for...")
         return
 
     if isinstance(target_entity, User):
@@ -1077,22 +1077,22 @@ async def list_admins_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     chat = update.effective_chat
 
     if chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP, ChatType.CHANNEL]:
-        await update.message.reply_text("This command can only be used in groups, supergroups, or channels.")
+        await update.message.reply_text("Huh? This command can only be used in chats.")
         return
 
     try:
         administrators = await context.bot.get_chat_administrators(chat_id=chat.id)
     except TelegramError as e:
         logger.error(f"Failed to get admin list for chat {chat.id} ('{chat.title}'): {e}")
-        await update.message.reply_text(f"Error: Couldn't fetch the admin list for this chat. Reason: {html.escape(str(e))}")
+        await update.message.reply_text(f"Skrrrt... Some supernatural force is preventing me from getting a list of administrators for this chat. Reason: {html.escape(str(e))}")
         return
     except Exception as e:
         logger.error(f"Unexpected error getting admin list for chat {chat.id}: {e}", exc_info=True)
-        await update.message.reply_text("An unexpected error occurred while fetching the admin list.")
+        await update.message.reply_text(f"BOMBOCLAT! There was a problem retrieving the administrator list.")
         return
 
     if not administrators:
-        await update.message.reply_text("It seems there are no administrators in this chat (or I can't see them).")
+        await update.message.reply_text("There seem to be no admins in this chat. Unless I'm blind and need glasses 👓")
         return
 
     chat_title_display = html.escape(chat.title or chat.first_name or f"Chat ID {chat.id}")
@@ -1158,10 +1158,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     message = update.message
     if not message: return
 
-    if chat.type == ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="Error: Cannot ban users in a private chat.")
-        return
-    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Error: You need to be an admin with rights to ban users in this chat."):
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
     target_entity: User | Chat | None = None
@@ -1183,111 +1180,129 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 target_entity = await context.bot.get_chat(int(target_input))
             except:
                 if target_input.isdigit():
-                    logger.warning(f"Could not resolve full profile for ID {target_input}. Creating a minimal User object.")
                     target_entity = User(id=int(target_input), first_name="", is_bot=False)
-    else:
-        await send_safe_reply(update, context, text="Usage: /ban <ID/@username/reply> [duration] [reason]")
-        return
     
     if not target_entity:
-        await send_safe_reply(update, context, text=f"Could not find or resolve the specified entity.")
+        await send_safe_reply(update, context, text="Usage: /ban <ID/@username/reply> [duration] [reason]")
         return
-
+        
     duration_str: str | None = None
     reason: str = "No reason provided."
     if args_after_target:
         potential_duration_td = parse_duration_to_timedelta(args_after_target[0])
         if potential_duration_td:
             duration_str = args_after_target[0]
-            if len(args_after_target) > 1:
-                reason = " ".join(args_after_target[1:])
+            if len(args_after_target) > 1: reason = " ".join(args_after_target[1:])
         else:
             reason = " ".join(args_after_target)
     if not reason.strip(): reason = "No reason provided."
 
-    if target_entity.id == context.bot.id or target_entity.id == user_who_bans.id or is_privileged_user(target_entity.id):
-        await send_safe_reply(update, context, text="This entity cannot be banned."); return
-
-    if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="This action can only be applied to users.")
-        return
-
     duration_td = parse_duration_to_timedelta(duration_str)
     until_date_for_api = datetime.now(timezone.utc) + duration_td if duration_td else None
 
-    try:
-        await context.bot.ban_chat_member(chat_id=chat.id, user_id=target_entity.id, until_date=until_date_for_api)
-        
-        try:
-            full_user_profile = await context.bot.get_chat(target_entity.id)
-            user_display_name = full_user_profile.mention_html() or html.escape(full_user_profile.full_name or str(target_entity.id))
-        except:
-            user_display_name = f"<code>{target_entity.id}</code>"
+    if target_entity.id == context.bot.id or target_entity.id == user_who_bans.id or is_privileged_user(target_entity.id):
+        await send_safe_reply(update, context, text="Nuh uh... This user cannot be banned."); return
 
-        response_lines = ["Success: User Banned"]
-        response_lines.append(f"<b>• User:</b> {user_display_name} (<code>{target_entity.id}</code>)")
-        response_lines.append(f"<b>• Reason:</b> {html.escape(reason)}")
-        if duration_str and until_date_for_api:
-            response_lines.append(f"<b>• Duration:</b> <code>{duration_str}</code> (until <code>{until_date_for_api.strftime('%Y-%m-%d %H:%M:%S %Z')}</code>)")
-        else:
-            response_lines.append(f"<b>• Duration:</b> <code>Permanent</code>")
-        await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
-    except Exception as e:
-        await send_safe_reply(update, context, text=f"Failed to ban user: {html.escape(str(e))}")
+    is_user = isinstance(target_entity, User) or (isinstance(target_entity, Chat) and target_entity.type == ChatType.PRIVATE)
+    is_channel = isinstance(target_entity, Chat) and target_entity.type == ChatType.CHANNEL
+
+    if not (is_user or is_channel):
+        await send_safe_reply(update, context, text="🧐 This action can only be applied to users or channels.")
+        return
+
+    if is_user:
+        try:
+            target_member = await context.bot.get_chat_member(chat.id, target_entity.id)
+            if target_member.status in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
+                await send_safe_reply(update, context, text="Chat Creator and Administrators cannot be banned.")
+                return
+        except TelegramError as e:
+            if "user not found" not in str(e).lower():
+                logger.warning(f"Could not get member status for /ban: {e}")
+    
+    try:
+        if is_user:
+            await context.bot.ban_chat_member(chat_id=chat.id, user_id=target_entity.id, until_date=until_date_for_api)
+        elif is_channel:
+            await context.bot.ban_chat_sender_chat(chat_id=chat.id, sender_chat_id=target_entity.id)
         
+        display_name = create_user_html_link(target_entity) if is_user else html.escape(target_entity.title)
+        
+        response_lines = ["Success: User Banned"]
+        response_lines.append(f"<b>• User:</b> {display_name} (<code>{target_entity.id}</code>)")
+        response_lines.append(f"<b>• Reason:</b> {html.escape(reason)}")
+        
+        if is_user:
+            if duration_str and until_date_for_api:
+                response_lines.append(f"<b>• Duration:</b> <code>{duration_str}</code> (until <code>{until_date_for_api.strftime('%Y-%m-%d %H:%M:%S %Z')}</code>)")
+            else:
+                response_lines.append(f"<b>• Duration:</b> <code>Permanent</code>")
+        
+        await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
+        
+    except Exception as e:
+        await send_safe_reply(update, context, text=f"Error: Failed to ban entity: {html.escape(str(e))}")
+
 async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     message = update.message
     if not message: return
 
     if chat.type == ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="Error: Cannot unban users in a private chat.")
+        await send_safe_reply(update, context, text="Huh? You can't unban in private chat...")
         return
 
-    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Error: You need to be an admin with rights to unban users in this chat."):
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
-    target_user: User | None = None
+    target_entity: User | Chat | None = None
+    
     if message.reply_to_message:
-        target_user = message.reply_to_message.from_user
+        target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
     elif context.args:
         target_arg = context.args[0]
-        target_user = await resolve_user_with_telethon(context, target_arg, update)
+        target_entity = await resolve_user_with_telethon(context, target_arg, update)
         
-        if not target_user and target_arg.isdigit():
+        if not target_entity and (target_arg.isdigit() or (target_arg.startswith('-') and target_arg[1:].isdigit())):
             try:
-                target_user = await context.bot.get_chat(int(target_arg))
+                target_entity = await context.bot.get_chat(int(target_arg))
             except:
-                 target_user = User(id=int(target_arg), first_name="", is_bot=False)
+                if target_arg.isdigit():
+                    target_entity = User(id=int(target_arg), first_name="", is_bot=False)
 
     else:
         await send_safe_reply(update, context, text="Usage: /unban <ID/@username/reply>")
         return
 
-    if not target_user:
-        await send_safe_reply(update, context, text=f"Could not find or resolve the specified user.")
+    if not target_entity:
+        await send_safe_reply(update, context, text=f"Skrrrt... I can't find the user.")
         return
+        
+    is_user = isinstance(target_entity, User) or (isinstance(target_entity, Chat) and target_entity.type == ChatType.PRIVATE)
+    is_channel = isinstance(target_entity, Chat) and target_entity.type == ChatType.CHANNEL
 
-    if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="Unban can only be applied to users.")
+    if not (is_user or is_channel):
+        await send_safe_reply(update, context, text="🧐 This action can only be applied to users or channels.")
         return
 
     try:
-        await context.bot.unban_chat_member(chat_id=chat.id, user_id=target_user.id, only_if_banned=True)
+        if is_user:
+            await context.bot.unban_chat_member(chat_id=chat.id, user_id=target_entity.id, only_if_banned=True)
+        elif is_channel:
+            await context.bot.unban_chat_sender_chat(chat_id=chat.id, sender_chat_id=target_entity.id)
         
-        try:
-            full_user_profile = await context.bot.get_chat(target_user.id)
-            user_display_name = full_user_profile.mention_html() or html.escape(getattr(full_user_profile, 'full_name', '') or str(target_user.id))
-        except:
-            user_display_name = create_user_html_link(target_user)
+        if is_user:
+            display_name = create_user_html_link(target_entity)
+        else:
+            display_name = html.escape(target_entity.title or f"Channel {target_entity.id}")
 
-        response_lines = ["Success: User Unbanned", f"<b>• User:</b> {user_display_name} (<code>{target_user.id}</code>)"]
+        response_lines = ["Success: User Unbanned"]
+        response_lines.append(f"<b>• User:</b> {display_name} (<code>{target_entity.id}</code>)")
+        
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
-    except TelegramError as e:
-        await send_safe_reply(update, context, text=f"Failed to unban user: {html.escape(str(e))}")
+        
     except Exception as e:
-        logger.error(f"Unexpected error in /unban: {e}", exc_info=True)
-        await send_safe_reply(update, context, text="An unexpected error occurred.")
+        await send_safe_reply(update, context, text=f"Failed to unban entity: {html.escape(str(e))}")
 
 async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
@@ -1296,10 +1311,10 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if not message: return
 
     if chat.type == ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="Error: Cannot mute users in a private chat.")
+        await send_safe_reply(update, context, text="Huh? You can't mute in private chat...")
         return
 
-    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Error: You need to be an admin with rights to restrict users in this chat."):
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
     target_user: User | None = None
@@ -1327,11 +1342,11 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     if not target_user:
-        await send_safe_reply(update, context, text=f"Could not find or resolve the specified user.")
+        await send_safe_reply(update, context, text=f"Skrrrt... I can't find the user.")
         return
 
     if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="Mute can only be applied to users.")
+        await send_safe_reply(update, context, text="🧐 Mute can only be applied to users.")
         return
         
     duration_str: str | None = None
@@ -1346,13 +1361,13 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             reason = " ".join(args_after_target)
     if not reason.strip(): reason = "No reason provided."
 
-    if target_user.id == context.bot.id or target_user.id == user_who_mutes.id or is_privileged_user(target_user.id):
-        await send_safe_reply(update, context, text="This user cannot be muted."); return
+    if target_user.id == context.bot.id or target_user.id == user_who_mutes.id:
+        await send_safe_reply(update, context, text="Nuh uh... This user cannot be muted."); return
 
     try:
         target_chat_member = await context.bot.get_chat_member(chat.id, target_user.id)
         if target_chat_member.status in ["creator", "administrator"]:
-            await send_safe_reply(update, context, text="Administrators and creators cannot be muted by this command.")
+            await send_safe_reply(update, context, text="WHAT? Chat Creator and Administrators cannot be muted.")
             return
     except TelegramError as e:
         if "user not found" in str(e).lower():
@@ -1386,10 +1401,10 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not message: return
 
     if chat.type == ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="Error: Cannot unmute users in a private chat.")
+        await send_safe_reply(update, context, text="Huh? You can't unmute in private chat...")
         return
 
-    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Error: You need to be an admin with rights to change user permissions in this chat."):
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
     target_user: User | None = None
@@ -1411,11 +1426,11 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     if not target_user:
-        await send_safe_reply(update, context, text=f"Could not find or resolve the specified user.")
+        await send_safe_reply(update, context, text=f"Skrrrt... I can't find the user.")
         return
 
     if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="Unmute can only be applied to users.")
+        await send_safe_reply(update, context, text="🧐 Unmute can only be applied to users.")
         return
 
     permissions_to_restore = ChatPermissions(
@@ -1440,10 +1455,10 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if not message: return
 
     if chat.type == ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="Error: Cannot kick users from a private chat.")
+        await send_safe_reply(update, context, text="Huh? You can't kick in private chat...")
         return
 
-    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Error: You need to be an admin with rights to kick users in this chat."):
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
     target_user: User | None = None
@@ -1471,22 +1486,22 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     if not target_user:
-        await send_safe_reply(update, context, text=f"Could not find or resolve the specified user.")
+        await send_safe_reply(update, context, text=f"Skrrrt... I can't find the user.")
         return
 
     reason: str = " ".join(args_after_target) or "No reason provided."
 
     if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="Kick can only be applied to users.")
+        await send_safe_reply(update, context, text="🧐 Kick can only be applied to users.")
         return
 
-    if target_user.id == context.bot.id or target_user.id == user_who_kicks.id or is_privileged_user(target_user.id):
-        await send_safe_reply(update, context, text="This user cannot be kicked."); return
+    if target_user.id == context.bot.id or target_user.id == user_who_kicks.id:
+        await send_safe_reply(update, context, text="Nuh uh... This user cannot be kicked."); return
 
     try:
         target_chat_member = await context.bot.get_chat_member(chat.id, target_user.id)
         if target_chat_member.status in ["creator", "administrator"]:
-            await send_safe_reply(update, context, text="Administrators and creators cannot be kicked by this command.")
+            await send_safe_reply(update, context, text="WHAT? Chat Creator and Administrators cannot be kicked.")
             return
     except TelegramError as e:
         if "user not found" in str(e).lower():
@@ -1513,43 +1528,43 @@ async def kickme_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     if chat.type == ChatType.PRIVATE:
-        await update.message.reply_text("You can't kick yourself from a private chat.")
+        await update.message.reply_text("Huh? You can't kick yourself in private chat...")
         return
 
     try:
         bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
         if not (bot_member.status == "administrator" and getattr(bot_member, 'can_restrict_members', False)):
-            await update.message.reply_text("Error: I can't kick users here because I'm not an admin with ban/kick permissions.")
+            await update.message.reply_text("Error: I can't kick users here because I'm not an admin with ban/kick permissions 🤓.")
             return
     except TelegramError as e:
         logger.error(f"Error checking bot's own permissions in /kickme for chat {chat.id}: {e}")
-        await update.message.reply_text("Error: Couldn't verify my own permissions to perform this action.")
+        await update.message.reply_text("Error: Couldn't verify my own permissions 🤕.")
         return
 
     try:
         user_chat_member = await context.bot.get_chat_member(chat.id, user_to_kick.id)
         
         if user_chat_member.status == "creator":
-            await update.message.reply_text("As the chat Creator, you must use Telegram's native 'Leave group' option.")
+            await update.message.reply_text("Hold Up! As the chat Creator, you must use Telegram's native 'Leave group' option.")
             return
         if user_chat_member.status == "administrator":
-            await update.message.reply_text("As a chat Administrator, you can't use /kickme. Please use Telegram's 'Leave group' option to prevent accidental self-removal.")
+            await update.message.reply_text("Hold Up! As a chat Administrator, you can't use /kickme. Please use Telegram's 'Leave group' option to prevent accidental self-removal.")
             return
             
     except TelegramError as e:
         if "user not found" in str(e).lower():
             logger.warning(f"User {user_to_kick.id} not found in chat {chat.id} for /kickme, though they sent the command.")
-            await update.message.reply_text("It seems you're not in this chat anymore.")
+            await update.message.reply_text("🧐 It seems you're not in this chat anymore.")
             return
         else:
             logger.error(f"Error checking your status in this chat for /kickme: {e}")
-            await update.message.reply_text("Error: Couldn't verify your status in this chat to perform /kickme.")
+            await update.message.reply_text("Skrrrt... Couldn't verify your status in this chat to perform /kickme.")
             return
 
     try:
         user_display_name = create_user_html_link(target_user)
         
-        await update.message.reply_text(f"Okay, {user_display_name}, as you wish! You have been kicked from the chat.", parse_mode=ParseMode.HTML)
+        await update.message.reply_text(f"Done! {user_display_name}, as you wish... You have been kicked from the chat.", parse_mode=ParseMode.HTML)
         
         await context.bot.ban_chat_member(chat_id=chat.id, user_id=user_to_kick.id)
         await context.bot.unban_chat_member(chat_id=chat.id, user_id=user_to_kick.id, only_if_banned=True)
@@ -1561,7 +1576,7 @@ async def kickme_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text(f"Error: I tried to help you leave, but something went wrong: {html.escape(str(e))}")
     except Exception as e:
         logger.error(f"Unexpected error in /kickme for user {user_to_kick.id}: {e}", exc_info=True)
-        await update.message.reply_text("An unexpected error occurred while trying to process your /kickme request.")
+        await update.message.reply_text("Error: An unexpected error occurred while trying to process your /kickme request.")
 
 async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
@@ -1569,10 +1584,10 @@ async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if not message: return
 
     if chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP]:
-        await message.reply_text("Users can only be promoted in groups and supergroups.")
+        await message.reply_text("Huh? You can't promote in private chat....")
         return
 
-    if not await _can_user_perform_action(update, context, 'can_promote_members', "Error: You need admin rights with 'Promote Members' permission.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_promote_members', "Why should I listen to a person with no privileges for this? You need 'can_promote_members' permission.", allow_bot_privileged_override=False):
         return
 
     target_user: User | None = None
@@ -1597,24 +1612,24 @@ async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     if not target_user:
-        await message.reply_text(f"Could not find or resolve the specified user.")
+        await message.reply_text(f"Skrrrt... I can't find the user..")
         return
 
     provided_custom_title = " ".join(args_for_title) if args_for_title else None
     
     if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
-        await message.reply_text("Promotion can only be applied to users."); return
+        await message.reply_text("🧐 Promotion can only be applied to users."); return
     if target_user.id == context.bot.id:
-        await message.reply_text("Error: I'm a bot, I can't promote myself."); return
+        await message.reply_text("Skrrrt... I'm a bot!!! I can't promote myself."); return
     if target_user.is_bot:
-        await message.reply_text("Error: Bots should be promoted manually with specific rights."); return
+        await message.reply_text("Skrrrt... Bots should be promoted manually with specific rights. So... I can't help you 😱"); return
 
     try:
         target_chat_member = await context.bot.get_chat_member(chat.id, target_user.id)
         user_display = create_user_html_link(target_user)
 
         if target_chat_member.status == "creator":
-            await message.reply_html(f"{user_display} is the chat Creator and cannot be managed.")
+            await message.reply_html(f"Huh? {user_display} is the chat Creator and cannot be managed.")
             return
 
         if target_chat_member.status == "administrator":
@@ -1644,7 +1659,7 @@ async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         user_display = create_user_html_link(target_user)
         await message.reply_html(f"✅ User {user_display} has been promoted with the title '<i>{html.escape(title_to_set)}</i>'.")
     except TelegramError as e:
-        await message.reply_text(f"Failed to promote user: {html.escape(str(e))}")
+        await message.reply_text(f"Error: Failed to promote user: {html.escape(str(e))}")
 
 async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
@@ -1652,10 +1667,10 @@ async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not message: return
     
     if chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP]:
-        await message.reply_text("Users can only be demoted in groups and supergroups.")
+        await message.reply_text("Huh? You can't demote in private chat...")
         return
 
-    if not await _can_user_perform_action(update, context, 'can_promote_members', "Error: You need admin rights with 'Promote Members' permission.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_promote_members', "Why should I listen to a person with no privileges for this? You need 'can_promote_members' permission.", allow_bot_privileged_override=False):
         return
     
     target_user: User | None = None
@@ -1678,15 +1693,15 @@ async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     if not target_user:
-        await message.reply_text(f"Could not find or resolve the specified user.")
+        await message.reply_text(f"Skrrrt... I can't find the user..")
         return
         
     if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
-        await message.reply_text("Demotion can only be applied to users.")
+        await message.reply_text("🧐 Demotion can only be applied to users.")
         return
         
     if target_user.id == context.bot.id:
-        await message.reply_text("I can't demote myself.")
+        await message.reply_text("Wait a minute! I can't demote myself. It's a paradox 😱.")
         return
 
     try:
@@ -1694,7 +1709,7 @@ async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         user_display = create_user_html_link(target_user)
 
         if target_chat_member.status == "creator":
-            await message.reply_html(f"The chat Creator cannot be demoted."); return
+            await message.reply_html(f"WHAT? The chat Creator cannot be demoted."); return
         
         if target_chat_member.status != "administrator":
             await message.reply_html(f"ℹ️ User {user_display} is not an administrator."); return
@@ -1709,10 +1724,10 @@ async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     except TelegramError as e:
         if "user not found" in str(e).lower():
-            await message.reply_text("User not found in this chat.")
+            await message.reply_text("Error: User not found in this chat.")
         else:
             logger.error(f"Error during demotion: {e}")
-            await message.reply_text(f"Failed to demote user. Reason: {html.escape(str(e))}")
+            await message.reply_text(f"Error: Failed to demote user. Reason: {html.escape(str(e))}")
             
 async def pin_message_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
@@ -1720,24 +1735,24 @@ async def pin_message_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     message_to_pin = update.message.reply_to_message
 
     if chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP, ChatType.CHANNEL]:
-        await update.message.reply_text("Messages can only be pinned in groups, supergroups, or channels.")
+        await update.message.reply_text("Huh? You can't pin messages in private chat...")
         return
 
     if not message_to_pin:
-        await update.message.reply_text("Please use this command by replying to the message you want to pin.")
+        await update.message.reply_text("Please🙏 use this command by replying to the message you want to pin.")
         return
 
     try:
         bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
         if not (bot_member.status == "administrator" and getattr(bot_member, 'can_pin_messages', False)):
-            await update.message.reply_text("Error: I need to be an admin with the 'Pin Messages' permission in this chat to do that.")
+            await update.message.reply_text("Error: I need to be an admin with the 'can_pin_messages' permission in this chat.")
             return
     except TelegramError as e:
         logger.error(f"Error checking bot's own permissions in /pin for chat {chat.id}: {e}")
         await update.message.reply_text("Error: Couldn't verify my own permissions in this chat.")
         return
         
-    if not await _can_user_perform_action(update, context, 'can_pin_messages', "Error: You need to be an admin with 'Pin Messages' permission in this chat to use this command."):
+    if not await _can_user_perform_action(update, context, 'can_pin_messages', "Why should I listen to a person with no privileges for this? You need 'can_pin_messages' permission."):
         return
 
     disable_notification = True
@@ -1779,7 +1794,7 @@ async def unpin_message_command(update: Update, context: ContextTypes.DEFAULT_TY
     message_to_unpin = update.message.reply_to_message
 
     if chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP, ChatType.CHANNEL]:
-        await update.message.reply_text("Messages can only be unpinned in groups, supergroups, or channels.")
+        await update.message.reply_text("Huh? You can't unpin messages in private chat...")
         return
         
     if not message_to_unpin:
@@ -1789,14 +1804,14 @@ async def unpin_message_command(update: Update, context: ContextTypes.DEFAULT_TY
     try:
         bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
         if not (bot_member.status == ChatMemberStatus.ADMINISTRATOR and getattr(bot_member, 'can_pin_messages', False)):
-            await update.message.reply_text("Error: I need to be an admin with the 'Pin Messages' permission to do that.")
+            await update.message.reply_text("Error: I need to be an admin with 'can_pin_messages' permission in this chat.")
             return
     except TelegramError as e:
         logger.error(f"Error checking bot's own permissions in /unpin for chat {chat.id}: {e}")
         await update.message.reply_text("Error: Couldn't verify my own permissions in this chat.")
         return
 
-    if not await _can_user_perform_action(update, context, 'can_pin_messages', "Error: You need to be an admin with 'Pin Messages' permission to use this command."):
+    if not await _can_user_perform_action(update, context, 'can_pin_messages', "Why should I listen to a person with no privileges for this? You need 'can_pin_messages' permission."):
         return
 
     try:
@@ -1824,7 +1839,7 @@ async def purge_messages_command(update: Update, context: ContextTypes.DEFAULT_T
     replied_to_message = update.message.reply_to_message
 
     if chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP]:
-        await command_message.reply_text("Messages can only be purged in groups and supergroups.")
+        await command_message.reply_text("Huh? You can't purge messages in private chat...")
         return
 
     if not replied_to_message:
@@ -1834,14 +1849,14 @@ async def purge_messages_command(update: Update, context: ContextTypes.DEFAULT_T
     try:
         bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
         if not (bot_member.status == "administrator" and getattr(bot_member, 'can_delete_messages', False)):
-            await context.bot.send_message(chat.id, "Error: I need to be an admin with the 'Delete Messages' permission in this chat.")
+            await context.bot.send_message(chat.id, "Error: I need to be an admin with the 'can_delete_messages' permission in this chat.")
             return
     except TelegramError as e:
         logger.error(f"Error checking bot's own permissions in /purge for chat {chat.id}: {e}")
         await context.bot.send_message(chat.id, "Error: Couldn't verify my own permissions in this chat.")
         return
 
-    if not await _can_user_perform_action(update, context, 'can_delete_messages', "Error: You do not have permission to use this command."):
+    if not await _can_user_perform_action(update, context, 'can_delete_messages', "Why should I listen to a person with no privileges for this? You need 'can_delete_messages' permission."):
         return
 
     is_silent_purge = False
@@ -2762,14 +2777,14 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         await message.reply_text("Usage: /blist <ID/@user/reply> [reason]"); return
     
     if not target_entity:
-        await message.reply_text("Could not identify the user to blacklist.")
+        await message.reply_text("Skrrrt... I can't find the user.")
         return
 
     if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
-        await message.reply_text("This action can only be applied to users.")
+        await message.reply_text("🧐 This action can only be applied to users.")
         return
     if is_privileged_user(target_entity.id) or target_entity.id == context.bot.id:
-        await message.reply_text("This user cannot be blacklisted.")
+        await message.reply_text("LoL, looks like... Someone tried blacklist privileged user. Nice Try.")
         return
 
     user_display = create_user_html_link(target_entity)
@@ -2819,12 +2834,12 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
         await message.reply_text("Specify a user ID/@username (or reply) to unblacklist."); return
         
     if not target_entity:
-        await message.reply_text("Could not identify the user to unblacklist."); return
+        await message.reply_text("Skrrrt... I can't find the user."); return
     
     if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
-        await message.reply_text("This action can only be applied to users."); return
+        await message.reply_text("🧐 This action can only be applied to users."); return
     if target_entity.id == OWNER_ID:
-        await message.reply_text("The Owner is never on the blacklist."); return
+        await message.reply_text("WHAT? The Owner is never on the blacklist."); return
 
     user_display = create_user_html_link(target_entity)
 
@@ -2927,14 +2942,14 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await message.reply_text("Usage: /gban <ID/@username/reply> [reason]"); return
     
     if not target_entity:
-        await message.reply_text(f"Could not find or resolve the specified user/entity.");
+        await message.reply_text(f"Skrrrt... I can't find the user.");
         return
 
     if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
-        await message.reply_text("This action can only be applied to users.")
+        await message.reply_text("🧐 This action can only be applied to users.")
         return
     if is_privileged_user(target_entity.id) or target_entity.id == context.bot.id:
-        await message.reply_text("This user cannot be globally banned.")
+        await message.reply_text("LoL, looks like... Someone tried global ban privileged user. Nice Try.")
         return
     if get_gban_reason(target_entity.id):
         user_display = create_user_html_link(target_entity)
@@ -2995,10 +3010,10 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await message.reply_text("Usage: /ungban <ID/@username/reply>"); return
         
     if not target_entity:
-        await message.reply_text("Could not find or resolve the specified user/entity."); return
+        await message.reply_text("Skrrrt... I can't find the user."); return
 
     if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
-        await message.reply_text("This action can only be applied to users."); return
+        await message.reply_text("🧐 This action can only be applied to users."); return
 
     user_display = create_user_html_link(target_entity)
 
@@ -3019,6 +3034,10 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         log_user_display = create_user_html_link(target_entity)
         
         chat_name_display = html.escape(chat.title or f"{user_who_ungbans.first_name}")
+        if chat.type != ChatType.PRIVATE and chat.username:
+            message_link = f"https://t.me/{chat.username}/{message.message_id}"
+            chat_name_display = f"<a href='{message_link}'>{html.escape(chat.title)}</a>"
+            
         admin_link = create_user_html_link(user_who_ungbans)
 
         log_message = (
@@ -3197,15 +3216,15 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     if not target_user:
-        await message.reply_text("Could not find or resolve the specified user.")
+        await message.reply_text("Skrrrt... I can't find the user.")
         return
     
     if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
-        await message.reply_text("Sudo can only be granted to users.")
+        await message.reply_text("🧐 Sudo can only be granted to users.")
         return
 
     if target_user.id == OWNER_ID or target_user.id == context.bot.id or target_user.is_bot:
-        await message.reply_text("This user cannot be a sudoer.")
+        await message.reply_text("This user cannot be a sudo.")
         return
     
     user_display = create_user_html_link(target_user)
@@ -3263,11 +3282,11 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
         
     if not target_user:
-        await message.reply_text("Could not find or resolve the specified user.")
+        await message.reply_text("Skrrrt... I can't find the user..")
         return
 
     if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
-        await message.reply_text("Sudo can only be revoked from users.")
+        await message.reply_text("🧐 Sudo can only be revoked from users.")
         return
 
     if target_user.id == OWNER_ID:
@@ -3383,7 +3402,7 @@ async def list_sudo_users_command(update: Update, context: ContextTypes.DEFAULT_
 
     await update.message.reply_html(message_text, disable_web_page_preview=True)
 
-async def list_chats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def list_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_user.id != OWNER_ID:
         logger.warning(f"Unauthorized /listgroups attempt by user {update.effective_user.id}.")
         return
@@ -3420,7 +3439,7 @@ async def list_chats_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if final_message:
         await update.message.reply_html(final_message, disable_web_page_preview=True)
 
-async def del_chat_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def del_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_user.id != OWNER_ID:
         return
 
@@ -3457,7 +3476,7 @@ async def del_chat_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     await update.message.reply_html("\n".join(response_lines))
 
-async def clean_chats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def clean_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_user.id != OWNER_ID:
         return
 
@@ -3572,9 +3591,9 @@ async def main() -> None:
         application.add_handler(CommandHandler("ungban", ungban_command))
         application.add_handler(CommandHandler("enforcegban", enforce_gban_command))
         application.add_handler(CommandHandler("listsudo", list_sudo_users_command))
-        application.add_handler(CommandHandler("listchats", list_chats_command))
-        application.add_handler(CommandHandler("delchat", del_chat_command))
-        application.add_handler(CommandHandler("cleanchats", clean_chats_command))
+        application.add_handler(CommandHandler("listgroups", list_groups_command))
+        application.add_handler(CommandHandler("delgroup", del_groups_command))
+        application.add_handler(CommandHandler("cleangroups", clean_groups_command))
         application.add_handler(CommandHandler("sudocmds", sudo_commands_command))
         application.add_handler(CommandHandler("addsudo", addsudo_command))
         application.add_handler(CommandHandler("delsudo", delsudo_command))
