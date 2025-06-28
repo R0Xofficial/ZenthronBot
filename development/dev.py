@@ -1220,7 +1220,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         try:
             target_entity_member = await context.bot.get_chat_member(chat.id, target_entity.id)
             if target_entity_member.status in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
-                await send_safe_reply(update, context, text="WHAT? Administrators and creators cannot be banned by this command.")
+                await send_safe_reply(update, context, text="WHAT? Chat Creator and Administrators cannot be banned.")
                 return
         except TelegramError as e:
             if "user not found" not in str(e).lower():
@@ -1374,7 +1374,7 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     try:
         target_chat_member = await context.bot.get_chat_member(chat.id, target_user.id)
         if target_chat_member.status in ["creator", "administrator"]:
-            await send_safe_reply(update, context, text="WHAT? Administrators and creators cannot be muted by this command.")
+            await send_safe_reply(update, context, text="WHAT? Chat Creator and Administrators cannot be muted.")
             return
     except TelegramError as e:
         if "user not found" in str(e).lower():
@@ -1508,7 +1508,7 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     try:
         target_chat_member = await context.bot.get_chat_member(chat.id, target_user.id)
         if target_chat_member.status in ["creator", "administrator"]:
-            await send_safe_reply(update, context, text="WHAT? Administrators and creators cannot be kicked by this command.")
+            await send_safe_reply(update, context, text="WHAT? Chat Creator and Administrators cannot be kicked.")
             return
     except TelegramError as e:
         if "user not found" in str(e).lower():
