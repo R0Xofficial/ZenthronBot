@@ -1256,27 +1256,29 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
-    target_user: User | None = None
+    target_entity: User | Chat | None = None
+    
     if message.reply_to_message:
-        target_user = message.reply_to_message.from_user
+        target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
     elif context.args:
         target_arg = context.args[0]
-        target_user = await resolve_user_with_telethon(context, target_arg, update)
+        target_entity = await resolve_user_with_telethon(context, target_arg, update)
         
-        if not target_user and target_arg.isdigit():
+        if not target_entity and (target_arg.isdigit() or (target_arg.startswith('-') and target_arg[1:].isdigit())):
             try:
-                target_user = await context.bot.get_chat(int(target_arg))
+                target_entity = await context.bot.get_chat(int(target_arg))
             except:
-                 target_user = User(id=int(target_arg), first_name="", is_bot=False)
+                if target_arg.isdigit():
+                    target_entity = User(id=int(target_arg), first_name="", is_bot=False)
 
     else:
         await send_safe_reply(update, context, text="Usage: /unban <ID/@username/reply>")
         return
 
-    if not target_user:
+    if not target_entity:
         await send_safe_reply(update, context, text=f"Skrrrt... I can't find the user.")
         return
-
+        
     is_user = isinstance(target_entity, User) or (isinstance(target_entity, Chat) and target_entity.type == ChatType.PRIVATE)
     is_channel = isinstance(target_entity, Chat) and target_entity.type == ChatType.CHANNEL
 
@@ -1293,7 +1295,7 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         if is_user:
             display_name = create_user_html_link(target_entity)
         else:
-            display_name = html.escape(target_entity.title)
+            display_name = html.escape(target_entity.title or f"Channel {target_entity.id}")
 
         response_lines = ["Success: User Unbanned"]
         response_lines.append(f"<b>• User:</b> {display_name} (<code>{target_entity.id}</code>)")
