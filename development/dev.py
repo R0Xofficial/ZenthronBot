@@ -1159,9 +1159,6 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     message = update.message
     if not message: return
 
-    if chat.type == ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="Huh? You can't ban in private chat...")
-        return
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
@@ -1184,39 +1181,41 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 target_entity = await context.bot.get_chat(int(target_input))
             except:
                 if target_input.isdigit():
-                    logger.warning(f"Could not resolve full profile for ID {target_input}. Creating a minimal User object.")
                     target_entity = User(id=int(target_input), first_name="", is_bot=False)
-    else:
-        await send_safe_reply(update, context, text="Usage: /ban <ID/@username/reply> [duration] [reason]")
-        return
     
     if not target_entity:
-        await send_safe_reply(update, context, text=f"Skrrrt... I can't find the user.")
+        await send_safe_reply(update, context, text="Usage: /ban <ID/@username/reply> [duration] [reason]")
         return
-
+        
     duration_str: str | None = None
     reason: str = "No reason provided."
     if args_after_target:
         potential_duration_td = parse_duration_to_timedelta(args_after_target[0])
         if potential_duration_td:
             duration_str = args_after_target[0]
-            if len(args_after_target) > 1:
-                reason = " ".join(args_after_target[1:])
+            if len(args_after_target) > 1: reason = " ".join(args_after_target[1:])
         else:
             reason = " ".join(args_after_target)
     if not reason.strip(): reason = "No reason provided."
-    
-    if target_entity.id == context.bot.id or target_entity.id == user_who_bans.id:
+
+    duration_td = parse_duration_to_timedelta(duration_str)
+    until_date_for_api = datetime.now(timezone.utc) + duration_td if duration_td else None
+
+    if target_entity.id == context.bot.id or target_entity.id == user_who_bans.id or is_privileged_user(target_entity.id):
         await send_safe_reply(update, context, text="Nuh uh... This user cannot be banned."); return
 
-    is_user_to_check = isinstance(target_entity, User) or \
-                       (isinstance(target_entity, Chat) and target_entity.type == ChatType.PRIVATE)
+    is_user = isinstance(target_entity, User) or (isinstance(target_entity, Chat) and target_entity.type == ChatType.PRIVATE)
+    is_channel = isinstance(target_entity, Chat) and target_entity.type == ChatType.CHANNEL
 
-    if is_user_to_check:
+    if not (is_user or is_channel):
+        await send_safe_reply(update, context, text="🧐 This action can only be applied to users or channels.")
+        return
+
+    if is_user:
         try:
             target_member = await context.bot.get_chat_member(chat.id, target_entity.id)
             if target_member.status in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
-                await send_safe_reply(update, context, text="Administrators and creators cannot be banned by this command.")
+                await send_safe_reply(update, context, text="Chat Creator and Administrators cannot be banned.")
                 return
         except TelegramError as e:
             if "user not found" not in str(e).lower():
@@ -1228,25 +1227,19 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         elif is_channel:
             await context.bot.ban_chat_sender_chat(chat_id=chat.id, sender_chat_id=target_entity.id)
         
-        if is_user:
-            display_name = create_user_html_link(target_entity)
-        else:
-            display_name = html.escape(target_entity.title)
-
+        display_name = create_user_html_link(target_entity) if is_user else html.escape(target_entity.title)
+        
         response_lines = ["Success: User Banned"]
         response_lines.append(f"<b>• User:</b> {display_name} (<code>{target_entity.id}</code>)")
         response_lines.append(f"<b>• Reason:</b> {html.escape(reason)}")
         
         if is_user:
-            if duration_str and until_date_for_api:
-                response_lines.append(f"<b>• Duration:</b> <code>{duration_str}</code>")
-            else:
-                response_lines.append(f"<b>• Duration:</b> <code>Permanent</code>")
+            response_lines.append(f"<b>• Duration:</b> <code>{'Permanent' if not duration_str else duration_str}</code>")
         
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
         
     except Exception as e:
-        await send_safe_reply(update, context, text=f"Failed to ban entity: {html.escape(str(e))}")
+        await send_safe_reply(update, context, text=f"Error: Failed to ban entity: {html.escape(str(e))}")
 
 async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
