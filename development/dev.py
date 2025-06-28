@@ -1209,22 +1209,26 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if target_entity.id == context.bot.id or target_entity.id == user_who_bans.id or is_privileged_user(target_entity.id):
         await send_safe_reply(update, context, text="Nuh uh... This entity cannot be banned."); return
 
-    try:
-        target_entity_member = await context.bot.get_chat_member(chat.id, target_entity.id)
-        if target_entity_member.status in ["creator", "administrator"]:
-            await send_safe_reply(update, context, text="WHAT? Administrators and creators cannot be banned by this command.")
-            return
-
     is_user = isinstance(target_entity, User) or (isinstance(target_entity, Chat) and target_entity.type == ChatType.PRIVATE)
     is_channel = isinstance(target_entity, Chat) and target_entity.type == ChatType.CHANNEL
 
     if not (is_user or is_channel):
         await send_safe_reply(update, context, text="🧐 This action can only be applied to users or channels.")
         return
+    
+    if target_entity.id == context.bot.id or target_entity.id == user_who_bans.id or is_privileged_user(target_entity.id):
+        await send_safe_reply(update, context, text="This entity cannot be banned."); return
 
-    duration_td = parse_duration_to_timedelta(duration_str)
-    until_date_for_api = datetime.now(timezone.utc) + duration_td if duration_td else None
-
+    if is_user:
+        try:
+            target_entity_member = await context.bot.get_chat_member(chat.id, target_entity.id)
+            if target_entity_member.status in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
+                await send_safe_reply(update, context, text="WHAT? Administrators and creators cannot be banned by this command.")
+                return
+        except TelegramError as e:
+            if "user not found" not in str(e).lower():
+                logger.warning(f"Could not get target's chat member status for /ban: {e}")
+    
     try:
         if is_user:
             await context.bot.ban_chat_member(chat_id=chat.id, user_id=target_entity.id, until_date=until_date_for_api)
