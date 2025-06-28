@@ -1213,7 +1213,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await send_safe_reply(update, context, text="🧐 This action can only be applied to users or channels.")
         return
     
-    if target_entity.id == context.bot.id or target_entity.id == user_who_bans.id
+    if target_entity.id == context.bot.id or target_entity.id == user_who_bans.id:
         await send_safe_reply(update, context, text="Nuh uh... This user cannot be banned."); return
 
     if is_user:
@@ -1368,7 +1368,7 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             reason = " ".join(args_after_target)
     if not reason.strip(): reason = "No reason provided."
 
-    if target_user.id == context.bot.id or target_user.id == user_who_mutes.id
+    if target_user.id == context.bot.id or target_user.id == user_who_mutes.id:
         await send_safe_reply(update, context, text="Nuh uh... This user cannot be muted."); return
 
     try:
@@ -1502,7 +1502,7 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await send_safe_reply(update, context, text="🧐 Kick can only be applied to users.")
         return
 
-    if target_user.id == context.bot.id or target_user.id == user_who_kicks.id
+    if target_user.id == context.bot.id or target_user.id == user_who_kicks.id:
         await send_safe_reply(update, context, text="Nuh uh... This user cannot be kicked."); return
 
     try:
