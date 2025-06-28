@@ -1234,7 +1234,10 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         response_lines.append(f"<b>• Reason:</b> {html.escape(reason)}")
         
         if is_user:
-            response_lines.append(f"<b>• Duration:</b> <code>{'Permanent' if not duration_str else duration_str}</code>")
+            if duration_str and until_date_for_api:
+                response_lines.append(f"<b>• Duration:</b> <code>{duration_str}</code> (until <code>{until_date_for_api.strftime('%Y-%m-%d %H:%M:%S %Z')}</code>)")
+            else:
+                response_lines.append(f"<b>• Duration:</b> <code>Permanent</code>")
         
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
         
