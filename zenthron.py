@@ -1035,7 +1035,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     if update.message.reply_to_message:
         target_entity = update.message.reply_to_message.sender_chat or update.message.reply_to_message.from_user
     elif context.args:
-        target_input = context.args[0]
+        target_input = " ".join(context.args)
         
         target_entity = await resolve_user_with_telethon(context, target_input, update)
         
