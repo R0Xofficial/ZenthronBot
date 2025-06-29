@@ -26,7 +26,6 @@ import io
 import telegram
 import time
 import google.generativeai as genai
-import markdown
 from typing import List, Tuple
 from telethon import TelegramClient
 from telethon.tl.types import User as TelethonUser, Channel as TelethonChannel
@@ -813,37 +812,27 @@ def create_user_html_link(user: User) -> str:
         
     return f'<a href="tg://user?id={user.id}">{html.escape(display_text)}</a>'
 
-def markdown_to_html(text: str) -> str:
-    text = re.sub(r'```(\w*)\s*\n', r'```\1\n', text)
-    
-    extensions = ['fenced_code', 'codehilite', 'nl2br']
-    
-    html_output = markdown.markdown(text, extensions=extensions)
-    
-    if html_output.startswith("<p>"):
-        html_output = html_output[3:]
-    if html_output.endswith("</p>"):
-        html_output = html_output[:-4]
+async def send_or_edit_with_telethon(context: ContextTypes.DEFAULT_TYPE, chat_id: int, text: str, message_to_edit_id: int | None = None, reply_to_id: int | None = None):
+    if 'telethon_client' not in context.bot_data:
+        logger.error("Cannot send via Telethon: client not found in context.")
+        await context.bot.send_message(chat_id, text)
+        return
 
-    def simplify_code_blocks(match):
-        language = match.group(2) or ""
-        code = html.escape(match.group(3))
-        if language:
-            return f'<pre><code class="language-{language.strip()}">{code}</code></pre>'
+    client: TelegramClient = context.bot_data['telethon_client']
+    
+    try:
+        if message_to_edit_id:
+            await client.edit_message(chat_id, message_to_edit_id, text, parse_mode='md')
         else:
-            return f'<pre>{code}</pre>'
-
-    html_output = re.sub(
-        r'<div class="codehilite"><pre>(<code( class="language-(\w+)")?>)?(.*?)(</code>)?</pre></div>',
-        simplify_code_blocks,
-        html_output,
-        flags=re.DOTALL
-    )
-    
-    html_output = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', html_output)
-    html_output = re.sub(r'(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)', r'<i>\1</i>', html_output)
-
-    return html_output.strip()
+            await client.send_message(chat_id, text, reply_to=reply_to_id, parse_mode='md')
+    except Exception as e:
+        logger.error(f"Telethon failed to send/edit message: {e}. Falling back to plain text via PTB.")
+        if message_to_edit_id:
+            await context.bot.delete_message(chat_id, message_to_edit_id)
+        
+        for i in range(0, len(text), 4096):
+            chunk = text[i:i+4096]
+            await context.bot.send_message(chat_id, chunk, reply_to_message_id=reply_to_id)
 
 # --- Command Handlers ---
 HELP_TEXT = """
@@ -2252,58 +2241,44 @@ async def set_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
+    message = update.message
 
-    can_use_ai = False
-    is_regular_user = True
-    
-    if is_privileged_user(user.id):
-        can_use_ai = True
-        is_regular_user = False
-    elif PUBLIC_AI_ENABLED:
-        can_use_ai = True
-    
-    if not can_use_ai and is_regular_user:
-        await update.message.reply_html(
+    can_use_ai = not is_privileged_user(user.id) and not PUBLIC_AI_ENABLED
+    if can_use_ai:
+        await message.reply_html(
             "🧠 My AI brain is currently <b>DISABLED</b> by my Owner for non-SUDO users 😴\n\n"
             "Maybe try again later; ask my Owner to enable the feature, or just ask a human? 😉"
         )
         return
-    elif not can_use_ai:
-        return
 
     if not GEMINI_API_KEY:
-        await update.message.reply_text("Sorry, the bot owner has not configured the AI features.")
+        await message.reply_text("Sorry, the bot owner has not configured the AI features.")
         return
         
     if not context.args:
-        await update.message.reply_text("What do you want to ask? 🤔\nUsage: /askai <your question>")
+        await message.reply_text("What do you want to ask? 🤔\nUsage: /askai <your question>")
         return
 
     prompt = " ".join(context.args)
     
-    status_message = await update.message.reply_html("🤔 <code>Thinking...</code>")
+    status_message = await message.reply_html("🤔 <code>Thinking...</code>")
     
     try:
         ai_response_markdown = await get_gemini_response(prompt)
         
-        ai_response_html = markdown_to_html(ai_response_markdown)
+        await send_or_edit_with_telethon(
+            context,
+            chat_id=message.chat_id,
+            text=ai_response_markdown,
+            message_to_edit_id=status_message.message_id
+        )
 
-        if len(ai_response_html) > 4096:
-             for i in range(0, len(ai_response_html), 4096):
-                chunk = ai_response_html[i:i+4096]
-                if i == 0:
-                    await status_message.edit_text(chunk, parse_mode=ParseMode.HTML)
-                else:
-                    await update.message.reply_text(chunk, parse_mode=ParseMode.HTML)
-        else:
-            await status_message.edit_text(ai_response_html, parse_mode=ParseMode.HTML)
-
-    except BadRequest as e:
-        logger.warning(f"HTML parsing failed for AI response: {e}. Sending as plain text.")
-        await status_message.edit_text(ai_response_markdown)
     except Exception as e:
-        logger.error(f"Failed to process /askai request: {e}")
-        await status_message.edit_text(f"💥 Houston, we have a problem! My AI core malfunctioned: {type(e).__name__}")
+        logger.error(f"Failed to process /askai request: {e}", exc_info=True)
+        try:
+            await status_message.edit_text(f"💥 Houston, we have a problem! My AI core malfunctioned: {type(e).__name__}")
+        except:
+            pass
 
 async def chat_sinfo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Displays basic info about the current chat."""
