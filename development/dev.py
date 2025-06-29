@@ -2191,7 +2191,7 @@ async def get_gemini_response(prompt: str) -> str:
         return "AI features are not configured by the bot owner."
     try:
         genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         response = await model.generate_content_async(prompt)
         return response.text
     except Exception as e:
