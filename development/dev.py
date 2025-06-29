@@ -2236,7 +2236,7 @@ async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     if not can_use_ai and is_regular_user:
         await update.message.reply_html(
-            "🧠 My AI brain is currently <b>DISABLED</b> by my Owner 😴\n\n"
+            "🧠 My AI brain is currently <b>DISABLED</b> by my Owner for non-SUDO users 😴\n\n"
             "Maybe try again later; ask my Owner to enable the feature, or just ask a human? 😉"
         )
         return
