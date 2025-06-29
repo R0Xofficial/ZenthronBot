@@ -2268,36 +2268,38 @@ async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     status_message = await message.reply_html("🤔 <code>Thinking...</code>")
     
-    ai_response_markdown = ""
     try:
         ai_response_markdown = await get_gemini_response(prompt)
         ai_response_html = markdown_to_html(ai_response_markdown)
 
-        try:
-            if len(ai_response_html) > 4096:
-                 for i in range(0, len(ai_response_html), 4096):
-                    chunk = ai_response_html[i:i+4096]
-                    if i == 0:
-                        await status_message.edit_text(chunk, parse_mode=ParseMode.HTML)
-                    else:
-                        await message.reply_text(chunk, parse_mode=ParseMode.HTML, reply_to_message_id=message.message_id)
-            else:
-                await status_message.edit_text(ai_response_html, parse_mode=ParseMode.HTML)
-        
-        except BadRequest as e:
-            logger.warning(f"HTML parsing failed for AI response: {e}. Sending as plain text reply.")
+        if len(ai_response_html) > 4096:
+            first_chunk = ai_response_html[:4096]
             try:
-                await status_message.delete()
-            except Exception:
-                pass
-            await message.reply_text(ai_response_markdown)
+                await status_message.edit_text(first_chunk, parse_mode=ParseMode.HTML)
+            except BadRequest as e:
+                logger.warning(f"HTML parsing failed for first AI chunk: {e}. Sending as plain text.")
+                await status_message.edit_text(ai_response_markdown[:4096])
+
+            for i in range(4096, len(ai_response_html), 4096):
+                chunk = ai_response_html[i:i+4096]
+                try:
+                    await message.reply_text(chunk, parse_mode=ParseMode.HTML)
+                except BadRequest:
+                    plain_chunk = ai_response_markdown[i:i+4096]
+                    await message.reply_text(plain_chunk)
+        else:
+            try:
+                await status_message.edit_text(ai_response_html, parse_mode=ParseMode.HTML)
+            except BadRequest as e:
+                logger.warning(f"HTML parsing failed for AI response: {e}. Sending as plain text.")
+                await status_message.edit_text(ai_response_markdown)
 
     except Exception as e:
         logger.error(f"Failed to process /askai request: {e}", exc_info=True)
         try:
             await status_message.edit_text(f"💥 Houston, we have a problem! My AI core malfunctioned: {type(e).__name__}")
-        except:
-            await message.reply_text(f"💥 An error occurred: {type(e).__name__}")
+        except Exception:
+            pass
 
 async def chat_sinfo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Displays basic statistics about the current chat."""
