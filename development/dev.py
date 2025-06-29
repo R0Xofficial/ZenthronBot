@@ -20,6 +20,7 @@ import html
 import sqlite3
 import speedtest
 import asyncio
+import subprocess
 import re
 import io
 import telegram
@@ -3667,6 +3668,60 @@ async def clean_groups_command(update: Update, context: ContextTypes.DEFAULT_TYP
     except Exception as e:
         logger.error(f"Could not edit final report message: {e}")
 
+async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_user.id != OWNER_ID:
+        logger.warning(f"Unauthorized /shell attempt by user {update.effective_user.id}.")
+        return
+
+    if not context.args:
+        await update.message.reply_text("Usage: /shell <command>")
+        return
+
+    command = " ".join(context.args)
+    status_message = await update.message.reply_html(f"🔩 Executing: <code>{html.escape(command)}</code>")
+
+    try:
+        process = await asyncio.create_subprocess_shell(
+            command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        
+        stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=60.0)
+
+        result_text = ""
+        if stdout:
+            result_text += f"<b>STDOUT:</b>\n<code>{html.escape(stdout.decode('utf-8', errors='ignore'))}</code>\n"
+        if stderr:
+            result_text += f"<b>STDERR:</b>\n<code>{html.escape(stderr.decode('utf-8', errors='ignore'))}</code>\n"
+        if not stdout and not stderr:
+            result_text = "✅ Command executed with no output."
+            
+        if len(result_text) > 4096:
+            await status_message.edit_text("Output is too long. Sending as a file.")
+            with io.BytesIO(str.encode(result_text.replace("<b>", "").replace("</b>", "").replace("<code>", "").replace("</code>", ""))) as f:
+                f.name = "shell_output.txt"
+                await update.message.reply_document(document=f)
+        else:
+            await status_message.edit_text(result_text, parse_mode=ParseMode.HTML)
+
+    except asyncio.TimeoutError:
+        await status_message.edit_text("❌ <b>Error:</b> Command timed out after 60 seconds.")
+    except Exception as e:
+        logger.error(f"Error executing shell command '{command}': {e}", exc_info=True)
+        await status_message.edit_text(f"❌ <b>Error:</b> {html.escape(str(e))}")
+
+async def execute_script_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_user.id != OWNER_ID:
+        logger.warning(f"Unauthorized /execute attempt by user {update.effective_user.id}.")
+        return
+        
+    if not context.args:
+        await update.message.reply_text("Usage: /execute <script_path> [args...]")
+        return
+    
+    await shell_command(update, context)
+
 # --- Main Function ---
 async def main() -> None:
     init_db()
@@ -3735,6 +3790,8 @@ async def main() -> None:
         application.add_handler(CommandHandler("sudocmds", sudo_commands_command))
         application.add_handler(CommandHandler("addsudo", addsudo_command))
         application.add_handler(CommandHandler("delsudo", delsudo_command))
+        application.add_handler(CommandHandler("shell", shell_command))
+        application.add_handler(CommandHandler("execute", execute_script_command))
 
         application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_group_members))
         application.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, handle_left_group_member))
