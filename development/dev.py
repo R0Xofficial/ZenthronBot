@@ -3691,9 +3691,9 @@ async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
         result_text = ""
         if stdout:
-            result_text += f"<b>STDOUT:</b>\n<code>{html.escape(stdout.decode('utf-8', errors='ignore'))}</code>\n"
+            result_text += f"<b>INFO:</b>\n<code>{html.escape(stdout.decode('utf-8', errors='ignore'))}</code>\n"
         if stderr:
-            result_text += f"<b>STDERR:</b>\n<code>{html.escape(stderr.decode('utf-8', errors='ignore'))}</code>\n"
+            result_text += f"<b>OUTPUT:</b>\n<code>{html.escape(stderr.decode('utf-8', errors='ignore'))}</code>\n"
         if not stdout and not stderr:
             result_text = "✅ Command executed with no output."
             
