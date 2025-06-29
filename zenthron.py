@@ -808,6 +808,20 @@ def create_user_html_link(user: User) -> str:
     return f'<a href="tg://user?id={user.id}">{html.escape(display_text)}</a>'
 
 def markdown_to_html(text: str) -> str:
+    text = re.sub(
+        r'```(\w+)\n(.*?)\n```', 
+        r'<pre><code class="language-\1">\2</code></pre>', 
+        text, 
+        flags=re.DOTALL
+    )
+    
+    text = re.sub(
+        r'```\n(.*?)\n```', 
+        r'<pre>\1</pre>', 
+        text, 
+        flags=re.DOTALL
+    )
+    
     text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
     text = re.sub(r'(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)', r'<i>\1</i>', text)
     text = re.sub(r'`(.*?)`', r'<code>\1</code>', text)
