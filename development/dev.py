@@ -812,27 +812,27 @@ def create_user_html_link(user: User) -> str:
         
     return f'<a href="tg://user?id={user.id}">{html.escape(display_text)}</a>'
 
-async def send_or_edit_with_telethon(context: ContextTypes.DEFAULT_TYPE, chat_id: int, text: str, message_to_edit_id: int | None = None, reply_to_id: int | None = None):
+async def send_with_telethon(context: ContextTypes.DEFAULT_TYPE, chat_id: int, text: str, reply_to_id: int | None = None):
     if 'telethon_client' not in context.bot_data:
-        logger.error("Cannot send via Telethon: client not found in context.")
-        await context.bot.send_message(chat_id, text)
+        logger.error("Telethon client not found, falling back to PTB.")
+        try:
+            await context.bot.send_message(chat_id, text, reply_to_message_id=reply_to_id)
+        except Exception as e_ptb:
+            logger.error(f"PTB fallback also failed: {e_ptb}")
         return
 
     client: TelegramClient = context.bot_data['telethon_client']
     
     try:
-        if message_to_edit_id:
-            await client.edit_message(chat_id, message_to_edit_id, text, parse_mode='md')
-        else:
-            await client.send_message(chat_id, text, reply_to=reply_to_id, parse_mode='md')
+        await client.send_message(chat_id, text, reply_to=reply_to_id, parse_mode='md')
     except Exception as e:
-        logger.error(f"Telethon failed to send/edit message: {e}. Falling back to plain text via PTB.")
-        if message_to_edit_id:
-            await context.bot.delete_message(chat_id, message_to_edit_id)
-        
-        for i in range(0, len(text), 4096):
-            chunk = text[i:i+4096]
-            await context.bot.send_message(chat_id, chunk, reply_to_message_id=reply_to_id)
+        logger.error(f"Telethon failed to send message: {e}. Falling back to plain text chunks via PTB.")
+        try:
+            for i in range(0, len(text), 4096):
+                chunk = text[i:i+4096]
+                await context.bot.send_message(chat_id, chunk, reply_to_message_id=reply_to_id)
+        except Exception as e_fallback:
+            logger.error(f"Final fallback to plain text failed: {e_fallback}")
 
 # --- Command Handlers ---
 HELP_TEXT = """
@@ -2243,8 +2243,8 @@ async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     user = update.effective_user
     message = update.message
 
-    can_use_ai = not is_privileged_user(user.id) and not PUBLIC_AI_ENABLED
-    if can_use_ai:
+    is_regular_user = not is_privileged_user(user.id)
+    if is_regular_user and not PUBLIC_AI_ENABLED:
         await message.reply_html(
             "🧠 My AI brain is currently <b>DISABLED</b> by my Owner for non-SUDO users 😴\n\n"
             "Maybe try again later; ask my Owner to enable the feature, or just ask a human? 😉"
@@ -2260,17 +2260,21 @@ async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     prompt = " ".join(context.args)
-    
     status_message = await message.reply_html("🤔 <code>Thinking...</code>")
     
     try:
         ai_response_markdown = await get_gemini_response(prompt)
         
-        await send_or_edit_with_telethon(
+        try:
+            await status_message.delete()
+        except Exception:
+            logger.warning("Could not delete the 'Thinking...' message.")
+
+        await send_with_telethon(
             context,
             chat_id=message.chat_id,
             text=ai_response_markdown,
-            message_to_edit_id=status_message.message_id
+            reply_to_id=message.message_id
         )
 
     except Exception as e:
