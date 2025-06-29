@@ -811,6 +811,12 @@ def create_user_html_link(user: User) -> str:
         
     return f'<a href="tg://user?id={user.id}">{html.escape(display_text)}</a>'
 
+def markdown_to_html(text: str) -> str:
+    text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
+    text = re.sub(r'(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)', r'<i>\1</i>', text)
+    text = re.sub(r'`(.*?)`', r'<code>\1</code>', text)
+    return text
+
 # --- Command Handlers ---
 HELP_TEXT = """
 <b>Here are the commands you can use:</b>
@@ -2242,25 +2248,31 @@ async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
         
     if not context.args:
-        await update.message.reply_text("My circuits are buzzing... What do you want to ask? 🤔\nUsage: /askai <your question>")
+        await update.message.reply_text("What do you want to ask? 🤔\nUsage: /askai <your question>")
         return
 
     prompt = " ".join(context.args)
+    
     status_message = await update.message.reply_text("🤔 Thinking... (This might take a moment, I'm consulting the digital cosmos!)")
     
     try:
-        ai_response = await get_gemini_response(prompt)
+        ai_response_markdown = await get_gemini_response(prompt)
         
-        if len(ai_response) > 4096:
-             for i in range(0, len(ai_response), 4096):
-                chunk = ai_response[i:i+4096]
-                if i == 0:
-                    await status_message.edit_text(chunk)
-                else:
-                    await update.message.reply_text(chunk)
-        else:
-            await status_message.edit_text(ai_response)
+        ai_response_html = markdown_to_html(ai_response_markdown)
 
+        if len(ai_response_html) > 4096:
+             for i in range(0, len(ai_response_html), 4096):
+                chunk = ai_response_html[i:i+4096]
+                if i == 0:
+                    await status_message.edit_text(chunk, parse_mode=ParseMode.HTML)
+                else:
+                    await update.message.reply_text(chunk, parse_mode=ParseMode.HTML)
+        else:
+            await status_message.edit_text(ai_response_html, parse_mode=ParseMode.HTML)
+
+    except BadRequest as e:
+        logger.warning(f"HTML parsing failed for AI response: {e}. Sending as plain text.")
+        await status_message.edit_text(ai_response_markdown)
     except Exception as e:
         logger.error(f"Failed to process /askai request: {e}")
         await status_message.edit_text(f"💥 Houston, we have a problem! My AI core malfunctioned: {type(e).__name__}")
