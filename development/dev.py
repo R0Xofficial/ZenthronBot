@@ -2277,16 +2277,21 @@ async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not user_question.strip():
         await message.reply_text("What do you want to ask? 🤔\nUsage: /askai <your question> or reply to a message.")
         return
-
-    prompt = user_question
+        
+    prompt_parts = []
+    prompt_parts.append("You are a helpful assistant. Your primary goal is to answer the user's question. ")
     if context_text or context_user_info:
-        prompt_parts = [f"Based on the following context, please answer the user's question."]
+        prompt_parts.append("You MUST base your answer on the provided context below. Analyze it carefully. ")
+        prompt_parts.append("\n\n--- CONTEXT START ---\n")
         if context_text:
-            prompt_parts.append(f"\n\n--- Context from a previous message ---\n{context_text}")
+            prompt_parts.append(f"Message Text: {context_text}\n")
         if context_user_info:
-            prompt_parts.append(f"\n\n--- Information about the context message author ---\n{context_user_info}")
-        prompt_parts.append(f"\n-------------------------------------\n\nUser's question: {user_question}")
-        prompt = "".join(prompt_parts)
+            prompt_parts.append(f"Message Author Info: {context_user_info}\n")
+        prompt_parts.append("--- CONTEXT END ---\n\n")
+
+    prompt_parts.append(f"Now, answer the following question: {user_question}")
+
+    prompt = "".join(prompt_parts)
 
     status_message = await message.reply_html("🤔 <code>Thinking...</code>")
     
