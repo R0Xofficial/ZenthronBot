@@ -5,7 +5,7 @@
 # See the LICENSE file for details.
 
 # -------------------------------------------------------------
-# ---                   REQUIRED VARIABLES                    ---
+# ---                   REQUIRED VARIABLES                  ---
 # -------------------------------------------------------------
 
 # --- PTB Bot Configuration ---
@@ -31,7 +31,7 @@ export TELEGRAM_API_HASH="PASTE_HERE"
 
 
 # -------------------------------------------------------------
-# ---                   OPTIONAL VARIABLES                    ---
+# ---                   OPTIONAL VARIABLES                  ---
 # -------------------------------------------------------------
 # To enable an optional feature, remove the '#' from the line beginning with 'export'.
 
@@ -44,6 +44,23 @@ export TELEGRAM_API_HASH="PASTE_HERE"
 # Go to https://developers.google.com/tenor/guides/quickstart to generate your key.
 #
 # export TENOR_API_KEY="PASTE_HERE"
+
+# --------------------------------------------------------------------
+# --- Google Gemini AI Configuration (OPTIONAL for /askai command) ---
+# --------------------------------------------------------------------
+# To enable the /askai command, you need a Gemini API key.
+#
+# How to get your API key:
+# 1. Go to Google AI Studio: https://aistudio.google.com/
+# 2. Log in with your Google Account.
+# 3. Click the "Get API key" button in the top left.
+# 4. Click "Create API key in new project".
+# 5. Copy the generated key and paste it below.
+#
+# IMPORTANT: This key is not required for the bot to run, only for the AI features.
+# To enable it, remove the '#' from the line below and paste your key.
+
+# export GEMINI_API_KEY="PASTE_HERE"
 
 
 # -------------------------------------------------------------
