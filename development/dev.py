@@ -824,7 +824,7 @@ HELP_TEXT = """
 
 <b>User Commands:</b>
 /info &lt;ID/@user/reply&gt; - Get info about a user.
-/chatstat - Get basic stats about the current chat.
+/chatinfo - Get basic info about the current chat.
 /kickme - Kick yourself from the chat.
 /listadmins - Show the list of administrators in the current chat.
 <i>(Alias: /admins)</i>
