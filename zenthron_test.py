@@ -1158,6 +1158,10 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     message = update.message
     if not message: return
 
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't ban in private chat...")
+        return
+
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
