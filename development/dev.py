@@ -846,6 +846,10 @@ HELP_TEXT = """
 /enforcegban &lt;yes/no&gt; - Enable/disable Global Ban enforcement in this chat.
 <i>(Chat Creator only)</i>
 
+<b>AI:</b>
+/askai [prompt] - Ask AI something.
+<i>(Make sure the bot owner has enabled the service)</i>
+
 <b>4FUN Commands:</b>
 /kill &lt;@user/reply&gt; - Metaphorically eliminate someone.
 /punch &lt;user/reply&gt; - Deliver a textual punch.
@@ -871,6 +875,7 @@ OWNER_COMMANDS_TEXT = """
 <b>Owner Commands:</b>
 /leave [Optional chat ID] - Make the bot leave a chat.
 /speedtest - Perform an internet speed test.
+/setai &lt;enable/disable&gt; - Turn on or off ai access for all users. <i>(Does not apply to privileged users)</i>
 /listgroups - List all known by bot groups.
 /delchat &lt;ID_1&gt; [ID_2] - Remove groups from database
 /cleangroups - Remove cached groups from database automatically.
@@ -3695,6 +3700,8 @@ async def main() -> None:
         application.add_handler(CommandHandler("gban", gban_command))
         application.add_handler(CommandHandler("ungban", ungban_command))
         application.add_handler(CommandHandler("enforcegban", enforce_gban_command))
+        application.add_handler(CommandHandler("setai", set_ai_command))
+        application.add_handler(CommandHandler("askai", ask_ai_command))
         application.add_handler(CommandHandler("listsudo", list_sudo_users_command))
         application.add_handler(CommandHandler("listgroups", list_groups_command))
         application.add_handler(CommandHandler("delgroup", del_groups_command))
