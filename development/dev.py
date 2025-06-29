@@ -2235,7 +2235,7 @@ async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         can_use_ai = True
     
     if not can_use_ai and is_regular_user:
-        await update.message.reply_text(
+        await update.message.reply_html(
             "🧠 My AI brain is currently DISABLED by owner 😴\n\n"
             "Maybe try again later; ask my owner to enable the feature, or just ask a human? 😉"
         )
@@ -2253,7 +2253,7 @@ async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     prompt = " ".join(context.args)
     
-    status_message = await update.message.reply_text("🤔 Thinking... (This might take a moment, I'm consulting the digital cosmos!)")
+    status_message = await update.message.reply_html("🤔 <code>Thinking...</code>")
     
     try:
         ai_response_markdown = await get_gemini_response(prompt)
