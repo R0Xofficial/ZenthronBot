@@ -814,24 +814,36 @@ def create_user_html_link(user: User) -> str:
     return f'<a href="tg://user?id={user.id}">{html.escape(display_text)}</a>'
 
 def markdown_to_html(text: str) -> str:
-    text = re.sub(
-        r'```(\w+)\n(.*?)\n```', 
-        r'<pre><code class="language-\1">\2</code></pre>', 
-        text, 
+    text = re.sub(r'```(\w*)\s*\n', r'```\1\n', text)
+    
+    extensions = ['fenced_code', 'codehilite', 'nl2br']
+    
+    html_output = markdown.markdown(text, extensions=extensions)
+    
+    if html_output.startswith("<p>"):
+        html_output = html_output[3:]
+    if html_output.endswith("</p>"):
+        html_output = html_output[:-4]
+
+    def simplify_code_blocks(match):
+        language = match.group(2) or ""
+        code = html.escape(match.group(3))
+        if language:
+            return f'<pre><code class="language-{language.strip()}">{code}</code></pre>'
+        else:
+            return f'<pre>{code}</pre>'
+
+    html_output = re.sub(
+        r'<div class="codehilite"><pre>(<code( class="language-(\w+)")?>)?(.*?)(</code>)?</pre></div>',
+        simplify_code_blocks,
+        html_output,
         flags=re.DOTALL
     )
     
-    text = re.sub(
-        r'```\n(.*?)\n```', 
-        r'<pre>\1</pre>', 
-        text, 
-        flags=re.DOTALL
-    )
-    
-    text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
-    text = re.sub(r'(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)', r'<i>\1</i>', text)
-    text = re.sub(r'`(.*?)`', r'<code>\1</code>', text)
-    return text
+    html_output = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', html_output)
+    html_output = re.sub(r'(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)', r'<i>\1</i>', html_output)
+
+    return html_output.strip()
 
 # --- Command Handlers ---
 HELP_TEXT = """
@@ -2238,40 +2250,71 @@ async def set_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     )
     logger.info(f"Owner {OWNER_ID} toggled public AI access to: {status_text}")
 
-def markdown_to_html(text: str) -> str:
-    text = re.sub(r'```(\w*)\s*\n', r'```\1\n', text)
-    
-    extensions = ['fenced_code', 'codehilite', 'nl2br']
-    
-    html_output = markdown.markdown(text, extensions=extensions)
-    
-    if html_output.startswith("<p>"):
-        html_output = html_output[3:]
-    if html_output.endswith("</p>"):
-        html_output = html_output[:-4]
+async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    message = update.message
 
-    def simplify_code_blocks(match):
-        language = match.group(2) or ""
-        code = html.escape(match.group(3))
-        if language:
-            return f'<pre><code class="language-{language.strip()}">{code}</code></pre>'
+    can_use_ai = False
+    is_regular_user = not is_privileged_user(user.id)
+    
+    if not is_regular_user or PUBLIC_AI_ENABLED:
+        can_use_ai = True
+    
+    if not can_use_ai and is_regular_user:
+        await message.reply_html(
+            "🧠 My AI brain is currently <b>DISABLED</b> by my Owner for non-SUDO users 😴\n\n"
+            "Maybe try again later; ask my Owner to enable the feature, or just ask a human? 😉"
+        )
+        return
+    elif not can_use_ai:
+        return
+
+    if not GEMINI_API_KEY:
+        await message.reply_text("Sorry, the bot owner has not configured the AI features.")
+        return
+        
+    if not context.args:
+        await message.reply_text("What do you want to ask? 🤔\nUsage: /askai <your question>")
+        return
+
+    prompt = " ".join(context.args)
+    
+    status_message = await message.reply_html("🤔 <code>Thinking...</code>")
+    
+    try:
+        ai_response_markdown = await get_gemini_response(prompt)
+        ai_response_html = markdown_to_html(ai_response_markdown)
+        if len(ai_response_html) > 4096:
+            first_chunk = ai_response_html[:4096]
+            try:
+                await status_message.edit_text(first_chunk, parse_mode=ParseMode.HTML)
+            except BadRequest as e:
+                logger.warning(f"HTML parsing failed for first AI chunk: {e}. Sending as plain text.")
+                await status_message.edit_text(ai_response_markdown[:4096])
+
+            for i in range(4096, len(ai_response_html), 4096):
+                chunk = ai_response_html[i:i+4096]
+                try:
+                    await message.reply_text(chunk, parse_mode=ParseMode.HTML)
+                except BadRequest:
+                    plain_chunk = ai_response_markdown[i:i+4096]
+                    await message.reply_text(plain_chunk)
         else:
-            return f'<pre>{code}</pre>'
+            try:
+                await status_message.edit_text(ai_response_html, parse_mode=ParseMode.HTML)
+            except BadRequest as e:
+                logger.warning(f"HTML parsing failed for AI response: {e}. Sending as plain text.")
+                await status_message.edit_text(ai_response_markdown)
 
-    html_output = re.sub(
-        r'<div class="codehilite"><pre>(<code( class="language-(\w+)")?>)?(.*?)(</code>)?</pre></div>',
-        simplify_code_blocks,
-        html_output,
-        flags=re.DOTALL
-    )
-    
-    html_output = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', html_output)
-    html_output = re.sub(r'(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)', r'<i>\1</i>', html_output)
-
-    return html_output.strip()
+    except Exception as e:
+        logger.error(f"Failed to process /askai request: {e}", exc_info=True)
+        try:
+            await status_message.edit_text(f"💥 Houston, we have a problem! My AI core malfunctioned: {type(e).__name__}")
+        except Exception:
+            pass
 
 async def chat_sinfo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Displays basic statistics about the current chat."""
+    """Displays basic info about the current chat."""
     chat = update.effective_chat
     if not chat:
         await update.message.reply_text("Could not get chat information for some reason.")
