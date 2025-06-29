@@ -862,9 +862,9 @@ HELP_TEXT = """
 /enforcegban &lt;yes/no&gt; - Enable/disable Global Ban enforcement in this chat.
 <i>(Chat Creator only)</i>
 
-<b>AI:</b>
+<b>AI:</b> <i>(Experimental)</i>
 /askai [prompt] - Ask AI something.
-<i>(Make sure the bot owner has enabled the service)</i>
+<i>(Make sure the bot Owner has enabled the service)</i>
 
 <b>4FUN Commands:</b>
 /kill &lt;@user/reply&gt; - Metaphorically eliminate someone.
