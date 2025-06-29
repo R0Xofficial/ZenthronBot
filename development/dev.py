@@ -24,6 +24,7 @@ import re
 import io
 import telegram
 import time
+import google.generativeai as genai
 from typing import List, Tuple
 from telethon import TelegramClient
 from telethon.tl.types import User as TelethonUser, Channel as TelethonChannel
@@ -58,6 +59,8 @@ LOG_CHAT_ID = None
 API_ID = None
 API_HASH = None
 SESSION_NAME = "zenthron_user_session"
+PUBLIC_AI_ENABLED = False
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # --- Load configuration from environment variables ---
 try:
@@ -2172,7 +2175,92 @@ async def say(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.error(f"Unexpected error during /say execution: {e}", exc_info=True)
         await update.message.reply_text(f"💥 Oops! An unexpected error occurred while trying to send the message to <b>{safe_chat_title}</b> (<code>{target_chat_id}</code>). Check logs.", parse_mode=ParseMode.HTML)
 
-async def chat_stat_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def get_gemini_response(prompt: str) -> str:
+    if not GEMINI_API_KEY:
+        return "AI features are not configured by the bot owner."
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        model = genai.GenerativeModel('gemini-pro')
+        response = await model.generate_content_async(prompt)
+        return response.text
+    except Exception as e:
+        logger.error(f"Error communicating with Gemini AI: {e}", exc_info=True)
+        return f"Sorry, I encountered an error while communicating with the AI: {type(e).__name__}"
+
+async def set_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    global PUBLIC_AI_ENABLED
+    
+    if update.effective_user.id != OWNER_ID:
+        return
+
+    if not context.args or len(context.args) != 1 or context.args[0].lower() not in ['enable', 'disable']:
+        await update.message.reply_text("Usage: /setai <enable/disable>")
+        return
+
+    choice = context.args[0].lower()
+    
+    if choice == 'enable':
+        PUBLIC_AI_ENABLED = True
+        status_text = "ENABLED"
+    else:
+        PUBLIC_AI_ENABLED = False
+        status_text = "DISABLED"
+    
+    await update.message.reply_html(
+        f"✅ Public access to <b>/askai</b> command has been globally <b>{status_text}</b>."
+    )
+    logger.info(f"Owner {OWNER_ID} toggled public AI access to: {status_text}")
+
+async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+
+    can_use_ai = False
+    is_regular_user = True
+    
+    if is_privileged_user(user.id):
+        can_use_ai = True
+        is_regular_user = False
+    elif PUBLIC_AI_ENABLED:
+        can_use_ai = True
+    
+    if not can_use_ai and is_regular_user:
+        await update.message.reply_text(
+            "🧠 My AI brain is currently taking a nap by order of the bot owner. 😴\n\n"
+            "Maybe try again later, or just ask a human? They are surprisingly smart sometimes! 😉"
+        )
+        return
+    elif not can_use_ai:
+        return
+
+    if not GEMINI_API_KEY:
+        await update.message.reply_text("Sorry, the bot owner has not configured the AI features.")
+        return
+        
+    if not context.args:
+        await update.message.reply_text("My circuits are buzzing... What do you want to ask? 🤔\nUsage: /askai <your question>")
+        return
+
+    prompt = " ".join(context.args)
+    status_message = await update.message.reply_text("🤔 Thinking... (This might take a moment, I'm consulting the digital cosmos!)")
+    
+    try:
+        ai_response = await get_gemini_response(prompt)
+        
+        if len(ai_response) > 4096:
+             for i in range(0, len(ai_response), 4096):
+                chunk = ai_response[i:i+4096]
+                if i == 0:
+                    await status_message.edit_text(chunk)
+                else:
+                    await update.message.reply_text(chunk)
+        else:
+            await status_message.edit_text(ai_response)
+
+    except Exception as e:
+        logger.error(f"Failed to process /askai request: {e}")
+        await status_message.edit_text(f"💥 Houston, we have a problem! My AI core malfunctioned: {type(e).__name__}")
+
+async def chat_sinfo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Displays basic statistics about the current chat."""
     chat = update.effective_chat
     if not chat:
@@ -3576,7 +3664,7 @@ async def main() -> None:
         application.add_handler(CommandHandler("github", github))
         application.add_handler(CommandHandler("owner", owner_info))
         application.add_handler(CommandHandler("info", entity_info_command))
-        application.add_handler(CommandHandler("chatstat", chat_stat_command))
+        application.add_handler(CommandHandler("chatinfo", chat_sinfo_command))
         application.add_handler(CommandHandler("cinfo", chat_info_command))
         application.add_handler(CommandHandler("ban", ban_command))
         application.add_handler(CommandHandler("unban", unban_command))
