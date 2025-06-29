@@ -894,11 +894,13 @@ OWNER_COMMANDS_TEXT = """
 /speedtest - Perform an internet speed test.
 /setai &lt;enable/disable&gt; - Turn on or off ai access for all users. <i>(Does not apply to privileged users)</i>
 /listgroups - List all known by bot groups.
-/delchat &lt;ID_1&gt; [ID_2] - Remove groups from database
+/delchat &lt;ID 1&gt; [ID 2] - Remove groups from database
 /cleangroups - Remove cached groups from database automatically.
 /listsudo - List all users with sudo privileges.
 /addsudo &lt;ID/@user/reply&gt; - Grant SUDO (bot admin) permissions to a user.
 /delsudo &lt;ID/@user/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
+/shell &lt;command&gt; - Execute the command in the terminal.
+/execute &lt;file patch&gt; - Run script.
 """
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
