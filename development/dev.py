@@ -2958,11 +2958,13 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return    
 
     add_to_gban(target_entity.id, user_who_gbans.id, reason)
-    user_display = create_user_html_link(target_entity)
-    if chat.type != ChatType.PRIVATE:
-        try: await context.bot.ban_chat_member(chat.id, target_entity.id)
-        except Exception: pass
+    if chat.type != ChatType.PRIVATE and is_gban_enforced(chat.id):
+        try:
+            await context.bot.ban_chat_member(chat.id, target_entity.id)
+        except Exception as e:
+            logger.warning(f"Could not enforce local ban for gban in chat {chat.id}: {e}")
 
+    user_display = create_user_html_link(target_entity)
     await message.reply_html(f"✅ User {user_display} has been globally banned.\n<b>Reason:</b> {html.escape(reason)}")
     
     try:
