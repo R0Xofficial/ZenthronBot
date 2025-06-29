@@ -6,7 +6,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# --- ZenthronBot ---
+# --- ZenthronBot [OLD] ---
+# This version is the last version
+# before the PTB to Telethon merge update.
+# NOTE: This version will no longer receive patches. 
 
 import logging
 import random
