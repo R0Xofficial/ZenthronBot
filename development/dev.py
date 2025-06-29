@@ -2224,18 +2224,16 @@ async def set_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
+    message = update.message
 
     can_use_ai = False
-    is_regular_user = True
+    is_regular_user = not is_privileged_user(user.id)
     
-    if is_privileged_user(user.id):
-        can_use_ai = True
-        is_regular_user = False
-    elif PUBLIC_AI_ENABLED:
+    if not is_regular_user or PUBLIC_AI_ENABLED:
         can_use_ai = True
     
     if not can_use_ai and is_regular_user:
-        await update.message.reply_html(
+        await message.reply_html(
             "🧠 My AI brain is currently <b>DISABLED</b> by my Owner for non-SUDO users 😴\n\n"
             "Maybe try again later; ask my Owner to enable the feature, or just ask a human? 😉"
         )
@@ -2244,20 +2242,56 @@ async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     if not GEMINI_API_KEY:
-        await update.message.reply_text("Sorry, the bot owner has not configured the AI features.")
-        return
-        
-    if not context.args:
-        await update.message.reply_text("What do you want to ask? 🤔\nUsage: /askai <your question>")
+        await message.reply_text("Sorry, the bot owner has not configured the AI features.")
         return
 
-    prompt = " ".join(context.args)
-    
-    status_message = await update.message.reply_html("🤔 <code>Thinking...</code>")
+    user_question = " ".join(context.args) if context.args else ""
+    replied_message = message.reply_to_message
+    context_text = ""
+    context_user_info = ""
+
+    if replied_message:
+        replied_user = replied_message.from_user
+        if replied_user and replied_user.id == user.id:
+            is_asking_about_self = False
+            if not user_question.strip() or any(word in user_question.lower() for word in ["me", "myself", "who am i", "kim jestem", "o mnie"]):
+                is_asking_about_self = True
+            
+            if is_asking_about_self:
+                await message.reply_html(
+                    f"Looking in the mirror, are we? 😉\n\nWell, hello there, {create_user_html_link(user)}! That's you!"
+                )
+                return
+
+        if replied_message.text:
+            context_text = replied_message.text
+        
+        if replied_user:
+            context_user_info = f"The user who wrote the context message has the ID {replied_user.id}, and their name is {replied_user.full_name}."
+            if replied_user.username:
+                context_user_info += f" Their username is @{replied_user.username}."
+
+        if not user_question.strip():
+            user_question = "Analyze the provided context (both the message text and the user info) and provide a relevant summary or answer any implicit question you can find."
+
+    if not user_question.strip():
+        await message.reply_text("What do you want to ask? 🤔\nUsage: /askai <your question> or reply to a message.")
+        return
+
+    prompt = user_question
+    if context_text or context_user_info:
+        prompt_parts = [f"Based on the following context, please answer the user's question."]
+        if context_text:
+            prompt_parts.append(f"\n\n--- Context from a previous message ---\n{context_text}")
+        if context_user_info:
+            prompt_parts.append(f"\n\n--- Information about the context message author ---\n{context_user_info}")
+        prompt_parts.append(f"\n-------------------------------------\n\nUser's question: {user_question}")
+        prompt = "".join(prompt_parts)
+
+    status_message = await message.reply_html("🤔 <code>Thinking...</code>")
     
     try:
         ai_response_markdown = await get_gemini_response(prompt)
-        
         ai_response_html = markdown_to_html(ai_response_markdown)
 
         if len(ai_response_html) > 4096:
@@ -2266,7 +2300,7 @@ async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 if i == 0:
                     await status_message.edit_text(chunk, parse_mode=ParseMode.HTML)
                 else:
-                    await update.message.reply_text(chunk, parse_mode=ParseMode.HTML)
+                    await message.reply_text(chunk, parse_mode=ParseMode.HTML)
         else:
             await status_message.edit_text(ai_response_html, parse_mode=ParseMode.HTML)
 
