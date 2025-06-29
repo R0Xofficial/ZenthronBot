@@ -573,6 +573,16 @@ def telethon_entity_to_ptb_user(entity: 'TelethonUser') -> User | None:
     )
 
 async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_input: str, update: Update) -> User | Chat | None:
+    if update.message and update.message.entities:
+        for entity in update.message.entities:
+            if entity.type == constants.MessageEntityType.TEXT_MENTION:
+                mentioned_text = update.message.text[entity.offset:(entity.offset + entity.length)]
+                if target_input.lstrip('@').lower() == mentioned_text.lstrip('@').lower():
+                    if entity.user:
+                        logger.info(f"Resolved '{target_input}' via Text Mention entity.")
+                        update_user_in_db(entity.user)
+                        return entity.user
+
     identifier: str | int = target_input
     try:
         identifier = int(target_input)
@@ -588,7 +598,7 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
         return entity_from_db
 
     try:
-        logger.info(f"Trying to resolve '{target_input}' with PTB")
+        logger.info(f"Trying to resolve '{target_input}' with PTB's get_chat.")
         ptb_entity = await context.bot.get_chat(target_input)
         if ptb_entity:
             if isinstance(ptb_entity, User):
@@ -614,7 +624,7 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
             if ptb_user:
                 update_user_in_db(ptb_user)
                 return ptb_user
-
+        
     except Exception as e:
         logger.error(f"All methods failed for '{target_input}'. Final Telethon error: {e}")
 
