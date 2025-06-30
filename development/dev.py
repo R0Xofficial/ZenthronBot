@@ -1047,11 +1047,13 @@ OWNERDEV_COMMANDS_TEXT = """
 /listgroups - List all known by bot groups.
 /delchat &lt;ID 1&gt; [ID 2] - Remove groups from database
 /cleangroups - Remove cached groups from database automatically.
-/listsudo - List all users with sudo privileges.
+/listsupport - List all users with support privileges.
 /addsupport &lt;ID/@user/reply&gt; - Grant Support permissions to a user.
 /delsupport &lt;ID/@user/reply&gt; - Revoke Support permissions from a user.
+/listsudo - List all users with sudo privileges.
 /addsudo &lt;ID/@user/reply&gt; - Grant SUDO (bot admin) permissions to a user.
 /delsudo &lt;ID/@user/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
+/listdev - List all users with developer privileges.
 /shell &lt;command&gt; - Execute the command in the terminal.
 /execute &lt;file patch&gt; [args...] - Run script.
 """
