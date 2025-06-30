@@ -1022,7 +1022,7 @@ HELP_TEXT = """
 /bonk &lt;@user/reply&gt; - Playfully reprimand someone with a bonk.
 """
 
-SUPPORT_COMMANDS_TEST = """
+SUPPORT_COMMANDS_TEXT = """
 <i>Note: Commands /ban, /unban, /mute, /unmute, /kick, /pin, /unpin, /purge, /promote, /demote, /zombies can be used by privileged users even if they are not chat administrators. (Use it wisely and don't overuse your power. Otherwise you may lose your privileges)</i>
 
 <b>Support Commands:</b>
