@@ -2080,13 +2080,16 @@ async def zombies_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     chat = update.effective_chat
     try:
         bot_member = await chat.get_member(context.bot.id)
+        if bot_member.status != ChatMemberStatus.ADMINISTRATOR:
+            await update.message.reply_text("Error: I can't clean zombies here because I'm not an administrator.")
+            return
         if not bot_member.can_restrict_members:
             await update.message.reply_text("I can't clean zombies here because I don't have the 'can_restrict_members' permission.")
             return
     except Exception as e:
         await update.message.reply_text(f"Skrrrt... I couldn't verify my own permissions: {e}")
         return
-
+        
     if context.args and context.args[0].lower() == 'clean':
         await _find_and_process_zombies(update, context, dry_run=False)
     else:
