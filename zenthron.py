@@ -2025,7 +2025,7 @@ async def _find_and_process_zombies(update: Update, context: ContextTypes.DEFAUL
     telethon_client: TelegramClient = context.bot_data['telethon_client']
 
     action_text = "Scanning for" if dry_run else "Cleaning"
-    status_message = await message.reply_html(f"🔥 {action_text} deleted accounts... This might take a while for large groups.")
+    status_message = await message.reply_html(f"🔥 <b>{action_text} deleted accounts...</b> This might take a while for large groups.")
 
     zombie_count = 0
     kicked_count = 0
