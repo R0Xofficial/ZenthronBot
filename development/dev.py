@@ -1040,7 +1040,7 @@ SUDO_COMMANDS_TEXT = """
 """
 
 DEVELOPER_COMMANDS_TEXT = """
-<b>Owner/Developer Commands:</b>
+<b>Developer Commands:</b>
 /leave [Optional chat ID] - Make the bot leave a chat.
 /speedtest - Perform an internet speed test.
 /setai &lt;enable/disable&gt; - Turn on or off ai access for all users. <i>(Does not apply to privileged users)</i>
