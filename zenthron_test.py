@@ -1011,7 +1011,7 @@ HELP_TEXT = """
 <i>(Chat Creator only)</i>
 
 <b>AI:</b> <i>(Experimental)</i>
-/askai [prompt] - Ask AI something.
+/askai &lt;prompt&gt; - Ask AI something.
 <i>(Make sure the bot owner has enabled the service)</i>
 
 <b>4FUN Commands:</b>
@@ -1033,15 +1033,15 @@ SUPPORT_COMMANDS_TEXT = """
 SUDO_COMMANDS_TEXT = """
 <b>Sudo Commands:</b>
 /status - Show bot status.
-/cinfo [Optional chat ID] - Get detailed info about the current or specified chat.
-/say [Optional chat ID] [Your text] - Send a message as the bot.
+/cinfo &lt;Optional chat ID&gt; - Get detailed info about the current or specified chat.
+/say &lt;Optional chat ID&gt; [Your text] - Send a message as the bot.
 /blist &lt;ID/@user/reply&gt; [Reason] - Add a user to the blacklist.
 /unblist &lt;ID/@user/reply&gt; - Remove a user from the blacklist.
 """
 
 DEVELOPER_COMMANDS_TEXT = """
 <b>Developer Commands:</b>
-/leave [Optional chat ID] - Make the bot leave a chat.
+/leave &lt;Optional chat ID&gt; - Make the bot leave a chat.
 /speedtest - Perform an internet speed test.
 /setai &lt;enable/disable&gt; - Turn on or off ai access for all users. <i>(Does not apply to privileged users)</i>
 /listgroups - List all known by bot groups.
@@ -2406,7 +2406,7 @@ async def say(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     args = context.args
     if not args:
-        await update.message.reply_text("Usage: /say [optional_chat_id] <your message>")
+        await update.message.reply_text("Usage: /say <optional_chat_id> [your message]")
         return
 
     target_chat_id_str = args[0]
