@@ -2056,8 +2056,7 @@ async def _find_and_process_zombies(update: Update, context: ContextTypes.DEFAUL
 
     if dry_run:
         await status_message.edit_text(
-            f"✅ Scan complete. Found <code>{zombie_count}</code> deleted accounts in this chat.\n"
-            f"To remove them, use /zombies clean.",
+            f"✅ Scan complete. Found <code>{zombie_count}</code> deleted accounts in this chat.\n",
             parse_mode=ParseMode.HTML
         )
     else:
