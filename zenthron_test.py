@@ -3613,10 +3613,12 @@ async def enforce_gban_command(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
+    admin = update.effective_user
     message = update.message
     if not message: return
     
-    if not is_owner_or_dev(user.id):
+    if not is_owner_or_dev(admin.id):
+        logger.warning(f"Unauthorized /addsupport attempt by user {admin.id}.")
         return
 
     target_user: User | None = None
@@ -3677,6 +3679,8 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
             await context.bot.send_message(target_user.id, "You have been added to the Support team.")
         except Exception as e:
             logger.warning(f"Failed to send PM to new Support user {target_user.id}: {e}")
+
+        admin_link = create_user_html_link(admin)
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -3684,6 +3688,7 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 f"<b>#SUPPORT</b>\n\n"
                 f"<b>User:</b> {user_display}\n"
                 f"<b>User ID:</b> <code>{target_user.id}</code>\n"
+                f"<b>Admin:</b> {admin_link}\n"
                 f"<b>Date:</b> <code>{current_time}</code>"
             )
             await send_operational_log(context, log_message)
@@ -3694,10 +3699,12 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
+    admin = update.effective_user
     message = update.message
     if not message: return
     
-    if not is_owner_or_dev(user.id):
+    if not is_owner_or_dev(admin.id):
+        logger.warning(f"Unauthorized /delsupport attempt by user {admin.id}.")
         return
 
     target_user: User | None = None
@@ -3734,12 +3741,15 @@ async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         except Exception as e:
             logger.warning(f"Failed to send PM to revoked Support user {target_user.id}: {e}")
 
+        admin_link = create_user_html_link(admin)
+
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
             log_message = (
                 f"<b>#UNSUPPORT</b>\n\n"
                 f"<b>User:</b> {user_display}\n"
                 f"<b>User ID:</b> <code>{target_user.id}</code>\n"
+                f"<b>Admin:</b> {admin_link}\n"
                 f"<b>Date:</b> <code>{current_time}</code>"
             )
             await send_operational_log(context, log_message)
@@ -3750,11 +3760,12 @@ async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
+    admin = update.effective_user
     message = update.message
     if not message: return
     
-    if not is_owner_or_dev(user.id):
-        logger.warning(f"Unauthorized /addsudo attempt by user {user.id}.")
+    if not is_owner_or_dev(admin.id):
+        logger.warning(f"Unauthorized /addsudo attempt by user {admin.id}.")
         return
 
     target_user: User | None = None
@@ -3826,6 +3837,8 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await context.bot.send_message(target_user.id, "You have been granted Sudo privileges.")
         except Exception as e:
             logger.warning(f"Failed to send PM to new sudo user {target_user.id}: {e}")
+
+        admin_link = create_user_html_link(admin)
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -3833,6 +3846,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 f"<b>#SUDO</b>\n\n"
                 f"<b>User:</b> {user_display}\n"
                 f"<b>User ID:</b> <code>{target_user.id}</code>\n"
+                f"<b>Admin:</b> {admin_link}\n"
                 f"<b>Date:</b> <code>{current_time}</code>"
             )
             await send_operational_log(context, log_message)
@@ -3843,11 +3857,12 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
+    admin = update.effective_user
     message = update.message
     if not message: return
     
-    if not is_owner_or_dev(user.id):
-        logger.warning(f"Unauthorized /delsudo attempt by user {user.id}.")
+    if not is_owner_or_dev(admin.id):
+        logger.warning(f"Unauthorized /delsudo attempt by user {admin.id}.")
         return
 
     target_user: User | None = None
@@ -3895,12 +3910,15 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         except Exception as e:
             logger.warning(f"Failed to send PM to revoked sudo user {target_user.id}: {e}")
 
+        admin_link = create_user_html_link(admin)
+
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
             log_message = (
                 f"<b>#UNSUDO</b>\n\n"
                 f"<b>User:</b> {user_display}\n"
                 f"<b>User ID:</b> <code>{target_user.id}</code>\n"
+                f"<b>Admin:</b> {admin_link}\n"
                 f"<b>Date:</b> <code>{current_time}</code>"
             )
             await send_operational_log(context, log_message)
