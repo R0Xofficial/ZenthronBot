@@ -1061,7 +1061,7 @@ DEVELOPER_COMMANDS_TEXT = """
 OWNER_COMMANDS_TEXT = """
 <b>Owner Commands:</b>
 /adddev &lt;ID/@user/reply&gt; - Grant Developer (All) permissions to a user.
-/delsudo &lt;ID/@user/reply&gt; - Revoke Developer (All) permissions from a user.
+/deldev &lt;ID/@user/reply&gt; - Revoke Developer (All) permissions from a user.
 """
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
