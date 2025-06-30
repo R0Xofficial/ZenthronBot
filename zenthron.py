@@ -3446,6 +3446,31 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await message.reply_html(f"User {user_display} already has sudo powers.")
         return
 
+    gban_reason = get_gban_reason(target_entity.id)
+    blist_reason = get_blacklist_reason(target_entity.id)
+
+    if gban_reason:
+        error_message = (
+            f"❌ <b>Promotion Failed!</b>\n\n"
+            f"User {user_display} cannot be promoted to <code>Sudo</code> because they are <b>Globally Bannned</b>.\n\n"
+            f"<b>Reason:</b> {html.escape(gban_reason)}\n\n"
+            f"<i>For security reasons, this action has been blocked. "
+            f"Please remove global ban first using /ungban if you wish to proceed.</i>"
+        )
+        await message.reply_html(error_message)
+        return
+
+    if blist_reason:
+        error_message = (
+            f"❌ <b>Promotion Failed!</b>\n\n"
+            f"User {user_display} cannot be promoted to <code>Sudo</code> because they are on the <b>Blacklist</b>.\n\n"
+            f"<b>Reason:</b> {html.escape(blist_reason)}\n\n"
+            f"<i>For security reasons, this action has been blocked. "
+            f"Please remove the user from the blacklist first using /unblist if you wish to proceed.</i>"
+        )
+        await message.reply_html(error_message)
+        return
+
     if add_sudo_user(target_user.id, user.id):
         await message.reply_html(f"✅ User {user_display} has been granted sudo powers.")
         
