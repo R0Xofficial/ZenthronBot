@@ -1016,7 +1016,7 @@ def format_entity_info(entity: Chat | User,
             elif chat_member_status_str == "restricted": display_status = "<code>Muted</code>"
             elif chat_member_status_str == "not_a_member": display_status = "<code>Not in chat</code>"
             else: display_status = f"<code>{html.escape(chat_member_status_str.replace('_', ' ').capitalize())}</code>"
-            info_lines.append(f"\n<b>• Status:</b> {display_status}\n")
+            info_lines.append(f"<b>• Status:</b> {display_status}")
 
         if is_target_owner:
             info_lines.append(f"\n<b>• User Level:</b> <code>God</code>")
@@ -1024,13 +1024,13 @@ def format_entity_info(entity: Chat | User,
             info_lines.append(f"\n<b>• User Level:</b> <code>Sudo</code>")
             
         if blacklist_reason_str is not None:
-            info_lines.append(f"\n<b>• Blacklisted:</b> <code>Yes</code>\n")
+            info_lines.append(f"\n<b>• Blacklisted:</b> <code>Yes</code>")
             info_lines.append(f"<b>Reason:</b> {html.escape(blacklist_reason_str)}")
         else:
             info_lines.append(f"\n<b>• Blacklisted:</b> <code>No</code>")
 
         if gban_reason_str is not None:
-            info_lines.append(f"\n<b>• Globally Banned:</b> <code>Yes</code>\n")
+            info_lines.append(f"\n<b>• Globally Banned:</b> <code>Yes</code>")
             info_lines.append(f"<b>Reason:</b> {html.escape(gban_reason_str)}")
         else:
             info_lines.append(f"\n<b>• Globally Banned:</b> <code>No</code>")
