@@ -2317,7 +2317,9 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     known_users_count = "N/A"
     blacklisted_count = "N/A"
+    developer_users_count = "N/A"
     sudo_users_count = "N/A"
+    support_users_count = "N/A"
     gban_count = "N/A"
     chat_count = "N/A"
 
@@ -2334,11 +2336,21 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             count_result_blacklist = cursor.fetchone()
             if count_result_blacklist:
                 blacklisted_count = str(count_result_blacklist[0])
+
+            cursor.execute("SELECT COUNT(*) FROM dev_users")
+            count_result_dev = cursor.fetchone()
+            if count_result_dev:
+                developer_users_count = str(count_result_dev[0])
                 
             cursor.execute("SELECT COUNT(*) FROM sudo_users")
             count_result_sudo = cursor.fetchone()
             if count_result_sudo:
                 sudo_users_count = str(count_result_sudo[0])
+
+            cursor.execute("SELECT COUNT(*) FROM support_users")
+            count_result_support = cursor.fetchone()
+            if count_result_support:
+                support_users_count = str(count_result_support[0])
 
             cursor.execute("SELECT COUNT(*) FROM global_bans")
             count_result_gban = cursor.fetchone()
@@ -2354,14 +2366,18 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.error(f"SQLite error fetching counts for /status: {e}", exc_info=True)
         known_users_count = "DB Error"
         blacklisted_count = "DB Error"
+        developer_users_count = "DB Error"
         sudo_users_count = "DB Error"
+        support_users_count = "DB Error"
         gban_count = "DB Error"
         chat_count = "DB Error"
     except Exception as e:
         logger.error(f"Unexpected error fetching counts for /status: {e}", exc_info=True)
         known_users_count = "Error"
         blacklisted_count = "Error"
+        developer_users_count = "Error"
         sudo_users_count = "Error"
+        support_users_count = "Error"
         gban_count = "Error"
         chat_count = "Error"
 
@@ -2372,7 +2388,9 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "<b>📊 Stats:</b>",
         f" <b>• 💬 Chats:</b> <code>{chat_count}</code>",
         f" <b>• 👀 Known Users:</b> <code>{known_users_count}</code>",
+        f" <b>• 🛃 Developer Users:</b> <code>{developer_users_count}</code>",
         f" <b>• 🛡 Sudo Users:</b> <code>{sudo_users_count}</code>",
+        f" <b>• 👷‍♂️ Support Users:</b> <code>{support_users_count}</code>",
         f" <b>• 🚫 Blacklisted Users:</b> <code>{blacklisted_count}</code>",
         f" <b>• 🌍 Globally Banned Users:</b> <code>{gban_count}</code>"
     ]
