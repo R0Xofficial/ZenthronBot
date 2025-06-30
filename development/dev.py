@@ -4034,29 +4034,35 @@ async def sudo_commands_command(update: Update, context: ContextTypes.DEFAULT_TY
     user = update.effective_user
     chat = update.effective_chat
     
-    if not (is_owner_or_dev(user.id) or is_sudo_user(user.id) or is_support_user(user.id)):
-        logger.warning(f"Unauthorized /sudocmds attempt by user {user.id}.")
+    if not is_privileged_user(user.id):
         return
 
+    help_parts = []
+
+    if is_support_user(user.id) or is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
+        help_parts.append(SUPPORT_COMMANDS_TEXT)
+
+    if is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
+        help_parts.append(SUDO_COMMANDS_TEXT)
+
+    if is_dev_user(user.id) or user.id == OWNER_ID:
+        help_parts.append(DEVELOPER_COMMANDS_TEXT)
+    
+    if user.id == OWNER_ID:
+        help_parts.append(OWNER_COMMANDS_TEXT)
+    
+    final_help_text = "\n\n".join(help_parts)
+    
     if chat.type == ChatType.PRIVATE:
-        final_sudo_help = SUDO_COMMANDS_TEXT
-        if user.id == OWNER_ID:
-            final_sudo_help += "\n" + OWNER_COMMANDS_TEXT
-        await update.message.reply_html(final_sudo_help, disable_web_page_preview=True)
-        return
-
-    bot_username = context.bot.username
-    deep_link_url = f"https://t.me/{bot_username}?start=sudocmds"
-    
-    keyboard = InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton(text="🛡️ Get Privileged Commands (PM)", url=deep_link_url)]
-        ]
-    )
-    
-    message_text = "The list of privileged commands has been sent to your private chat. Please click the button below to see it."
-    
-    await send_safe_reply(update, context, text=message_text, reply_markup=keyboard)
+        if final_help_text:
+            await update.message.reply_html(final_help_text, disable_web_page_preview=True)
+    else:
+        bot_username = context.bot.username
+        deep_link_url = f"https://t.me/{bot_username}?start=sudocmds"
+        keyboard = InlineKeyboardMarkup(
+            [[InlineKeyboardButton(text="🛡️ Get Privileged Commands (PM)", url=deep_link_url)]]
+        )
+        await send_safe_reply(update, context, text="The list of privileged commands has been sent to your private chat.", reply_markup=keyboard)
 
 async def listdevs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
