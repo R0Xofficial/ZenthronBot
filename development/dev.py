@@ -4051,7 +4051,7 @@ async def sudo_commands_command(update: Update, context: ContextTypes.DEFAULT_TY
     if user.id == OWNER_ID:
         help_parts.append(OWNER_COMMANDS_TEXT)
     
-    final_help_text = "\n\n".join(help_parts)
+    final_help_text = "\n".join(help_parts)
     
     if chat.type == ChatType.PRIVATE:
         if final_help_text:
