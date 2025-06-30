@@ -1629,7 +1629,7 @@ async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await message.reply_text("Huh? You can't promote in private chat....")
         return
 
-    if not await _can_user_perform_action(update, context, 'can_promote_members', "Why should I listen to a person with no privileges for this? You need 'can_promote_members' permission.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_promote_members', "Why should I listen to a person with no privileges for this? You need 'can_promote_members' permission.", allow_bot_privileged_override=True):
         return
 
     target_user: User | None = None
@@ -1712,7 +1712,7 @@ async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await message.reply_text("Huh? You can't demote in private chat...")
         return
 
-    if not await _can_user_perform_action(update, context, 'can_promote_members', "Why should I listen to a person with no privileges for this? You need 'can_promote_members' permission.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_promote_members', "Why should I listen to a person with no privileges for this? You need 'can_promote_members' permission.", allow_bot_privileged_override=True):
         return
     
     target_user: User | None = None
