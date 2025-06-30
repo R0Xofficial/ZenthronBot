@@ -2064,11 +2064,13 @@ async def _find_and_process_zombies(update: Update, context: ContextTypes.DEFAUL
         await status_message.edit_text("\n".join(report), parse_mode=ParseMode.HTML)
 
 async def zombies_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission.", allow_bot_privileged_override=True):
-        return
+    chat = update.effective_chat
 
     if chat.type == ChatType.PRIVATE:
         await send_safe_reply(update, context, text="Huh? You can't delete zombies in private chat...")
+        return
+
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission.", allow_bot_privileged_override=True):
         return
 
     if 'telethon_client' not in context.bot_data:
