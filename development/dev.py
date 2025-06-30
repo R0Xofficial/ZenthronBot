@@ -4075,7 +4075,7 @@ async def listdevs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             if name_parts:
                 user_display_name = " ".join(name_parts) + f" (<code>{user_id}</code>)"
         except Exception:
-            user_obj_from_db = get_user_from_db_by_id(user_id)
+            user_obj_from_db = get_user_from_db_by_username(str(user_id))
             if user_obj_from_db:
                 display_name_parts = []
                 if user_obj_from_db.first_name: display_name_parts.append(html.escape(user_obj_from_db.first_name))
@@ -4175,7 +4175,7 @@ async def listsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             if name_parts:
                 user_display_name = " ".join(name_parts) + f" (<code>{user_id}</code>)"
         except Exception:
-            user_obj_from_db = get_user_from_db_by_id(user_id)
+            user_obj_from_db = get_user_from_db_by_username(str(user_id))
             if user_obj_from_db:
                 display_name_parts = []
                 if user_obj_from_db.first_name: display_name_parts.append(html.escape(user_obj_from_db.first_name))
