@@ -1092,7 +1092,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             if user.id == OWNER_ID:
                 help_parts.append(OWNER_COMMANDS_TEXT)
             
-            final_sudo_help = "\n\n".join(help_parts)
+            final_sudo_help = "\n".join(help_parts)
             
             if final_sudo_help:
                 await update.message.reply_html(final_sudo_help, disable_web_page_preview=True)
@@ -4069,7 +4069,7 @@ async def sudo_commands_command(update: Update, context: ContextTypes.DEFAULT_TY
     if user.id == OWNER_ID:
         help_parts.append(OWNER_COMMANDS_TEXT)
     
-    final_help_text = "".join(help_parts)
+    final_help_text = "\n".join(help_parts)
     
     if chat.type == ChatType.PRIVATE:
         if final_help_text:
