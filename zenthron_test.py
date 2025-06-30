@@ -3671,7 +3671,7 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     if add_support_user(target_user.id, user.id):
-        await message.reply_html(f"✅ User {user_display} has been added to Support.")
+        await message.reply_html(f"✅ User {user_display} has been granted <b>Support</b> powers.")
         
         try:
             await context.bot.send_message(target_user.id, "You have been added to the Support team.")
@@ -3688,7 +3688,7 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
             )
             await send_operational_log(context, log_message)
         except Exception as e:
-            logger.error(f"Error sending #SUPPORT_ADDED log: {e}", exc_info=True)
+            logger.error(f"Error sending #SUPPORT log: {e}", exc_info=True)
     else:
         await message.reply_text("Failed to add user to Support list. Check logs.")
 
@@ -3727,7 +3727,7 @@ async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     if remove_support_user(target_user.id):
-        await message.reply_html(f"✅ Support role for user {user_display} has been revoked.")
+        await message.reply_html(f"✅ <b>Support</b> role for user {user_display} has been revoked.")
         
         try:
             await context.bot.send_message(target_user.id, "You have been removed from the Support team.")
@@ -3820,10 +3820,10 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     if add_sudo_user(target_user.id, user.id):
-        await message.reply_html(f"✅ User {user_display} has been granted sudo powers.")
+        await message.reply_html(f"✅ User {user_display} has been granted <b>Sudo</b> powers.")
         
         try:
-            await context.bot.send_message(target_user.id, "You have been granted sudo privileges by the Bot Owner.")
+            await context.bot.send_message(target_user.id, "You have been granted Sudo privileges.")
         except Exception as e:
             logger.warning(f"Failed to send PM to new sudo user {target_user.id}: {e}")
         
@@ -3888,10 +3888,10 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     if remove_sudo_user(target_user.id):
-        await message.reply_html(f"✅ Sudo powers for user {user_display} have been revoked.")
+        await message.reply_html(f"✅ <b>Sudo</b> powers for user {user_display} have been revoked.")
         
         try:
-            await context.bot.send_message(target_user.id, "Your sudo privileges have been revoked by the Bot Owner.")
+            await context.bot.send_message(target_user.id, "Your sudo privileges have been revoked.")
         except Exception as e:
             logger.warning(f"Failed to send PM to revoked sudo user {target_user.id}: {e}")
 
@@ -3970,7 +3970,7 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     if add_dev_user(target_user.id, user.id):
-        await message.reply_html(f"✅ User {user_display} has been promoted to Developer.")
+        await message.reply_html(f"✅ User {user_display} has been granted <b>Developer</b> powers.")
         
         try:
             await context.bot.send_message(target_user.id, "You have been promoted to Developer by the Bot Owner.")
@@ -4027,7 +4027,7 @@ async def deldev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     if remove_dev_user(target_user.id):
-        await message.reply_html(f"✅ Developer role for user {user_display} has been revoked.")
+        await message.reply_html(f"✅ <b>Developer</b> role for user {user_display} has been revoked.")
         
         try:
             await context.bot.send_message(target_user.id, "Your Developer role has been revoked by the Bot Owner.")
