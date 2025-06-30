@@ -1053,7 +1053,7 @@ DEVELOPER_COMMANDS_TEXT = """
 /listsudo - List all users with sudo privileges.
 /addsudo &lt;ID/@user/reply&gt; - Grant SUDO (bot admin) permissions to a user.
 /delsudo &lt;ID/@user/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
-/listdev - List all users with developer privileges.
+/listdevs - List all users with developer privileges.
 /shell &lt;command&gt; - Execute the command in the terminal.
 /execute &lt;file patch&gt; [args...] - Run script.
 """
