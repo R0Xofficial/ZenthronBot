@@ -1077,7 +1077,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
             final_sudo_help = SUPPORT_COMMANDS_TEXT
 
-            if is_sudo_user(user.id):
+            if (is_owner_or_dev(user.id) or is_sudo_user(user.id):
                 final_sudo_help += "\n" + SUDO_COMMANDS_TEXT
             
             if is_owner_or_dev(user.id):
