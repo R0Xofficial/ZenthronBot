@@ -125,7 +125,23 @@ def init_db():
         """)
 
         cursor.execute("""
+            CREATE TABLE IF NOT EXISTS support_users (
+                user_id INTEGER PRIMARY KEY,
+                added_by_id INTEGER NOT NULL,
+                timestamp TEXT NOT NULL
+            )
+        """)
+        
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS sudo_users (
+                user_id INTEGER PRIMARY KEY,
+                added_by_id INTEGER NOT NULL,
+                timestamp TEXT NOT NULL
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS dev_users (
                 user_id INTEGER PRIMARY KEY,
                 added_by_id INTEGER NOT NULL,
                 timestamp TEXT NOT NULL
@@ -151,7 +167,7 @@ def init_db():
         """)
         
         conn.commit()
-        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, sudo_users, global_bans, bot_chats ensured).")
+        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, support_users, sudo_users, dev_users, global_bans, bot_chats ensured).")
     except sqlite3.Error as e:
         logger.error(f"SQLite error during DB initialization: {e}", exc_info=True)
     finally:
@@ -249,6 +265,66 @@ async def check_blacklist_handler(update: Update, context: ContextTypes.DEFAULT_
         
         raise ApplicationHandlerStop
 
+# --- Support ---
+def add_support_user(user_id: int, added_by_id: int) -> bool:
+    """Adds a user to the Support list."""
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        current_timestamp_iso = datetime.now(timezone.utc).isoformat()
+        cursor.execute(
+            "INSERT OR IGNORE INTO support_users (user_id, added_by_id, timestamp) VALUES (?, ?, ?)",
+            (user_id, added_by_id, current_timestamp_iso)
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error adding support user {user_id}: {e}", exc_info=True)
+        return False
+    finally:
+        if conn: conn.close()
+
+def remove_support_user(user_id: int) -> bool:
+    """Removes a user from the Support list."""
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM support_users WHERE user_id = ?", (user_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error removing support user {user_id}: {e}", exc_info=True)
+        return False
+    finally:
+        if conn: conn.close()
+
+def is_support_user(user_id: int) -> bool:
+    """Checks if a user is on the Support list."""
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM support_users WHERE user_id = ?", (user_id,))
+        return cursor.fetchone() is not None
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error checking support for user {user_id}: {e}", exc_info=True)
+        return False
+    finally:
+        if conn: conn.close()
+
+def get_all_support_users_from_db() -> List[Tuple[int, str]]:
+    """Fetches all Support users from the database."""
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT user_id, timestamp FROM support_users ORDER BY timestamp DESC")
+            return cursor.fetchall()
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error fetching all support users: {e}", exc_info=True)
+        return []
+
 # --- Sudo ---
 def add_sudo_user(user_id: int, added_by_id: int) -> bool:
     """Adds a user to the sudo list."""
@@ -301,11 +377,96 @@ def is_sudo_user(user_id: int) -> bool:
         if conn:
             conn.close()
 
-def is_privileged_user(user_id: int) -> bool:
-    """Checks if the user is the Owner or a Sudo user."""
+def is_sudo_user(user_id: int) -> bool:
+    """Checks if a user is on the sudo list (database check only)."""
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM sudo_users WHERE user_id = ?", (user_id,))
+        return cursor.fetchone() is not None
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error checking sudo for user {user_id}: {e}", exc_info=True)
+        return False 
+    finally:
+        if conn:
+            conn.close()
+
+# --- Developer ---
+def add_dev_user(user_id: int, added_by_id: int) -> bool:
+    """Adds a user to the Developer list."""
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        current_timestamp_iso = datetime.now(timezone.utc).isoformat()
+        cursor.execute(
+            "INSERT OR IGNORE INTO dev_users (user_id, added_by_id, timestamp) VALUES (?, ?, ?)",
+            (user_id, added_by_id, current_timestamp_iso)
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error adding dev user {user_id}: {e}", exc_info=True)
+        return False
+    finally:
+        if conn: conn.close()
+
+def remove_dev_user(user_id: int) -> bool:
+    """Removes a user from the Developer list."""
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM dev_users WHERE user_id = ?", (user_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error removing dev user {user_id}: {e}", exc_info=True)
+        return False
+    finally:
+        if conn: conn.close()
+
+def is_dev_user(user_id: int) -> bool:
+    """Checks if a user is on the Developer list."""
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM dev_users WHERE user_id = ?", (user_id,))
+        return cursor.fetchone() is not None
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error checking dev for user {user_id}: {e}", exc_info=True)
+        return False
+    finally:
+        if conn: conn.close()
+        
+def get_all_dev_users_from_db() -> List[Tuple[int, str]]:
+    """Fetches all developers from the database."""
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT user_id, timestamp FROM dev_users ORDER BY timestamp DESC")
+            return cursor.fetchall()
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error fetching all dev users: {e}", exc_info=True)
+        return []
+
+def is_owner_or_dev(user_id: int) -> bool:
     if user_id == OWNER_ID:
         return True
-    return is_sudo_user(user_id)
+    return is_dev_user(user_id)
+
+def is_privileged_user(user_id: int) -> bool:
+    if user_id == OWNER_ID:
+        return True
+    if is_dev_user(user_id):
+        return True
+    if is_sudo_user(user_id):
+        return True
+    if is_support_user(user_id):
+        return True
+    return False
 
 # --- User logger ---
 def update_user_in_db(user: User | None):
