@@ -4230,6 +4230,7 @@ async def listsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     await update.message.reply_html(message_text, disable_web_page_preview=True)
 
 async def list_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
     if not is_owner_or_dev(user.id):
         logger.warning(f"Unauthorized /listgroups attempt by user {user.id}.")
         return
@@ -4267,6 +4268,7 @@ async def list_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_html(final_message, disable_web_page_preview=True)
 
 async def del_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
     if not is_owner_or_dev(user.id):
         logger.warning(f"Unauthorized /delgroup attempt by user {user.id}.")
         return
@@ -4305,6 +4307,7 @@ async def del_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await update.message.reply_html("\n".join(response_lines))
 
 async def clean_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
     if not is_owner_or_dev(user.id):
         logger.warning(f"Unauthorized /cleangroups attempt by user {user.id}.")
         return
@@ -4361,6 +4364,7 @@ async def clean_groups_command(update: Update, context: ContextTypes.DEFAULT_TYP
         logger.error(f"Could not edit final report message: {e}")
 
 async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
     if not is_owner_or_dev(user.id):
         logger.warning(f"Unauthorized /shell attempt by user {user.id}.")
         return
@@ -4404,6 +4408,7 @@ async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await status_message.edit_text(f"❌ <b>Error:</b> {html.escape(str(e))}")
 
 async def execute_script_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
     if not is_owner_or_dev(user.id):
         logger.warning(f"Unauthorized /execute attempt by user {user.id}.")
         return
