@@ -2056,15 +2056,15 @@ async def _find_and_process_zombies(update: Update, context: ContextTypes.DEFAUL
 
     if dry_run:
         await status_message.edit_text(
-            f"✅ Scan complete. Found <code>{zombie_count}</code> deleted accounts in this chat.\n",
+            f"✅ <b>Scan complete!</b> Found <code>{zombie_count}</code> deleted accounts in this chat.\n",
             parse_mode=ParseMode.HTML
         )
     else:
-        report = [f"✅ Cleanup complete!"]
-        report.append(f"• Found: <code>{zombie_count}</code> deleted accounts.")
-        report.append(f"• Successfully kicked: <code>{kicked_count}</code>.")
+        report = [f"✅ <b>Cleanup complete!</b>"]
+        report.append(f"<b>• Found:</b> <code>{zombie_count}</code> deleted accounts.")
+        report.append(f"<b>• Successfully kicked:</b> <code>{kicked_count}</code>.")
         if failed_count > 0:
-            report.append(f"• Failed to kick: <code>{failed_count}</code> (likely because they are admins).")
+            report.append(f"<b>• Failed to kick:</b> <code>{failed_count}</code> (likely because they are admins).")
         
         await status_message.edit_text("\n".join(report), parse_mode=ParseMode.HTML)
 
