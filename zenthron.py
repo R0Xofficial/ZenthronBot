@@ -885,7 +885,7 @@ SUDO_COMMANDS_TEXT = """
 /gban &lt;ID/@user/reply&gt; [Reason] - Ban a user globally.
 /ungban &lt;ID/@user/reply&gt; - Unban a user globally.
 
-<i>Note: Commands /ban, /unban, /mute, /unmute, /kick, /pin, /unpin, /purge can be used by sudo users even if they are not chat administrators.</i>
+<i>Note: Commands /ban, /unban, /mute, /unmute, /kick, /pin, /unpin, /purge, /promote, /demote can be used by sudo users even if they are not chat administrators. (Use it wisely and don't overuse your power. Otherwise you may lose your SUDO privileges)</i>
 """
 
 OWNER_COMMANDS_TEXT = """
