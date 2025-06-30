@@ -1075,38 +1075,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             return
         
         if context.args[0] == 'sudocmds':
-            user = update.effective_user
             if not is_privileged_user(user.id):
                 return
 
-            final_sudo_help = ""
+            help_parts = []
+            
+            if is_support_user(user.id) or is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
+                help_parts.append(SUPPORT_COMMANDS_TEXT)
+
+            if is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
+                help_parts.append(SUDO_COMMANDS_TEXT)
+
+            if is_dev_user(user.id) or user.id == OWNER_ID:
+                help_parts.append(DEVELOPER_COMMANDS_TEXT)
 
             if user.id == OWNER_ID:
-                final_sudo_help = (
-                    f"{SUPPORT_COMMANDS_TEXT}\n"
-                    f"{SUDO_COMMANDS_TEXT}\n"
-                    f"{OWNERDEV_COMMANDS_TEXT}\n"
-                    f"{OWNER_COMMANDS_TEXT}"
-                )
+                help_parts.append(OWNER_COMMANDS_TEXT)
             
-            elif is_dev_user(user.id):
-                final_sudo_help = (
-                    f"{SUPPORT_COMMANDS_TEXT}\n"
-                    f"{SUDO_COMMANDS_TEXT}\n"
-                    f"{OWNERDEV_COMMANDS_TEXT}"
-                )
-
-            elif is_sudo_user(user.id):
-                final_sudo_help = (
-                    f"{SUPPORT_COMMANDS_TEXT}\n"
-                    f"{SUDO_COMMANDS_TEXT}"
-                )
-
-            elif is_support_user(user.id):
-                final_sudo_help = (
-                    f"{SUPPORT_COMMANDS_TEXT}"
-                )
-
+            final_sudo_help = "\n\n".join(help_parts)
+            
             if final_sudo_help:
                 await update.message.reply_html(final_sudo_help, disable_web_page_preview=True)
             return
