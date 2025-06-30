@@ -862,6 +862,7 @@ HELP_TEXT = """
 /unpin - Unpin the replied-to message.
 /purge &lt;silent&gt; - Deletes messages up to the replied-to message.
 /report &lt;ID/@user/reply&gt; [reason] - Report a user to the administrators.
+/zombies &lt;clean&gt; - Check the number of deleted chat accounts; clean delete them.
 
 <b>Security:</b>
 /enforcegban &lt;yes/no&gt; - Enable/disable Global Ban enforcement in this chat.
@@ -3831,6 +3832,7 @@ async def main() -> None:
         application.add_handler(CommandHandler("kickme", kickme_command))
         application.add_handler(CommandHandler("promote", promote_command))
         application.add_handler(CommandHandler("demote", demote_command))
+        application.add_handler(CommandHandler("zombies", zombies_command))
         application.add_handler(CommandHandler("pin", pin_message_command))
         application.add_handler(CommandHandler("unpin", unpin_message_command))
         application.add_handler(CommandHandler("purge", purge_messages_command))
