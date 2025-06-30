@@ -1076,7 +1076,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         
         if context.args[0] == 'sudocmds':
             if not is_privileged_user(user.id):
-            return
+                return
 
             parts = []
             if is_support_user(user.id) or is_sudo_user(user.id) or is_owner_or_dev(user.id):
@@ -1091,8 +1091,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             if user.id == OWNER_ID:
                 parts.append(OWNER_COMMANDS_TEXT)
 
-        final_help = "\n".join(parts)
-        await update.message.reply_html(final_help, disable_web_page_preview=True)
+            final_help = "\n".join(parts)
+            await update.message.reply_html(final_help, disable_web_page_preview=True)
         return
             
     await update.message.reply_html(welcome_message)
