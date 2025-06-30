@@ -2047,7 +2047,6 @@ async def _find_and_process_zombies(update: Update, context: ContextTypes.DEFAUL
                         kicked_count += 1
                     except Exception as e:
                         failed_count += 1
-                        logger.warning(f"Failed to kick deleted account {member.id} from chat {chat.id}: {e}")
                     
                     await asyncio.sleep(0.1)
 
@@ -2057,8 +2056,9 @@ async def _find_and_process_zombies(update: Update, context: ContextTypes.DEFAUL
 
     if dry_run:
         await status_message.edit_text(
-            f"✅ Scan complete. Found <b>{zombie_count}</b> deleted accounts in this chat.\n"
-            f"To remove them, use <code>/zombies clean</code>."
+            f"✅ Scan complete. Found <code>{zombie_count}</code> deleted accounts in this chat.\n"
+            f"To remove them, use /zombies clean.",
+            parse_mode=ParseMode.HTML
         )
     else:
         report = [f"✅ Cleanup complete!"]
@@ -2084,7 +2084,7 @@ async def zombies_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await update.message.reply_text("Error: I can't clean zombies here because I'm not an administrator.")
             return
         if not bot_member.can_restrict_members:
-            await update.message.reply_text("I can't clean zombies here because I don't have the 'can_restrict_members' permission.")
+            await update.message.reply_text("Error: I can't clean zombies here because I don't have the 'can_restrict_members' permission.")
             return
     except Exception as e:
         await update.message.reply_text(f"Skrrrt... I couldn't verify my own permissions: {e}")
