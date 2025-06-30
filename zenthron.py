@@ -858,6 +858,7 @@ HELP_TEXT = """
 /unpin - Unpin the replied-to message.
 /purge &lt;silent&gt; - Deletes messages up to the replied-to message.
 /report &lt;ID/@user/reply&gt; [reason] - Report a user to the administrators.
+/zombies &lt;clean&gt; - Check the number of deleted accounts in group; clean delete them.
 
 <b>Security:</b>
 /enforcegban &lt;yes/no&gt; - Enable/disable Global Ban enforcement in this chat.
