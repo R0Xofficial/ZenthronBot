@@ -32,7 +32,7 @@ from telethon.tl.types import User as TelethonUser, Channel as TelethonChannel
 from telegram import Update, User, Chat, constants, ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ChatType, ParseMode, ChatMemberStatus
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ApplicationHandlerStop, JobQueue
-from telegram.error import TelegramError, BadRequest
+from telegram.error import TelegramError
 from telegram.request import HTTPXRequest
 from datetime import datetime, timezone, timedelta
 from texts import (
@@ -812,27 +812,25 @@ def create_user_html_link(user: User) -> str:
         
     return f'<a href="tg://user?id={user.id}">{html.escape(display_text)}</a>'
 
-async def send_with_telethon(context: ContextTypes.DEFAULT_TYPE, chat_id: int, text: str, reply_to_id: int | None = None):
-    if 'telethon_client' not in context.bot_data:
-        logger.error("Telethon client not found, falling back to PTB.")
-        try:
-            await context.bot.send_message(chat_id, text, reply_to_message_id=reply_to_id)
-        except Exception as e_ptb:
-            logger.error(f"PTB fallback also failed: {e_ptb}")
-        return
-
-    client: TelegramClient = context.bot_data['telethon_client']
+def markdown_to_html(text: str) -> str:
+    text = re.sub(
+        r'```(\w+)\n(.*?)\n```', 
+        r'<pre><code class="language-\1">\2</code></pre>', 
+        text, 
+        flags=re.DOTALL
+    )
     
-    try:
-        await client.send_message(chat_id, text, reply_to=reply_to_id, parse_mode='md')
-    except Exception as e:
-        logger.error(f"Telethon failed to send message: {e}. Falling back to plain text chunks via PTB.")
-        try:
-            for i in range(0, len(text), 4096):
-                chunk = text[i:i+4096]
-                await context.bot.send_message(chat_id, chunk, reply_to_message_id=reply_to_id)
-        except Exception as e_fallback:
-            logger.error(f"Final fallback to plain text failed: {e_fallback}")
+    text = re.sub(
+        r'```\n(.*?)\n```', 
+        r'<pre>\1</pre>', 
+        text, 
+        flags=re.DOTALL
+    )
+    
+    text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
+    text = re.sub(r'(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)', r'<i>\1</i>', text)
+    text = re.sub(r'`(.*?)`', r'<code>\1</code>', text)
+    return text
 
 # --- Command Handlers ---
 HELP_TEXT = """
@@ -900,11 +898,13 @@ OWNER_COMMANDS_TEXT = """
 /speedtest - Perform an internet speed test.
 /setai &lt;enable/disable&gt; - Turn on or off ai access for all users. <i>(Does not apply to privileged users)</i>
 /listgroups - List all known by bot groups.
-/delchat &lt;ID_1&gt; [ID_2] - Remove groups from database
+/delchat &lt;ID 1&gt; [ID 2] - Remove groups from database
 /cleangroups - Remove cached groups from database automatically.
 /listsudo - List all users with sudo privileges.
 /addsudo &lt;ID/@user/reply&gt; - Grant SUDO (bot admin) permissions to a user.
 /delsudo &lt;ID/@user/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
+/shell &lt;command&gt; - Execute the command in the terminal.
+/execute &lt;file patch&gt; - Run script.
 """
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -2208,7 +2208,7 @@ async def get_gemini_response(prompt: str) -> str:
         return "AI features are not configured by the bot owner."
     try:
         genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash-preview-05-20')
         response = await model.generate_content_async(prompt)
         return response.text
     except Exception as e:
@@ -2241,51 +2241,61 @@ async def set_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    message = update.message
 
-    is_regular_user = not is_privileged_user(user.id)
-    if is_regular_user and not PUBLIC_AI_ENABLED:
-        await message.reply_html(
+    can_use_ai = False
+    is_regular_user = True
+    
+    if is_privileged_user(user.id):
+        can_use_ai = True
+        is_regular_user = False
+    elif PUBLIC_AI_ENABLED:
+        can_use_ai = True
+    
+    if not can_use_ai and is_regular_user:
+        await update.message.reply_html(
             "🧠 My AI brain is currently <b>DISABLED</b> by my Owner for non-SUDO users 😴\n\n"
             "Maybe try again later; ask my Owner to enable the feature, or just ask a human? 😉"
         )
         return
+    elif not can_use_ai:
+        return
 
     if not GEMINI_API_KEY:
-        await message.reply_text("Sorry, the bot owner has not configured the AI features.")
+        await update.message.reply_text("Sorry, the bot owner has not configured the AI features.")
         return
         
     if not context.args:
-        await message.reply_text("What do you want to ask? 🤔\nUsage: /askai <your question>")
+        await update.message.reply_text("What do you want to ask? 🤔\nUsage: /askai <your question>")
         return
 
     prompt = " ".join(context.args)
-    status_message = await message.reply_html("🤔 <code>Thinking...</code>")
+    
+    status_message = await update.message.reply_html("🤔 <code>Thinking...</code>")
     
     try:
         ai_response_markdown = await get_gemini_response(prompt)
         
-        try:
-            await status_message.delete()
-        except Exception:
-            logger.warning("Could not delete the 'Thinking...' message.")
+        ai_response_html = markdown_to_html(ai_response_markdown)
 
-        await send_with_telethon(
-            context,
-            chat_id=message.chat_id,
-            text=ai_response_markdown,
-            reply_to_id=message.message_id
-        )
+        if len(ai_response_html) > 4096:
+             for i in range(0, len(ai_response_html), 4096):
+                chunk = ai_response_html[i:i+4096]
+                if i == 0:
+                    await status_message.edit_text(chunk, parse_mode=ParseMode.HTML)
+                else:
+                    await update.message.reply_text(chunk, parse_mode=ParseMode.HTML)
+        else:
+            await status_message.edit_text(ai_response_html, parse_mode=ParseMode.HTML)
 
+    except BadRequest as e:
+        logger.warning(f"HTML parsing failed for AI response: {e}. Sending as plain text.")
+        await status_message.edit_text(ai_response_markdown)
     except Exception as e:
-        logger.error(f"Failed to process /askai request: {e}", exc_info=True)
-        try:
-            await status_message.edit_text(f"💥 Houston, we have a problem! My AI core malfunctioned: {type(e).__name__}")
-        except:
-            pass
+        logger.error(f"Failed to process /askai request: {e}")
+        await status_message.edit_text(f"💥 Houston, we have a problem! My AI core malfunctioned: {type(e).__name__}")
 
 async def chat_sinfo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Displays basic info about the current chat."""
+    """Displays basic statistics about the current chat."""
     chat = update.effective_chat
     if not chat:
         await update.message.reply_text("Could not get chat information for some reason.")
