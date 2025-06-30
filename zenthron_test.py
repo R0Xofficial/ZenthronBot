@@ -3744,7 +3744,7 @@ async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
             )
             await send_operational_log(context, log_message)
         except Exception as e:
-            logger.error(f"Error sending #SUPPORT_REMOVED log: {e}", exc_info=True)
+            logger.error(f"Error sending #UNSUPPORT log: {e}", exc_info=True)
     else:
         await message.reply_text("Failed to remove user from Support list. Check logs.")
 
@@ -3987,7 +3987,7 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             )
             await send_operational_log(context, log_message)
         except Exception as e:
-            logger.error(f"Error sending #DEV_ADDED log: {e}", exc_info=True)
+            logger.error(f"Error sending #DEVELOPER log: {e}", exc_info=True)
     else:
         await message.reply_text("Failed to add user to Developer list. Check logs.")
 
@@ -4044,7 +4044,7 @@ async def deldev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             )
             await send_operational_log(context, log_message)
         except Exception as e:
-            logger.error(f"Error sending #DEV_REMOVED log: {e}", exc_info=True)
+            logger.error(f"Error sending #UNDEVELOPER log: {e}", exc_info=True)
     else:
         await message.reply_text("Failed to remove user from Developer list. Check logs.")
 
