@@ -6,11 +6,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# --- ZenthronBot [Development] ---
-# This is the development environment where the bot code is created.
-# This code is in active development.
-# It may contain bugs, unfinished features, or not work at all.
-# Use for testing and development only!
+# --- ZenthronBot ---
 
 import logging
 import random
@@ -862,7 +858,7 @@ HELP_TEXT = """
 /unpin - Unpin the replied-to message.
 /purge &lt;silent&gt; - Deletes messages up to the replied-to message.
 /report &lt;ID/@user/reply&gt; [reason] - Report a user to the administrators.
-/zombies &lt;clean&gt; - Check the number of deleted chat accounts; clean delete them.
+/zombies &lt;clean&gt; - Check the number of deleted accounts in group; clean delete them.
 
 <b>Security:</b>
 /enforcegban &lt;yes/no&gt; - Enable/disable Global Ban enforcement in this chat.
@@ -890,7 +886,7 @@ SUDO_COMMANDS_TEXT = """
 /gban &lt;ID/@user/reply&gt; [Reason] - Ban a user globally.
 /ungban &lt;ID/@user/reply&gt; - Unban a user globally.
 
-<i>Note: Commands /ban, /unban, /mute, /unmute, /kick, /pin, /unpin, /purge can be used by sudo users even if they are not chat administrators.</i>
+<i>Note: Commands /ban, /unban, /mute, /unmute, /kick, /pin, /unpin, /purge, /promote, /demote, /zombies can be used by sudo users even if they are not chat administrators. (Use it wisely and don't overuse your power. Otherwise you may lose your SUDO privileges)</i>
 """
 
 OWNER_COMMANDS_TEXT = """
@@ -2029,7 +2025,7 @@ async def _find_and_process_zombies(update: Update, context: ContextTypes.DEFAUL
     telethon_client: TelegramClient = context.bot_data['telethon_client']
 
     action_text = "Scanning for" if dry_run else "Cleaning"
-    status_message = await message.reply_html(f"🔥 {action_text} deleted accounts... This might take a while for large groups.")
+    status_message = await message.reply_html(f"🔥 <b>{action_text} deleted accounts...</b> This might take a while for large groups.")
 
     zombie_count = 0
     kicked_count = 0
@@ -2069,6 +2065,12 @@ async def _find_and_process_zombies(update: Update, context: ContextTypes.DEFAUL
         await status_message.edit_text("\n".join(report), parse_mode=ParseMode.HTML)
 
 async def zombies_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't delete zombies in private chat...")
+        return
+
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission.", allow_bot_privileged_override=True):
         return
 
@@ -3444,6 +3446,31 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await message.reply_html(f"User {user_display} already has sudo powers.")
         return
 
+    gban_reason = get_gban_reason(target_user.id)
+    blist_reason = get_blacklist_reason(target_user.id)
+
+    if gban_reason:
+        error_message = (
+            f"❌ <b>Promotion Failed!</b>\n\n"
+            f"User {user_display} cannot be promoted to <code>Sudo</code> because they are <b>Globally Bannned</b>.\n\n"
+            f"<b>Reason:</b> {html.escape(gban_reason)}\n\n"
+            f"<i>For security reasons, this action has been blocked. "
+            f"Please remove global ban first using /ungban if you wish to proceed.</i>"
+        )
+        await message.reply_html(error_message)
+        return
+
+    if blist_reason:
+        error_message = (
+            f"❌ <b>Promotion Failed!</b>\n\n"
+            f"User {user_display} cannot be promoted to <code>Sudo</code> because they are on the <b>Blacklist</b>.\n\n"
+            f"<b>Reason:</b> {html.escape(blist_reason)}\n\n"
+            f"<i>For security reasons, this action has been blocked. "
+            f"Please remove the user from the blacklist first using /unblist if you wish to proceed.</i>"
+        )
+        await message.reply_html(error_message)
+        return
+
     if add_sudo_user(target_user.id, user.id):
         await message.reply_html(f"✅ User {user_display} has been granted sudo powers.")
         
@@ -3834,13 +3861,13 @@ async def main() -> None:
         application.add_handler(CommandHandler("kickme", kickme_command))
         application.add_handler(CommandHandler("promote", promote_command))
         application.add_handler(CommandHandler("demote", demote_command))
-        application.add_handler(CommandHandler("zombies", zombies_command))
         application.add_handler(CommandHandler("pin", pin_message_command))
         application.add_handler(CommandHandler("unpin", unpin_message_command))
         application.add_handler(CommandHandler("purge", purge_messages_command))
         application.add_handler(CommandHandler("report", report_command))
         application.add_handler(CommandHandler("listadmins", list_admins_command))
         application.add_handler(CommandHandler("admins", list_admins_command))
+        application.add_handler(CommandHandler("zombies", zombies_command))
         application.add_handler(CommandHandler("kill", kill))
         application.add_handler(CommandHandler("punch", punch))
         application.add_handler(CommandHandler("slap", slap))
