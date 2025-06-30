@@ -3446,8 +3446,8 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await message.reply_html(f"User {user_display} already has sudo powers.")
         return
 
-    gban_reason = get_gban_reason(target_entity.id)
-    blist_reason = get_blacklist_reason(target_entity.id)
+    gban_reason = get_gban_reason(target_user.id)
+    blist_reason = get_blacklist_reason(target_user.id)
 
     if gban_reason:
         error_message = (
