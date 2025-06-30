@@ -363,21 +363,6 @@ def remove_sudo_user(user_id: int) -> bool:
             conn.close()
 
 def is_sudo_user(user_id: int) -> bool:
-    """Checks if a user is on the sudo list (specifically, not checking if they are THE owner)."""
-    conn = None
-    try:
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        cursor.execute("SELECT 1 FROM sudo_users WHERE user_id = ?", (user_id,))
-        return cursor.fetchone() is not None
-    except sqlite3.Error as e:
-        logger.error(f"SQLite error checking sudo for user {user_id}: {e}", exc_info=True)
-        return False 
-    finally:
-        if conn:
-            conn.close()
-
-def is_sudo_user(user_id: int) -> bool:
     """Checks if a user is on the sudo list (database check only)."""
     conn = None
     try:
@@ -1092,7 +1077,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
             final_sudo_help = SUPPORT_COMMANDS_TEXT
 
-            if is_sudo_user(user.id)
+            if is_sudo_user(user.id):
                 final_sudo_help += "\n" + SUDO_COMMANDS_TEXT
             
             if is_owner_or_dev(user.id):
@@ -1275,7 +1260,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     is_target_owner_flag = (target_entity.id == OWNER_ID)
     is_target_dev_flag = is_dev_user(target_entity.id)
     is_target_sudo_flag = is_sudo_user(target_entity.id)
-    is_target_support_flag = is_support_user(target_user.id)
+    is_target_support_flag = is_support_user(target_entity.id)
     blacklist_reason_str = get_blacklist_reason(target_entity.id)
     gban_reason_str = get_gban_reason(target_entity.id)
     member_status_in_current_chat_str: str | None = None
@@ -1293,7 +1278,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         is_target_owner=is_target_owner_flag,
         is_target_dev=is_target_dev_flag,
         is_target_sudo=is_target_sudo_flag,
-        is_target_support=is_target_support_flag
+        is_target_support=is_target_support_flag,
         blacklist_reason_str=blacklist_reason_str,
         gban_reason_str=gban_reason_str,
         current_chat_id_for_status=update.effective_chat.id
