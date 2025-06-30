@@ -1080,21 +1080,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
             final_help_parts = []
             
-            if is_support_user(user.id):
+            if is_privileged_user(user.id):
                 final_help_parts.append(SUPPORT_COMMANDS_TEXT)
 
-            if is_sudo_user(user.id):
-                final_help_parts = [SUPPORT_COMMANDS_TEXT, SUDO_COMMANDS_TEXT]
+            if is_sudo_user(user.id) or is_owner_or_dev(user.id):
+                final_help_parts.append(SUDO_COMMANDS_TEXT)
 
             if is_owner_or_dev(user.id):
-                final_help_parts = [SUPPORT_COMMANDS_TEXT, SUDO_COMMANDS_TEXT, OWNERDEV_COMMANDS_TEXT]
+                final_help_parts.append(OWNERDEV_COMMANDS_TEXT)
 
             if user.id == OWNER_ID:
-                final_help_parts = [SUPPORT_COMMANDS_TEXT, SUDO_COMMANDS_TEXT, OWNERDEV_COMMANDS_TEXT, OWNER_COMMANDS_TEXT]
+                final_help_parts.append(OWNER_COMMANDS_TEXT)
 
             final_sudo_help = "\n".join(final_help_parts)
             
-            if final_sudo_help: 
+            if final_sudo_help:
                  await update.message.reply_html(final_sudo_help, disable_web_page_preview=True)
             return
             
