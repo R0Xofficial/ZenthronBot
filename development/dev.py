@@ -1059,6 +1059,7 @@ OWNERDEV_COMMANDS_TEXT = """
 """
 
 OWNER_COMMANDS_TEXT = """
+<b>Owner Commands:</b>
 /adddev &lt;ID/@user/reply&gt; - Grant Developer (All) permissions to a user.
 /delsudo &lt;ID/@user/reply&gt; - Revoke Developer (All) permissions from a user.
 """
@@ -1074,22 +1075,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             return
         
         if context.args[0] == 'sudocmds':
-            if not (is_owner_or_dev(user.id) or is_sudo_user(user.id) or is_support_user(user.id)):
-                return
+            if not is_privileged_user(user.id):
+            return
 
-            final_sudo_help = SUPPORT_COMMANDS_TEXT
-
-            if (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
-                final_sudo_help += "\n" + SUDO_COMMANDS_TEXT
-            
+            parts = []
+            if is_support_user(user.id) or is_sudo_user(user.id) or is_owner_or_dev(user.id):
+                parts.append(SUPPORT_COMMANDS_TEXT)
+    
+            if is_sudo_user(user.id) or is_owner_or_dev(user.id):
+                parts.append(SUDO_COMMANDS_TEXT)
+    
             if is_owner_or_dev(user.id):
-                final_sudo_help += "\n" + OWNERDEV_COMMANDS_TEXT
+                parts.append(OWNERDEV_COMMANDS_TEXT)
 
             if user.id == OWNER_ID:
-                final_sudo_help += "\n" + OWNER_COMMANDS_TEXT
-            
-            await update.message.reply_html(final_sudo_help, disable_web_page_preview=True)
-            return
+                parts.append(OWNER_COMMANDS_TEXT)
+
+        final_help = "\n".join(parts)
+        await update.message.reply_html(final_help, disable_web_page_preview=True)
+        return
             
     await update.message.reply_html(welcome_message)
 
