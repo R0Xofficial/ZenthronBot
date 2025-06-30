@@ -443,14 +443,14 @@ def is_owner_or_dev(user_id: int) -> bool:
     return is_dev_user(user_id)
 
 def is_privileged_user(user_id: int) -> bool:
-    if user_id == OWNER_ID:
-        return True
-    if is_dev_user(user_id):
-        return True
-    if is_sudo_user(user_id):
-        return True
-    if is_support_user(user_id):
-        return True
+    if not user_id == OWNER_ID:
+        return False
+    if not is_dev_user(user_id):
+        return False
+    if not is_sudo_user(user_id):
+        return False
+    if not is_support_user(user_id):
+        return False
     return False
 
 # --- User logger ---
