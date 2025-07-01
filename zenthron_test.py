@@ -4024,12 +4024,16 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         feedback_message = f"✅ User {user_display}'s rank has been changed from <b>{current_role_full_name}</b> to <b>{new_role_full_name}</b>."
         await message.reply_html(feedback_message)
 
+        current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
         log_message = (f"<b>#ROLECHANGED</b>\n\n"
                        f"<b>User:</b> {user_display}\n"
                        f"<b>User ID:</b> <code>{target_user.id}</code>\n"
                        f"<b>Old Role:</b> <code>{current_role_full_name}</code>\n"
                        f"<b>New Role:</b> <code>{new_role_full_name}</code>\n"
-                       f"<b>Admin:</b> {admin_link}")
+                       f"<b>Admin:</b> {admin_link}\n"
+                       f"<b>Date:</b> {current_time}"
+        )
         await send_operational_log(context, log_message)
     else:
         await message.reply_text("An error occurred while changing the rank. Check logs.")
