@@ -1052,7 +1052,7 @@ DEVELOPER_COMMANDS_TEXT = """
 /addsudo &lt;ID/@user/reply&gt; - Grant SUDO (bot admin) permissions to a user.
 /delsudo &lt;ID/@user/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
 /listdevs - List all users with developer privileges.
-/setrank - Change the rank of a privileged user.
+/setrank &lt;ID/@user/reply&gt; - Change the rank of a privileged user.
 """
 
 OWNER_COMMANDS_TEXT = """
