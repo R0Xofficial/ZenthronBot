@@ -1025,13 +1025,11 @@ HELP_TEXT = """
 SUPPORT_COMMANDS_TEXT = """
 <i>Note: Commands /ban, /unban, /mute, /unmute, /kick, /pin, /unpin, /purge, /promote, /demote, /zombies can be used by privileged users even if they are not chat administrators. (Use it wisely and don't overuse your power. Otherwise you may lose your privileges)</i>
 
-<b>Support Commands:</b>
 /gban &lt;ID/@user/reply&gt; [Reason] - Ban a user globally.
 /ungban &lt;ID/@user/reply&gt; - Unban a user globally.
 """
 
 SUDO_COMMANDS_TEXT = """
-<b>Sudo Commands:</b>
 /status - Show bot status.
 /cinfo &lt;Optional chat ID&gt; - Get detailed info about the current or specified chat.
 /say &lt;Optional chat ID&gt; [Your text] - Send a message as the bot.
@@ -1040,7 +1038,6 @@ SUDO_COMMANDS_TEXT = """
 """
 
 DEVELOPER_COMMANDS_TEXT = """
-<b>Developer Commands:</b>
 /leave &lt;Optional chat ID&gt; - Make the bot leave a chat.
 /speedtest - Perform an internet speed test.
 /setai &lt;enable/disable&gt; - Turn on or off ai access for all users. <i>(Does not apply to privileged users)</i>
@@ -1057,7 +1054,6 @@ DEVELOPER_COMMANDS_TEXT = """
 """
 
 OWNER_COMMANDS_TEXT = """
-<b>Owner Commands:</b>
 /adddev &lt;ID/@user/reply&gt; - Grant Developer (All) permissions to a user.
 /deldev &lt;ID/@user/reply&gt; - Revoke Developer (All) permissions from a user.
 /shell &lt;command&gt; - Execute the command in the terminal.
@@ -1092,7 +1088,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             if user.id == OWNER_ID:
                 help_parts.append(OWNER_COMMANDS_TEXT)
             
-            final_sudo_help = "\n".join(help_parts)
+            final_sudo_help = "".join(help_parts)
             
             if final_sudo_help:
                 await update.message.reply_html(final_sudo_help, disable_web_page_preview=True)
@@ -4092,7 +4088,7 @@ async def sudo_commands_command(update: Update, context: ContextTypes.DEFAULT_TY
     if user.id == OWNER_ID:
         help_parts.append(OWNER_COMMANDS_TEXT)
     
-    final_help_text = "\n".join(help_parts)
+    final_help_text = "".join(help_parts)
     
     if chat.type == ChatType.PRIVATE:
         if final_help_text:
