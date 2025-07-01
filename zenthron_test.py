@@ -3975,17 +3975,22 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     if is_dev_user(user.id):
+        if user.id == target_user.id:
+            await message.reply_text("You cannot change your own rank.")
+            return
+
         if is_dev_user(target_user.id):
             await message.reply_text("As a Developer, you cannot change the rank of other Developers.")
             return
+            
         if new_role == "dev":
             await message.reply_text("As a Developer, you cannot promote others to the Developer role.")
             return
 
     current_role = ""
-    if is_dev_user(target_user.id): current_role = "dev"
-    elif is_sudo_user(target_user.id): current_role = "sudo"
-    elif is_support_user(target_user.id): current_role = "support"
+    if is_dev_user(target_user.id): current_role = "Developet"
+    elif is_sudo_user(target_user.id): current_role = "Sudo"
+    elif is_support_user(target_user.id): current_role = "Support"
 
     if new_role == current_role:
         await message.reply_text(f"User is already a {new_role.capitalize()}. No changes made.")
@@ -3996,11 +4001,11 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     remove_dev_user(target_user.id)
 
     success = False
-    if new_role == "support":
+    if new_role == "Support":
         success = add_support_user(target_user.id, user.id)
-    elif new_role == "sudo":
+    elif new_role == "Sudo":
         success = add_sudo_user(target_user.id, user.id)
-    elif new_role == "dev":
+    elif new_role == "Developer":
         success = add_dev_user(target_user.id, user.id)
 
     if success:
