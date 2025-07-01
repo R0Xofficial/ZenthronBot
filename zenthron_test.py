@@ -3948,13 +3948,25 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         logger.warning(f"Unauthorized /setrank attempt by user {admin.id}.")
         return
 
-    if len(context.args) < 2:
-        await message.reply_text("Usage: /setrank <ID/@username/reply> [support/sudo/dev]")
+    target_user: User | None = None
+    args_for_role: list[str] = []
+
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+        args_for_role = context.args
+    elif context.args:
+        target_input = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
+        args_for_role = context.args[1:]
+    
+    if not target_user or not args_for_role:
+        await message.reply_text("Usage: /setrank <ID/@username/reply> <support|sudo|dev>")
         return
 
-    target_input = context.args[0]
-    new_role_shortcut = context.args[1].lower()
-    
+    new_role_shortcut = args_for_role[0].lower()
+
     role_map = {
         "support": "Support",
         "sudo": "Sudo",
@@ -3966,18 +3978,6 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     new_role_full_name = role_map[new_role_shortcut]
-
-    target_user: User | None = None
-    if message.reply_to_message:
-        target_user = message.reply_to_message.from_user
-    else:
-        target_user = await resolve_user_with_telethon(context, target_input, update)
-        if not target_user and target_input.isdigit():
-            target_user = User(id=int(target_input), first_name="", is_bot=False)
-
-    if not target_user:
-        await message.reply_text("Error: User not found.")
-        return
 
     if not is_privileged_user(target_user.id) or target_user.id == OWNER_ID:
         await message.reply_text("This command can only be used on users who already have a role (Support, Sudo, or Dev).")
@@ -4032,8 +4032,7 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                        f"<b>Old Role:</b> <code>{current_role_full_name}</code>\n"
                        f"<b>New Role:</b> <code>{new_role_full_name}</code>\n"
                        f"<b>Admin:</b> {admin_link}\n"
-                       f"<b>Date:</b> {current_time}"
-        )
+                       f"<b>Date:</b> <code>{current_time}</code>")
         await send_operational_log(context, log_message)
     else:
         await message.reply_text("An error occurred while changing the rank. Check logs.")
