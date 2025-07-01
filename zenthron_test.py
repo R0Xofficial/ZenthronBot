@@ -1054,14 +1054,14 @@ DEVELOPER_COMMANDS_TEXT = """
 /addsudo &lt;ID/@user/reply&gt; - Grant SUDO (bot admin) permissions to a user.
 /delsudo &lt;ID/@user/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
 /listdevs - List all users with developer privileges.
-/shell &lt;command&gt; - Execute the command in the terminal.
-/execute &lt;file patch&gt; [args...] - Run script.
 """
 
 OWNER_COMMANDS_TEXT = """
 <b>Owner Commands:</b>
 /adddev &lt;ID/@user/reply&gt; - Grant Developer (All) permissions to a user.
 /deldev &lt;ID/@user/reply&gt; - Revoke Developer (All) permissions from a user.
+/shell &lt;command&gt; - Execute the command in the terminal.
+/execute &lt;file patch&gt; [args...] - Run script.
 """
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -2494,9 +2494,11 @@ async def get_gemini_response(prompt: str) -> str:
         return f"Sorry, I encountered an error while communicating with the AI: {type(e).__name__}"
 
 async def set_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
     global PUBLIC_AI_ENABLED
     
-    if update.effective_user.id != OWNER_ID:
+    if not is_owner_or_dev(user.id)
+        logger.warning(f"Unauthorized /setai attempt by user {user.id}.")
         return
 
     if not context.args or len(context.args) != 1 or context.args[0].lower() not in ['enable', 'disable']:
@@ -4386,7 +4388,7 @@ async def clean_groups_command(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    if not is_owner_or_dev(user.id):
+    if user.id != OWNER_ID:
         logger.warning(f"Unauthorized /shell attempt by user {user.id}.")
         return
 
@@ -4430,7 +4432,7 @@ async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def execute_script_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    if not is_owner_or_dev(user.id):
+    if user.id != OWNER_ID:
         logger.warning(f"Unauthorized /execute attempt by user {user.id}.")
         return
         
