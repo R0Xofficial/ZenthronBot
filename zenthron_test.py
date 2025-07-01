@@ -1039,7 +1039,6 @@ SUDO_COMMANDS_TEXT = """
 """
 
 DEVELOPER_COMMANDS_TEXT = """
-/leave &lt;Optional chat ID&gt; - Make the bot leave a chat.
 /speedtest - Perform an internet speed test.
 /setai &lt;enable/disable&gt; - Turn on or off ai access for all users. <i>(Does not apply to privileged users)</i>
 /listgroups - List all known by bot groups.
@@ -1056,6 +1055,7 @@ DEVELOPER_COMMANDS_TEXT = """
 """
 
 OWNER_COMMANDS_TEXT = """
+/leave &lt;Optional chat ID&gt; - Make the bot leave a chat.
 /adddev &lt;ID/@user/reply&gt; - Grant Developer (All) permissions to a user.
 /deldev &lt;ID/@user/reply&gt; - Revoke Developer (All) permissions from a user.
 /shell &lt;command&gt; - Execute the command in the terminal.
@@ -1786,7 +1786,7 @@ async def kickme_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             return
 
     try:
-        user_display_name = create_user_html_link(target_user)
+        user_display_name = create_user_html_link(user_to_kick)
         
         await update.message.reply_text(f"Done! {user_display_name}, as you wish... You have been kicked from the chat.", parse_mode=ParseMode.HTML)
         
@@ -2947,7 +2947,7 @@ async def speedtest_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    if not is_owner_or_dev(user.id):
+    if user.id != OWNER_ID:
         logger.warning(f"Unauthorized /leave attempt by user {user.id}.")
         return
 
