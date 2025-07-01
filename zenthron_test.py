@@ -3209,14 +3209,14 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
     existing_blist_reason = get_blacklist_reason(target_entity.id)
     if existing_blist_reason:
         await message.reply_html(
-            f"ℹ️ User {user_display} (<code>{target_entity.id}</code) is already on the blacklist.\n"
+            f"ℹ️ User {user_display} (<code>{target_entity.id}</code>) is already on the blacklist.\n"
             f"<b>Reason:</b> {html.escape(existing_blist_reason)}"
         )
         return
 
     if add_to_blacklist(target_entity.id, user.id, reason):
         user_display = create_user_html_link(target_entity)
-        await message.reply_html(f"✅ User {user_display} (<code>{target_entity.id}</code) has been added to the blacklist.\n<b>Reason:</b> {html.escape(reason)}")
+        await message.reply_html(f"✅ User {user_display} (<code>{target_entity.id}</code>) has been added to the blacklist.\n<b>Reason:</b> {html.escape(reason)}")
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -3266,11 +3266,11 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
     user_display = create_user_html_link(target_entity)
 
     if not is_user_blacklisted(target_entity.id):
-        await message.reply_html(f"ℹ️ User {user_display} (<code>{target_entity.id}</code) is not on the blacklist.")
+        await message.reply_html(f"ℹ️ User {user_display} (<code>{target_entity.id}</code>) is not on the blacklist.")
         return
 
     if remove_from_blacklist(target_entity.id):
-        await message.reply_html(f"✅ User {user_display} (<code>{target_entity.id}</code) has been removed from the blacklist.")
+        await message.reply_html(f"✅ User {user_display} (<code>{target_entity.id}</code>) has been removed from the blacklist.")
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -3380,7 +3380,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     existing_gban_reason = get_gban_reason(target_entity.id)
     if existing_gban_reason:
         await message.reply_html(
-            f"ℹ️ User {user_display} (<code>{target_entity.id}</code) is already globally banned.\n"
+            f"ℹ️ User {user_display} (<code>{target_entity.id}</code>) is already globally banned.\n"
             f"<b>Reason:</b> {html.escape(existing_gban_reason)}"
         )
         return
@@ -3392,7 +3392,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         except Exception as e:
             logger.warning(f"Could not enforce local ban for gban in chat {chat.id}: {e}")
 
-    await message.reply_html(f"✅ User {user_display} (<code>{target_entity.id}</code) has been globally banned.\n<b>Reason:</b> {html.escape(reason)}")
+    await message.reply_html(f"✅ User {user_display} (<code>{target_entity.id}</code>) has been globally banned.\n<b>Reason:</b> {html.escape(reason)}")
     
     try:
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -3450,12 +3450,12 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     user_display = create_user_html_link(target_entity)
 
     if not get_gban_reason(target_entity.id):
-        await message.reply_html(f"User {user_display} (<code>{target_entity.id}</code) is not globally banned.")
+        await message.reply_html(f"User {user_display} (<code>{target_entity.id}</code>) is not globally banned.")
         return
 
     remove_from_gban(target_entity.id)
 
-    await message.reply_html(f"✅ User {user_display} (<code>{target_entity.id}</code) has been globally unbanned.\n\n<i>Propagating unban...</i>")
+    await message.reply_html(f"✅ User {user_display} (<code>{target_entity.id}</code>) has been globally unbanned.\n\n<i>Propagating unban...</i>")
     
     if context.job_queue:
         context.job_queue.run_once(propagate_unban, 1, data={'target_user_id': target_entity.id, 'command_chat_id': chat.id})
