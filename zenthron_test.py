@@ -3987,7 +3987,10 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     new_role_full_name = role_map[new_role_shortcut]
 
-    if not is_privileged_user(target_user.id) or target_user.id == OWNER_ID:
+    if target_user.id == OWNER_ID:
+        await message.reply_text("Owner cannot have his rank changed because he holds the highest authority position.")
+
+    if not is_privileged_user(target_user.id):
         await message.reply_text("This command can only be used on users who already have a role (Support, Sudo, or Developer).")
         return
 
