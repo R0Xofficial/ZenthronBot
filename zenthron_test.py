@@ -1052,7 +1052,7 @@ DEVELOPER_COMMANDS_TEXT = """
 /addsudo &lt;ID/@user/reply&gt; - Grant SUDO (bot admin) permissions to a user.
 /delsudo &lt;ID/@user/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
 /listdevs - List all users with developer privileges.
-/setrank &lt;ID/@user/reply&gt; - Change the rank of a privileged user.
+/setrank &lt;ID/@user/reply&gt; [support/sudo/dev] - Change the rank of a privileged user.
 """
 
 OWNER_COMMANDS_TEXT = """
@@ -3949,7 +3949,7 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     if len(context.args) < 2:
-        await message.reply_text("Usage: /setrank <ID/@user/reply> <support|sudo|dev>")
+        await message.reply_text("Usage: /setrank <ID/@username/reply> [support/sudo/dev]")
         return
 
     target_input = context.args[0]
