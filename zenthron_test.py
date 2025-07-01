@@ -3206,9 +3206,12 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
 
     user_display = create_user_html_link(target_entity)
 
-    if is_user_blacklisted(target_entity.id):
-        user_display = create_user_html_link(target_entity)
-        await message.reply_html(f"ℹ️ User {user_display} is already on the blacklist.")
+    existing_blist_reason = get_blacklist_reason(target_entity.id)
+    if existing_blist_reason:
+        await message.reply_html(
+            f"ℹ️ User {user_display} is already on the blacklist.\n"
+            f"<b>Reason:</b> {html.escape(existing_blist_reason)}"
+        )
         return
 
     if add_to_blacklist(target_entity.id, user.id, reason):
@@ -3372,10 +3375,13 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if is_privileged_user(target_entity.id) or target_entity.id == context.bot.id:
         await message.reply_text("LoL, looks like... Someone tried global ban privileged user. Nice Try.")
         return
-    if get_gban_reason(target_entity.id):
-        user_display = create_user_html_link(target_entity)
-        await message.reply_html(f"User {user_display} is already globally banned.")
-        return    
+    existing_gban_reason = get_gban_reason(target_entity.id)
+    if existing_gban_reason:
+        await message.reply_html(
+            f"ℹ️ User {user_display} is already globally banned.\n"
+            f"<b>Reason:</b> {html.escape(existing_gban_reason)}"
+        )
+        return
 
     add_to_gban(target_entity.id, user_who_gbans.id, reason)
     if chat.type != ChatType.PRIVATE and is_gban_enforced(chat.id):
