@@ -1052,6 +1052,7 @@ DEVELOPER_COMMANDS_TEXT = """
 /addsudo &lt;ID/@user/reply&gt; - Grant SUDO (bot admin) permissions to a user.
 /delsudo &lt;ID/@user/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
 /listdevs - List all users with developer privileges.
+/setrank - Change the rank of a privileged user.
 """
 
 OWNER_COMMANDS_TEXT = """
@@ -3638,13 +3639,17 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not target_user:
         await message.reply_text("Error: User not found.")
         return
+
+    if is_privileged_user(target_user.id):
+        await message.reply_text("This user already has a role. Use /setrank to change it.")
+        return
     
     if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
         await message.reply_text("🧐 This role can only be granted to users.")
         return
 
-    if is_privileged_user(target_user.id) or target_user.id == context.bot.id or target_user.is_bot:
-        await message.reply_text("This user cannot be a Support member (they may have a higher role).")
+    if target_user.id == OWNER_ID or target_user.id == context.bot.id or target_user.is_bot:
+        await message.reply_text("This user cannot be a Support.")
         return
     
     user_display = create_user_html_link(target_user)
@@ -3722,7 +3727,7 @@ async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
         
     if not target_user:
-        await message.reply_text("Error: User not found.")
+        await message.reply_text("Skrrrt... I can't find the user.")
         return
 
     if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
@@ -3791,6 +3796,10 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     if not target_user:
         await message.reply_text("Skrrrt... I can't find the user.")
+        return
+
+    if is_privileged_user(target_user.id):
+        await message.reply_text("This user already has a role. Use /setrank to change it.")
         return
     
     if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
@@ -3929,6 +3938,87 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     else:
         await message.reply_text("Failed to remove user from sudo list. Check logs.")
 
+async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    admin = update.effective_user
+    message = update.message
+    if not message: return
+    
+    if not is_owner_or_dev(admin.id):
+        logger.warning(f"Unauthorized /setrank attempt by user {admin.id}.")
+        return
+
+    if len(context.args) < 2:
+        await message.reply_text("Usage: /setrank <ID/@user/reply> <support|sudo|dev>")
+        return
+
+    target_input = context.args[0]
+    new_role = context.args[1].lower()
+
+    valid_roles = ["support", "sudo", "dev"]
+    if new_role not in valid_roles:
+        await message.reply_text(f"Invalid role '{new_role}'. Please use one of: support, sudo, dev.")
+        return
+
+    target_user: User | None = None
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+    else:
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+
+    if not target_user:
+        await message.reply_text("Error: User not found.")
+        return
+
+    if not is_privileged_user(target_user.id) or target_user.id == OWNER_ID:
+        await message.reply_text("This command can only be used on users who already have a role (Support, Sudo, or Developer).")
+        return
+
+    if is_dev_user(user.id):
+        if is_dev_user(target_user.id):
+            await message.reply_text("As a Developer, you cannot change the rank of other Developers.")
+            return
+        if new_role == "dev":
+            await message.reply_text("As a Developer, you cannot promote others to the Developer role.")
+            return
+
+    current_role = ""
+    if is_dev_user(target_user.id): current_role = "dev"
+    elif is_sudo_user(target_user.id): current_role = "sudo"
+    elif is_support_user(target_user.id): current_role = "support"
+
+    if new_role == current_role:
+        await message.reply_text(f"User is already a {new_role.capitalize()}. No changes made.")
+        return
+
+    remove_support_user(target_user.id)
+    remove_sudo_user(target_user.id)
+    remove_dev_user(target_user.id)
+
+    success = False
+    if new_role == "support":
+        success = add_support_user(target_user.id, user.id)
+    elif new_role == "sudo":
+        success = add_sudo_user(target_user.id, user.id)
+    elif new_role == "dev":
+        success = add_dev_user(target_user.id, user.id)
+
+    if success:
+        user_display = create_user_html_link(target_user)
+        admin_link = create_user_html_link(admin)
+        feedback_message = f"✅ User {user_display}'s rank has been changed from <b>{current_role.capitalize()}</b> to <b>{new_role.capitalize()}</b>."
+        await message.reply_html(feedback_message)
+
+        log_message = (f"<b>#ROLECHANGED</b>\n\n"
+                       f"<b>User:</b> {user_display}\n"
+                       f"<b>User ID:</b> <code>{target_user.id}</code>\n"
+                       f"<b>Old Role:</b> <code>{current_role.capitalize()}</code>\n"
+                       f"<b>New Role:</b> <code>{new_role.capitalize()}</code>\n"
+                       f"<b>Admin:</b> {admin_link}")
+        await send_operational_log(context, log_message)
+    else:
+        await message.reply_text("An error occurred while changing the rank. Check logs.")
+
 async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.message
@@ -3951,7 +4041,11 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     if not target_user:
-        await message.reply_text("Error: User not found.")
+        await message.reply_text("Skrrrt... I can't find the user.")
+        return
+
+    if is_privileged_user(target_user.id):
+        await message.reply_text("This user already has a role. Use /setrank to change it.")
         return
     
     if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
@@ -4513,6 +4607,7 @@ async def main() -> None:
         application.add_handler(CommandHandler("listdevs", listdevs_command))
         application.add_handler(CommandHandler("addsupport", addsupport_command))
         application.add_handler(CommandHandler("delsupport", delsupport_command))
+        application.add_handler(CommandHandler("setrank", setrank_command))
         application.add_handler(CommandHandler("listsupport", listsupport_command))
         application.add_handler(CommandHandler("shell", shell_command))
         application.add_handler(CommandHandler("execute", execute_script_command))
