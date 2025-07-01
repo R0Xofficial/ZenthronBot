@@ -2497,7 +2497,7 @@ async def set_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     user = update.effective_user
     global PUBLIC_AI_ENABLED
     
-    if not is_owner_or_dev(user.id)
+    if not is_owner_or_dev(user.id):
         logger.warning(f"Unauthorized /setai attempt by user {user.id}.")
         return
 
