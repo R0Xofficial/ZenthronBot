@@ -3375,6 +3375,8 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if is_privileged_user(target_entity.id) or target_entity.id == context.bot.id:
         await message.reply_text("LoL, looks like... Someone tried global ban privileged user. Nice Try.")
         return
+
+    user_display = create_user_html_link(target_entity)
     existing_gban_reason = get_gban_reason(target_entity.id)
     if existing_gban_reason:
         await message.reply_html(
@@ -3390,7 +3392,6 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         except Exception as e:
             logger.warning(f"Could not enforce local ban for gban in chat {chat.id}: {e}")
 
-    user_display = create_user_html_link(target_entity)
     await message.reply_html(f"✅ User {user_display} has been globally banned.\n<b>Reason:</b> {html.escape(reason)}")
     
     try:
