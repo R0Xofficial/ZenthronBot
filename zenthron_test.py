@@ -3953,47 +3953,56 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     target_input = context.args[0]
-    new_role = context.args[1].lower()
+    new_role_shortcut = context.args[1].lower()
+    
+    role_map = {
+        "support": "Support",
+        "sudo": "Sudo",
+        "dev": "Developer"
+    }
 
-    valid_roles = ["support", "sudo", "dev"]
-    if new_role not in valid_roles:
-        await message.reply_text(f"Invalid role '{new_role}'. Please use one of: support, sudo, dev.")
+    if new_role_shortcut not in role_map:
+        await message.reply_text(f"Invalid role '{html.escape(new_role_shortcut)}'. Please use one of: support, sudo, dev.")
         return
+
+    new_role_full_name = role_map[new_role_shortcut]
 
     target_user: User | None = None
     if message.reply_to_message:
         target_user = message.reply_to_message.from_user
     else:
         target_user = await resolve_user_with_telethon(context, target_input, update)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
 
     if not target_user:
         await message.reply_text("Error: User not found.")
         return
 
     if not is_privileged_user(target_user.id) or target_user.id == OWNER_ID:
-        await message.reply_text("This command can only be used on users who already have a role (Support, Sudo, or Developer).")
+        await message.reply_text("This command can only be used on users who already have a role (Support, Sudo, or Dev).")
         return
 
     if is_dev_user(user.id):
         if user.id == target_user.id:
             await message.reply_text("You cannot change your own rank.")
             return
-
         if is_dev_user(target_user.id):
             await message.reply_text("As a Developer, you cannot change the rank of other Developers.")
             return
-            
-        if new_role == "dev":
+        if new_role_shortcut == "dev":
             await message.reply_text("As a Developer, you cannot promote others to the Developer role.")
             return
 
-    current_role = ""
-    if is_dev_user(target_user.id): current_role = "Developet"
-    elif is_sudo_user(target_user.id): current_role = "Sudo"
-    elif is_support_user(target_user.id): current_role = "Support"
+    current_role_shortcut = ""
+    if is_dev_user(target_user.id): current_role_shortcut = "dev"
+    elif is_sudo_user(target_user.id): current_role_shortcut = "sudo"
+    elif is_support_user(target_user.id): current_role_shortcut = "support"
+    
+    current_role_full_name = role_map.get(current_role_shortcut, "Unknown")
 
-    if new_role == current_role:
-        await message.reply_text(f"User is already a {new_role.capitalize()}. No changes made.")
+    if new_role_shortcut == current_role_shortcut:
+        await message.reply_text(f"User is already a {new_role_full_name}. No changes made.")
         return
 
     remove_support_user(target_user.id)
@@ -4001,24 +4010,25 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     remove_dev_user(target_user.id)
 
     success = False
-    if new_role == "Support":
+    if new_role_shortcut == "support":
         success = add_support_user(target_user.id, user.id)
-    elif new_role == "Sudo":
+    elif new_role_shortcut == "sudo":
         success = add_sudo_user(target_user.id, user.id)
-    elif new_role == "Developer":
+    elif new_role_shortcut == "dev":
         success = add_dev_user(target_user.id, user.id)
 
     if success:
         user_display = create_user_html_link(target_user)
         admin_link = create_user_html_link(admin)
-        feedback_message = f"✅ User {user_display}'s rank has been changed from <b>{current_role.capitalize()}</b> to <b>{new_role.capitalize()}</b>."
+        
+        feedback_message = f"✅ User {user_display}'s rank has been changed from <b>{current_role_full_name}</b> to <b>{new_role_full_name}</b>."
         await message.reply_html(feedback_message)
 
         log_message = (f"<b>#ROLECHANGED</b>\n\n"
                        f"<b>User:</b> {user_display}\n"
                        f"<b>User ID:</b> <code>{target_user.id}</code>\n"
-                       f"<b>Old Role:</b> <code>{current_role.capitalize()}</code>\n"
-                       f"<b>New Role:</b> <code>{new_role.capitalize()}</code>\n"
+                       f"<b>Old Role:</b> <code>{current_role_full_name}</code>\n"
+                       f"<b>New Role:</b> <code>{new_role_full_name}</code>\n"
                        f"<b>Admin:</b> {admin_link}")
         await send_operational_log(context, log_message)
     else:
