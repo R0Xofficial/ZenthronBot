@@ -95,6 +95,14 @@ if log_chat_id_str:
 else:
     logger.info("LOG_CHAT_ID not set. Operational logs will be sent to OWNER_ID if available.")
 
+APPEAL_CHAT_USERNAME = os.getenv("APPEAL_CHAT_USERNAME")
+if not APPEAL_CHAT_USERNAME:
+    logger.critical("CRITICAL: APPEAL_CHAT_USERNAME not set!"); 
+    print("\n--- FATAL ERROR --- \nAPPEAL_CHAT_USERNAME is not set."); 
+    exit(1)
+else:
+    logger.info(f"Appeal chat loaded: @{APPEAL_CHAT_USERNAME}")
+
 # --- Database Initialization ---
 def init_db():
     conn = None
@@ -1208,6 +1216,9 @@ def format_entity_info(entity: Chat | User,
             info_lines.append(f"<b>Reason:</b> {html.escape(gban_reason_str)}")
         else:
             info_lines.append(f"\n<b>• Globally Banned:</b> <code>No</code>")
+
+        if gban_reason_str is not None or blacklist_reason_str is not None:
+            info_lines.append(f"\n<b>Appeal Chat:</b> {APPEAL_CHAT_USERNAME}")
 
     elif entity_chat_type == ChatType.CHANNEL:
         channel = entity
