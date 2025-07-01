@@ -2233,6 +2233,9 @@ async def _find_and_process_zombies(update: Update, context: ContextTypes.DEFAUL
         await status_message.edit_text(f"An error occurred while scanning members: {html.escape(str(e))}")
         return
 
+    if not dry_run and kicked_count > 0:
+        await asyncio.sleep(1)
+
     if dry_run:
         await status_message.edit_text(
             f"✅ <b>Scan complete!</b> Found <code>{zombie_count}</code> deleted accounts in this chat.\n",
