@@ -8,7 +8,7 @@ Meet **ZenthronBot**, a powerful and feature-rich Telegram bot designed for adva
 
 - **Comprehensive Moderation**: A full suite of commands including ban, mute, kick, and purge to effectively manage chat activity.
 - **Advanced Security Layers**: Features like a global ban (gban) system and a personal blacklist to protect your communities from malicious users across all groups.
-- **Multi-Level Administration**: A robust permission system with three levels: Owner, Sudo users (bot admins), and chat administrators, ensuring granular control over the bot's powerful features.
+- **Multi-Level Administration**: A robust permission system with three levels: Owner, Developer Sudo, Support users (bot admins), and chat administrators, ensuring granular control over the bot's powerful features.
 - **Detailed Information Retrieval**: Commands to get in-depth information about users, chats, and the bot's own operational status.
 - **Fully Configurable**: Securely configured via environment variables, allowing for easy and safe deployment.
 
