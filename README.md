@@ -39,3 +39,5 @@ Meet **ZenthronBot**, a powerful and feature-rich Telegram bot designed for adva
     ```bash
     cd ~/zenthron && . ./env.sh && python zenthron.py
     ```
+# Official Support Chat:
+-   **https://t.me/ZenthronSupport/**
