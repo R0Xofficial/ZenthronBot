@@ -101,7 +101,7 @@ if not APPEAL_CHAT_USERNAME:
     print("\n--- FATAL ERROR --- \nAPPEAL_CHAT_USERNAME is not set."); 
     exit(1)
 else:
-    logger.info(f"Appeal chat loaded: @{APPEAL_CHAT_USERNAME}")
+    logger.info(f"Appeal chat loaded: {APPEAL_CHAT_USERNAME}")
 
 # --- Database Initialization ---
 def init_db():
