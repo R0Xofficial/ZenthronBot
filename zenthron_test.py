@@ -1467,7 +1467,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
         
     except Exception as e:
-        await send_safe_reply(update, context, text=f"Error: Failed to ban entity: {html.escape(str(e))}")
+        await send_safe_reply(update, context, text=f"Error: Failed to ban user: {html.escape(str(e))}")
 
 async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
@@ -1528,7 +1528,7 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
         
     except Exception as e:
-        await send_safe_reply(update, context, text=f"Failed to unban entity: {html.escape(str(e))}")
+        await send_safe_reply(update, context, text=f"Failed to unban user: {html.escape(str(e))}")
 
 async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
