@@ -3688,7 +3688,7 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 f"<b>#SUPPORT</b>\n\n"
                 f"<b>User:</b> {user_display}\n"
                 f"<b>User ID:</b> <code>{target_user.id}</code>\n"
-                f"<b>Promoted By:</b> {admin_link}\n"
+                f"<b>Admin:</b> {admin_link}\n"
                 f"<b>Date:</b> <code>{current_time}</code>"
             )
             await send_operational_log(context, log_message)
@@ -3749,7 +3749,7 @@ async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 f"<b>#UNSUPPORT</b>\n\n"
                 f"<b>User:</b> {user_display}\n"
                 f"<b>User ID:</b> <code>{target_user.id}</code>\n"
-                f"<b>Demoted By:</b> {admin_link}\n"
+                f"<b>Admin:</b> {admin_link}\n"
                 f"<b>Date:</b> <code>{current_time}</code>"
             )
             await send_operational_log(context, log_message)
@@ -3846,7 +3846,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 f"<b>#SUDO</b>\n\n"
                 f"<b>User:</b> {user_display}\n"
                 f"<b>User ID:</b> <code>{target_user.id}</code>\n"
-                f"<b>Promoted By:</b> {admin_link}\n"
+                f"<b>Admin:</b> {admin_link}\n"
                 f"<b>Date:</b> <code>{current_time}</code>"
             )
             await send_operational_log(context, log_message)
@@ -3918,7 +3918,7 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 f"<b>#UNSUDO</b>\n\n"
                 f"<b>User:</b> {user_display}\n"
                 f"<b>User ID:</b> <code>{target_user.id}</code>\n"
-                f"<b>Demoted By:</b> {admin_link}\n"
+                f"<b>Admin:</b> {admin_link}\n"
                 f"<b>Date:</b> <code>{current_time}</code>"
             )
             await send_operational_log(context, log_message)
