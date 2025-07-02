@@ -1039,10 +1039,10 @@ SUPPORT_COMMANDS_TEXT = """
 <b>Privileged User Commands:</b>
 /gban &lt;ID/@user/reply&gt; [Reason] - Ban a user globally.
 /ungban &lt;ID/@user/reply&gt; - Unban a user globally.
+/ping - Check bot ping.
 """
 
 SUDO_COMMANDS_TEXT = """
-/status - Show bot status.
 /cinfo &lt;Optional chat ID&gt; - Get detailed info about the current or specified chat.
 /say &lt;Optional chat ID&gt; [Your text] - Send a message as the bot.
 /blist &lt;ID/@user/reply&gt; [Reason] - Add a user to the blacklist.
@@ -1050,6 +1050,8 @@ SUDO_COMMANDS_TEXT = """
 """
 
 DEVELOPER_COMMANDS_TEXT = """
+/status - Show bot status.
+/stats - Show bot database stats.
 /speedtest - Perform an internet speed test.
 /setai &lt;enable/disable&gt; - Turn on or off ai access for all users. <i>(Does not apply to privileged users)</i>
 /listgroups - List all known by bot groups.
@@ -2344,10 +2346,14 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         if stdout:
             lines = stdout.decode('utf-8').strip().split('\n')
-            if '@' in lines[0]:
-                neofetch_output = "\n".join(lines[1:])
-            else:
-                neofetch_output = "\n".join(lines)
+            filtered_lines = []
+            for line in lines:
+                if '---' in line or '@' in line:
+                    continue
+                filtered_lines.append(line)
+            
+            neofetch_output = "\n".join(filtered_lines)
+            
         elif stderr:
             logger.warning(f"Neofetch returned an error: {stderr.decode('utf-8')}")
             neofetch_output = "Neofetch not found or failed to run."
@@ -2434,6 +2440,18 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     stats_msg = "\n".join(stats_lines)
     await update.message.reply_html(stats_msg)
+
+async def ping_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    if not is_privileged_user(user.id):
+        logger.warning(f"Unauthorized /ping attempt by user {user.id}.")
+        return
+    
+    start_time = time.time()
+    message = await update.message.reply_html("<b>Pinging...</b>")
+    end_time = time.time()
+    latency = round((end_time - start_time) * 1000, 2)
+    await message.edit_text(f"🏓 <b>Pong!</b>\nLatency: <code>{latency} ms</code>")
 
 async def say(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
@@ -3378,7 +3396,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     message = update.message
     if not message: return
 
-    if not (is_owner_or_dev(user_who_gbans.id) or is_sudo_user(user_who_gbans.id) or is_support_user(user_who_gbans.id)):
+    if not is_privileged_user(user_who_gbans.id):
         logger.warning(f"Unauthorized /gban attempt by user {user_who_gbans.id}.")
         return
 
@@ -3462,7 +3480,7 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     message = update.message
     if not message: return
 
-    if not (is_owner_or_dev(user_who_ungbans.id) or is_sudo_user(user_who_ungbans.id) or is_support_user(user_who_ungbans.id)):
+    if not is_privileged_user(user_who_ungbans.id):
         logger.warning(f"Unauthorized /ungban attempt by user {user_who_ungbans.id}.")
         return
 
@@ -4636,6 +4654,7 @@ async def main() -> None:
         application.add_handler(CommandHandler("touch", damnbroski))
         application.add_handler(CommandHandler("status", status_command))
         application.add_handler(CommandHandler("stats", stats_command))
+        application.add_handler(CommandHandler("ping", ping_command))
         application.add_handler(CommandHandler("say", say))
         application.add_handler(CommandHandler("leave", leave_chat))
         application.add_handler(CommandHandler("speedtest", speedtest_command))
