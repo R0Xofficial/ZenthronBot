@@ -2835,13 +2835,12 @@ async def save_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         await message.reply_text("Failed to save the note due to a database error.")
 
 async def list_notes_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    notes = get_all_notes(update.effective_chat.id)
     user = update.effective_user
 
     if chat.type == ChatType.PRIVATE:
         await send_safe_reply(update, context, text="Huh? You can't list notes in private chat...")
         return
-    
-    notes = get_all_notes(update.effective_chat.id)
     
     if not notes:
         await update.message.reply_text("There are no notes in this chat.")
