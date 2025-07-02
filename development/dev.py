@@ -3892,7 +3892,8 @@ async def handle_left_group_member(update: Update, context: ContextTypes.DEFAULT
     if custom_text:
         base_text = custom_text
     elif GENERIC_GOODBYE_TEXTS:
-        base_text = random.choice(GENERIC_GOODBYE_TEXTS)
+        user_mention = member.mention_html()
+        base_text = random.choice(GENERIC_GOODBYE_TEXTS).format(user_mention=user_mention)
     
     if base_text:
         final_message = await format_message_text(base_text, left_member, chat, context)
