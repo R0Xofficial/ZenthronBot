@@ -2356,7 +2356,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             
         elif stderr:
             logger.warning(f"Neofetch returned an error: {stderr.decode('utf-8')}")
-            neofetch_output = "Neofetch not found or failed to run."
+            neofetch_output = "Neofetch not found or failed to run. Check if you have it installed | pkg install neofetch"
 
     except FileNotFoundError:
         logger.warning("Neofetch command not found. Skipping.")
