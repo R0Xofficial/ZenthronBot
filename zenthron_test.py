@@ -22,6 +22,9 @@ import io
 import telegram
 import time
 import google.generativeai as genai
+import platform
+from telegram import __version__ as ptb_version
+from telethon import __version__ as telethon_version
 from typing import List, Tuple
 from telethon import TelegramClient
 from telethon.tl.types import User as TelethonUser, Channel as TelethonChannel
