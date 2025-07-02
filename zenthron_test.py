@@ -1221,6 +1221,7 @@ HELP_TEXT = """
 <b>🔹 User & Chat Info</b>
 /info &lt;ID/@username/reply&gt; - Get information about a user.
 /chatinfo - Get basic info about the current chat.
+/id - Get user or chat id.
 /listadmins - Show the list of administrators in this chat. <i>(Alias: /admins)</i>
 
 <b>🔹 Moderation Commands</b>
@@ -1230,9 +1231,9 @@ HELP_TEXT = """
 /unmute &lt;ID/@username/reply&gt; - Unmute a user.
 /kick &lt;ID/@username/reply&gt; [Reason] - Kick a user.
 /kickme - Kick yourself from the chat.
-/warn &lt;@username/reply&gt; [Reason] - Warn a user.
-/warnings &lt;@username/reply&gt; - Check a user's warnings.
-/resetwarns &lt;@username/reply&gt; - Reset user's warnings.
+/warn &lt;ID/@username/reply&gt; [Reason] - Warn a user.
+/warnings &lt;ID/@username/reply&gt; - Check a user's warnings.
+/resetwarns &lt;ID/@username/reply&gt; - Reset user's warnings.
 
 <b>🔹 Admin Tools</b>
 /promote &lt;ID/@usernamename/reply&gt; [Title] - Promote a user to admin.
@@ -1250,6 +1251,7 @@ HELP_TEXT = """
 <i>To get a note, simply use #notename in the chat.</i>
 
 <b>🔹 Chat Settings</b>
+/welcomehelp - Get help with text formatting and placeholders.
 /welcome &lt;on/off&gt; - Enable or disable welcome messages.
 /setwelcome &lt;text&gt; - Set a custom welcome message.
 /resetwelcome - Reset the welcome message to default.
@@ -1274,7 +1276,7 @@ HELP_TEXT = """
 SUPPORT_COMMANDS_TEXT = """
 <i>Note: Commands /ban, /unban, /mute, /unmute, /kick, /pin, /unpin, /purge, /promote, /demote, /zombies can be used by privileged users even if they are not chat administrators. (Use it wisely and don't overuse your power. Otherwise you may lose your privileges)</i>
 
-<b>Privileged User Commands:</b>
+<b>🔹 Privileged User Commands:</b>
 /gban &lt;ID/@username/reply&gt; [Reason] - Ban a user globally.
 /ungban &lt;ID/@username/reply&gt; - Unban a user globally.
 /ping - Check bot ping.
@@ -1293,7 +1295,7 @@ DEVELOPER_COMMANDS_TEXT = """
 /speedtest - Perform an internet speed test.
 /setai &lt;enable/disable&gt; - Turn on or off ai access for all users. <i>(Does not apply to privileged users)</i>
 /listgroups - List all known by bot groups.
-/delchat &lt;ID 1&gt; [ID 2] - Remove groups from database
+/delgroup &lt;ID 1&gt; [ID 2] - Remove groups from database
 /cleangroups - Remove cached groups from database automatically.
 /listsupport - List all users with support privileges.
 /addsupport &lt;ID/@username/reply&gt; - Grant Support permissions to a user.
@@ -2869,10 +2871,6 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
         
     reason = " ".join(reason_parts) or "No reason provided."
-
-    if is_privileged_user(target_user.id):
-        await update.message.reply_text("This user has immunity and cannot be warned.")
-        return
 
     warn_count = add_warning(chat.id, target_user.id, reason, warner.id)
     user_display = create_user_html_link(target_user)
