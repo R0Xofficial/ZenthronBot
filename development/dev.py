@@ -3827,20 +3827,17 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
         base_text = ""
         if custom_text:
             base_text = custom_text
-        elif member.id == OWNER_ID and OWNER_WELCOME_TEXTS:
             owner_mention = member.mention_html()
+            user_mention = member.mention_html()
+        elif member.id == OWNER_ID and OWNER_WELCOME_TEXTS:
             base_text = random.choice(OWNER_WELCOME_TEXTS)
         elif is_dev_user(member.id) and DEV_WELCOME_TEXTS:
-            user_mention = member.mention_html()
             base_text = random.choice(DEV_WELCOME_TEXTS)
         elif is_sudo_user(member.id) and SUDO_WELCOME_TEXTS:
-            user_mention = member.mention_html()
             base_text = random.choice(SUDO_WELCOME_TEXTS)
         elif is_support_user(member.id) and SUPPORT_WELCOME_TEXTS:
-            user_mention = member.mention_html()
             base_text = random.choice(SUPPORT_WELCOME_TEXTS)
         elif GENERIC_WELCOME_TEXTS:
-            user_mention = member.mention_html()
             base_text = random.choice(GENERIC_WELCOME_TEXTS)
         
         if base_text:
