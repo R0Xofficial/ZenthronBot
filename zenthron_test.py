@@ -1280,7 +1280,7 @@ ADMIN_NOTE_TEXT = """
 """
 
 SUPPORT_COMMANDS_TEXT = """
-<b>🔹 Privileged User Commands:</b>
+<b>🔹 Your Privileged Commands:</b>
 /gban &lt;ID/@user/reply&gt; [Reason] - Ban a user globally.
 /ungban &lt;ID/@user/reply&gt; - Unban a user globally.
 /ping - Check bot ping.
