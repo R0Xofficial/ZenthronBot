@@ -2656,10 +2656,16 @@ async def goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     status = "enabled" if enabled else "disabled"
     
     if custom_text:
-        message = f"Goodbye messages are currently <b>{status}</b>.\nI will be sending a custom message."
+        message = f"Goodbye messages are currently <b>{status}</b>.\nI will be sending this custom message:\n\n"
+        await update.message.reply_html(message)
+        await update.message.reply_html(custom_text.format(
+            first="John", last="Doe", fullname="John Doe", 
+            username="@example", mention="<a href='tg://user?id=1'>John</a>", 
+            id=1, count=100, chatname=chat.title
+        ))
     else:
         message = f"Goodbye messages are currently <b>{status}</b>.\nI will be sending one of my default goodbye messages."
-    await update.message.reply_html(message)
+        await update.message.reply_html(message)
 
 async def set_goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
