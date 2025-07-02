@@ -1232,6 +1232,7 @@ HELP_TEXT = """
 /kickme - Kick yourself from the chat.
 /warn &lt;@username/reply&gt; [Reason] - Warn a user.
 /warnings &lt;@username/reply&gt; - Check a user's warnings.
+/resetwarns &lt;@username/reply&gt; - Reset user's warnings.
 
 <b>🔹 Admin Tools</b>
 /promote &lt;ID/@usernamename/reply&gt; [Title] - Promote a user to admin.
@@ -3809,36 +3810,41 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
     if not is_gban_enforced(chat.id):
         return
 
-    for member in update.message.new_chat_members:
-        if member.id == context.bot.id:
-            continue
-        
-    if not are_welcome_messages_enabled(chat.id):
+    if should_clean_service(chat.id):
+        try:
+            await update.message.delete()
+        except Exception:
+            pass
+
+    is_enabled, custom_text = get_welcome_settings(chat.id)
+    if not is_enabled:
         return
 
     for member in update.message.new_chat_members:
         if member.id == context.bot.id:
             continue
 
-        user_mention = member.mention_html()
-        welcome_text = ""
-
-        if member.id == OWNER_ID and OWNER_WELCOME_TEXTS:
-            welcome_text = random.choice(OWNER_WELCOME_TEXTS).format(user_mention=user_mention)
+        base_text = ""
+        if custom_text:
+            base_text = custom_text
+        elif member.id == OWNER_ID and OWNER_WELCOME_TEXTS:
+            base_text = random.choice(OWNER_WELCOME_TEXTS)
         elif is_dev_user(member.id) and DEV_WELCOME_TEXTS:
-            welcome_text = random.choice(DEV_WELCOME_TEXTS).format(user_mention=user_mention)
+            base_text = random.choice(DEV_WELCOME_TEXTS)
         elif is_sudo_user(member.id) and SUDO_WELCOME_TEXTS:
-            welcome_text = random.choice(SUDO_WELCOME_TEXTS).format(user_mention=user_mention)
+            base_text = random.choice(SUDO_WELCOME_TEXTS)
         elif is_support_user(member.id) and SUPPORT_WELCOME_TEXTS:
-            welcome_text = random.choice(SUPPORT_WELCOME_TEXTS).format(user_mention=user_mention)
+            base_text = random.choice(SUPPORT_WELCOME_TEXTS)
         elif GENERIC_WELCOME_TEXTS:
-            welcome_text = random.choice(GENERIC_WELCOME_TEXTS).format(user_mention=user_mention)
+            base_text = random.choice(GENERIC_WELCOME_TEXTS)
         
-        if welcome_text:
-            try:
-                await update.message.reply_html(welcome_text, disable_web_page_preview=True)
-            except Exception as e:
-                logger.error(f"Failed to send welcome message: {e}")
+        if base_text:
+            final_message = await format_message_text(base_text, member, chat, context)
+            if final_message:
+                try:
+                    await context.bot.send_message(chat.id, final_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+                except Exception as e:
+                    logger.error(f"Failed to send welcome message for user {member.id} in chat {chat.id}: {e}")
 
         gban_reason = get_gban_reason(member.id)
         if gban_reason:
@@ -3867,13 +3873,29 @@ async def handle_left_group_member(update: Update, context: ContextTypes.DEFAULT
         remove_chat_from_db(chat.id)
         return
 
-    if are_goodbye_messages_enabled(chat.id) and GENERIC_GOODBYE_TEXTS:
-        user_mention = left_member.mention_html()
-        goodbye_text = random.choice(GENERIC_GOODBYE_TEXTS).format(user_mention=user_mention)
+    if should_clean_service(chat.id):
         try:
-            await update.message.reply_html(goodbye_text, disable_web_page_preview=True)
-        except Exception as e:
-            logger.error(f"Failed to send goodbye message: {e}")
+            await update.message.delete()
+        except Exception:
+            pass
+
+    is_enabled, custom_text = get_goodbye_settings(chat.id)
+    if not is_enabled:
+        return
+
+    base_text = ""
+    if custom_text:
+        base_text = custom_text
+    elif GENERIC_GOODBYE_TEXTS:
+        base_text = random.choice(GENERIC_GOODBYE_TEXTS)
+    
+    if base_text:
+        final_message = await format_message_text(base_text, left_member, chat, context)
+        if final_message:
+            try:
+                await context.bot.send_message(chat.id, final_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+            except Exception as e:
+                logger.error(f"Failed to send goodbye message in chat {chat.id}: {e}")
 
 async def send_operational_log(context: ContextTypes.DEFAULT_TYPE, message: str, parse_mode: str = ParseMode.HTML) -> None:
     """
