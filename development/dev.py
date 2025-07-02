@@ -2752,20 +2752,48 @@ async def set_clean_service_command(update: Update, context: ContextTypes.DEFAUL
 # --- Notes Command Handlers ---
 async def save_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+    user = update.effective_user
+    message = update.message
+    
     if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can manage notes."):
         return
         
-    if len(context.args) < 2:
-        await update.message.reply_text("Usage: /addnote <notename> <content>")
-        return
-        
-    note_name = context.args[0]
-    content = update.message.text.split(' ', 2)[2]
+    note_name = ""
+    content = ""
+    replied_message = message.reply_to_message
 
-    if add_note(chat.id, note_name, content, update.effective_user.id):
-        await update.message.reply_html(f"✅ Note <code>#{note_name.lower()}</code> has been saved.")
+    if replied_message:
+        if not context.args:
+            await message.reply_text("You need to provide a name for the note.\nUsage: /addnote <notename> (replying to a message)")
+            return
+        
+        note_name = context.args[0]
+        content = replied_message.text_html if replied_message.text_html else replied_message.text
+
+        if replied_message.caption:
+            content = replied_message.caption_html if replied_message.caption_html else replied_message.caption
+
+        if not content:
+            await message.reply_text("The replied message doesn't seem to have any text content to save.")
+            return
+
     else:
-        await update.message.reply_text("Failed to save the note.")
+        if len(context.args) < 2:
+            await message.reply_text("Usage:\n1. /addnote <notename> <content>\n2. Reply to a message with /addnote <notename>")
+            return
+            
+        note_name = context.args[0]
+        command_entity = message.entities[0]
+        content = message.text_html[command_entity.offset + command_entity.length:].strip()
+        
+        if not content:
+            await message.reply_text("You need to provide some content for the note.")
+            return
+
+    if add_note(chat.id, note_name, content, user.id):
+        await message.reply_html(f"✅ Note <code>#{note_name.lower()}</code> has been saved.")
+    else:
+        await message.reply_text("Failed to save the note due to a database error.")
 
 async def list_notes_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     notes = get_all_notes(update.effective_chat.id)
