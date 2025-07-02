@@ -2835,7 +2835,7 @@ async def save_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         await message.reply_text("Failed to save the note due to a database error.")
 
 async def list_notes_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user = update.effective_user
+    chat = update.effective_chat
 
     if chat.type == ChatType.PRIVATE:
         await send_safe_reply(update, context, text="Huh? You can't list notes in private chat...")
@@ -2996,6 +2996,7 @@ async def warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     await update.message.reply_html("\n".join(message_lines))
 
 async def reset_warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
     user = update.effective_user
 
     if chat.type == ChatType.PRIVATE:
