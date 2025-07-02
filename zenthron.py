@@ -22,13 +22,16 @@ import io
 import telegram
 import time
 import google.generativeai as genai
+import platform
+from telegram import __version__ as ptb_version
+from telethon import __version__ as telethon_version
 from typing import List, Tuple
 from telethon import TelegramClient
 from telethon.tl.types import User as TelethonUser, Channel as TelethonChannel
 from telegram import Update, User, Chat, constants, ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ChatType, ParseMode, ChatMemberStatus
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ApplicationHandlerStop, JobQueue
-from telegram.error import TelegramError
+from telegram.error import TelegramError, BadRequest
 from telegram.request import HTTPXRequest
 from datetime import datetime, timezone, timedelta
 from texts import (
@@ -95,6 +98,14 @@ if log_chat_id_str:
 else:
     logger.info("LOG_CHAT_ID not set. Operational logs will be sent to OWNER_ID if available.")
 
+APPEAL_CHAT_USERNAME = os.getenv("APPEAL_CHAT_USERNAME")
+if not APPEAL_CHAT_USERNAME:
+    logger.critical("CRITICAL: APPEAL_CHAT_USERNAME not set!"); 
+    print("\n--- FATAL ERROR --- \nAPPEAL_CHAT_USERNAME is not set."); 
+    exit(1)
+else:
+    logger.info(f"Appeal chat loaded: {APPEAL_CHAT_USERNAME}")
+
 # --- Database Initialization ---
 def init_db():
     conn = None
@@ -125,7 +136,23 @@ def init_db():
         """)
 
         cursor.execute("""
+            CREATE TABLE IF NOT EXISTS support_users (
+                user_id INTEGER PRIMARY KEY,
+                added_by_id INTEGER NOT NULL,
+                timestamp TEXT NOT NULL
+            )
+        """)
+        
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS sudo_users (
+                user_id INTEGER PRIMARY KEY,
+                added_by_id INTEGER NOT NULL,
+                timestamp TEXT NOT NULL
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS dev_users (
                 user_id INTEGER PRIMARY KEY,
                 added_by_id INTEGER NOT NULL,
                 timestamp TEXT NOT NULL
@@ -151,7 +178,7 @@ def init_db():
         """)
         
         conn.commit()
-        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, sudo_users, global_bans, bot_chats ensured).")
+        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, support_users, sudo_users, dev_users, global_bans, bot_chats ensured).")
     except sqlite3.Error as e:
         logger.error(f"SQLite error during DB initialization: {e}", exc_info=True)
     finally:
@@ -249,6 +276,66 @@ async def check_blacklist_handler(update: Update, context: ContextTypes.DEFAULT_
         
         raise ApplicationHandlerStop
 
+# --- Support ---
+def add_support_user(user_id: int, added_by_id: int) -> bool:
+    """Adds a user to the Support list."""
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        current_timestamp_iso = datetime.now(timezone.utc).isoformat()
+        cursor.execute(
+            "INSERT OR IGNORE INTO support_users (user_id, added_by_id, timestamp) VALUES (?, ?, ?)",
+            (user_id, added_by_id, current_timestamp_iso)
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error adding support user {user_id}: {e}", exc_info=True)
+        return False
+    finally:
+        if conn: conn.close()
+
+def remove_support_user(user_id: int) -> bool:
+    """Removes a user from the Support list."""
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM support_users WHERE user_id = ?", (user_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error removing support user {user_id}: {e}", exc_info=True)
+        return False
+    finally:
+        if conn: conn.close()
+
+def is_support_user(user_id: int) -> bool:
+    """Checks if a user is on the Support list."""
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM support_users WHERE user_id = ?", (user_id,))
+        return cursor.fetchone() is not None
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error checking support for user {user_id}: {e}", exc_info=True)
+        return False
+    finally:
+        if conn: conn.close()
+
+def get_all_support_users_from_db() -> List[Tuple[int, str]]:
+    """Fetches all Support users from the database."""
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT user_id, timestamp FROM support_users ORDER BY timestamp DESC")
+            return cursor.fetchall()
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error fetching all support users: {e}", exc_info=True)
+        return []
+
 # --- Sudo ---
 def add_sudo_user(user_id: int, added_by_id: int) -> bool:
     """Adds a user to the sudo list."""
@@ -287,7 +374,7 @@ def remove_sudo_user(user_id: int) -> bool:
             conn.close()
 
 def is_sudo_user(user_id: int) -> bool:
-    """Checks if a user is on the sudo list (specifically, not checking if they are THE owner)."""
+    """Checks if a user is on the sudo list (database check only)."""
     conn = None
     try:
         conn = sqlite3.connect(DB_NAME)
@@ -301,11 +388,81 @@ def is_sudo_user(user_id: int) -> bool:
         if conn:
             conn.close()
 
-def is_privileged_user(user_id: int) -> bool:
-    """Checks if the user is the Owner or a Sudo user."""
+# --- Developer ---
+def add_dev_user(user_id: int, added_by_id: int) -> bool:
+    """Adds a user to the Developer list."""
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        current_timestamp_iso = datetime.now(timezone.utc).isoformat()
+        cursor.execute(
+            "INSERT OR IGNORE INTO dev_users (user_id, added_by_id, timestamp) VALUES (?, ?, ?)",
+            (user_id, added_by_id, current_timestamp_iso)
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error adding dev user {user_id}: {e}", exc_info=True)
+        return False
+    finally:
+        if conn: conn.close()
+
+def remove_dev_user(user_id: int) -> bool:
+    """Removes a user from the Developer list."""
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM dev_users WHERE user_id = ?", (user_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error removing dev user {user_id}: {e}", exc_info=True)
+        return False
+    finally:
+        if conn: conn.close()
+
+def is_dev_user(user_id: int) -> bool:
+    """Checks if a user is on the Developer list."""
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM dev_users WHERE user_id = ?", (user_id,))
+        return cursor.fetchone() is not None
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error checking dev for user {user_id}: {e}", exc_info=True)
+        return False
+    finally:
+        if conn: conn.close()
+        
+def get_all_dev_users_from_db() -> List[Tuple[int, str]]:
+    """Fetches all developers from the database."""
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT user_id, timestamp FROM dev_users ORDER BY timestamp DESC")
+            return cursor.fetchall()
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error fetching all dev users: {e}", exc_info=True)
+        return []
+
+def is_owner_or_dev(user_id: int) -> bool:
     if user_id == OWNER_ID:
         return True
-    return is_sudo_user(user_id)
+    return is_dev_user(user_id)
+
+def is_privileged_user(user_id: int) -> bool:
+    if user_id == OWNER_ID:
+        return True
+    if is_dev_user(user_id):
+        return True
+    if is_sudo_user(user_id):
+        return True
+    if is_support_user(user_id):
+        return True
+    return False
 
 # --- User logger ---
 def update_user_in_db(user: User | None):
@@ -865,7 +1022,7 @@ HELP_TEXT = """
 <i>(Chat Creator only)</i>
 
 <b>AI:</b> <i>(Experimental)</i>
-/askai [prompt] - Ask AI something.
+/askai &lt;prompt&gt; - Ask AI something.
 <i>(Make sure the bot owner has enabled the service)</i>
 
 <b>4FUN Commands:</b>
@@ -876,32 +1033,46 @@ HELP_TEXT = """
 /bonk &lt;@user/reply&gt; - Playfully reprimand someone with a bonk.
 """
 
-SUDO_COMMANDS_TEXT = """
-<b>Sudo Commands:</b>
-/status - Show bot status.
-/cinfo [Optional chat ID] - Get detailed info about the current or specified chat.
-/say [Optional chat ID] [Your text] - Send a message as the bot.
-/blist &lt;ID/@user/reply&gt; [Reason] - Add a user to the blacklist.
-/unblist &lt;ID/@user/reply&gt; - Remove a user from the blacklist.
+SUPPORT_COMMANDS_TEXT = """
+<i>Note: Commands /ban, /unban, /mute, /unmute, /kick, /pin, /unpin, /purge, /promote, /demote, /zombies can be used by privileged users even if they are not chat administrators. (Use it wisely and don't overuse your power. Otherwise you may lose your privileges)</i>
+
+<b>Privileged User Commands:</b>
 /gban &lt;ID/@user/reply&gt; [Reason] - Ban a user globally.
 /ungban &lt;ID/@user/reply&gt; - Unban a user globally.
-
-<i>Note: Commands /ban, /unban, /mute, /unmute, /kick, /pin, /unpin, /purge, /promote, /demote, /zombies can be used by sudo users even if they are not chat administrators. (Use it wisely and don't overuse your power. Otherwise you may lose your SUDO privileges)</i>
+/ping - Check bot ping.
 """
 
-OWNER_COMMANDS_TEXT = """
-<b>Owner Commands:</b>
-/leave [Optional chat ID] - Make the bot leave a chat.
+SUDO_COMMANDS_TEXT = """
+/cinfo &lt;Optional chat ID&gt; - Get detailed info about the current or specified chat.
+/say &lt;Optional chat ID&gt; [Your text] - Send a message as the bot.
+/blist &lt;ID/@user/reply&gt; [Reason] - Add a user to the blacklist.
+/unblist &lt;ID/@user/reply&gt; - Remove a user from the blacklist.
+"""
+
+DEVELOPER_COMMANDS_TEXT = """
+/status - Show bot status.
+/stats - Show bot database stats.
 /speedtest - Perform an internet speed test.
 /setai &lt;enable/disable&gt; - Turn on or off ai access for all users. <i>(Does not apply to privileged users)</i>
 /listgroups - List all known by bot groups.
 /delchat &lt;ID 1&gt; [ID 2] - Remove groups from database
 /cleangroups - Remove cached groups from database automatically.
+/listsupport - List all users with support privileges.
+/addsupport &lt;ID/@user/reply&gt; - Grant Support permissions to a user.
+/delsupport &lt;ID/@user/reply&gt; - Revoke Support permissions from a user.
 /listsudo - List all users with sudo privileges.
 /addsudo &lt;ID/@user/reply&gt; - Grant SUDO (bot admin) permissions to a user.
 /delsudo &lt;ID/@user/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
+/listdevs - List all users with developer privileges.
+/setrank &lt;ID/@user/reply&gt; [support/sudo/dev] - Change the rank of a privileged user.
+"""
+
+OWNER_COMMANDS_TEXT = """
+/leave &lt;Optional chat ID&gt; - Make the bot leave a chat.
+/adddev &lt;ID/@user/reply&gt; - Grant Developer (All) permissions to a user.
+/deldev &lt;ID/@user/reply&gt; - Revoke Developer (All) permissions from a user.
 /shell &lt;command&gt; - Execute the command in the terminal.
-/execute &lt;file patch&gt; - Run script.
+/execute &lt;file patch&gt; [args...] - Run script.
 """
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -918,11 +1089,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             if not is_privileged_user(user.id):
                 return
 
-            final_sudo_help = SUDO_COMMANDS_TEXT
-            if user.id == OWNER_ID:
-                final_sudo_help += "\n" + OWNER_COMMANDS_TEXT
+            help_parts = []
             
-            await update.message.reply_html(final_sudo_help, disable_web_page_preview=True)
+            if is_support_user(user.id) or is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
+                help_parts.append(SUPPORT_COMMANDS_TEXT)
+
+            if is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
+                help_parts.append(SUDO_COMMANDS_TEXT)
+
+            if is_dev_user(user.id) or user.id == OWNER_ID:
+                help_parts.append(DEVELOPER_COMMANDS_TEXT)
+
+            if user.id == OWNER_ID:
+                help_parts.append(OWNER_COMMANDS_TEXT)
+            
+            final_sudo_help = "".join(help_parts)
+            
+            if final_sudo_help:
+                await update.message.reply_html(final_sudo_help, disable_web_page_preview=True)
             return
             
     await update.message.reply_html(welcome_message)
@@ -964,7 +1148,9 @@ async def owner_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 def format_entity_info(entity: Chat | User,
                        chat_member_status_str: str | None = None,
                        is_target_owner: bool = False,
+                       is_target_dev: bool = False,
                        is_target_sudo: bool = False,
+                       is_target_support: bool = False,
                        blacklist_reason_str: str | None = None,
                        gban_reason_str: str | None = None,
                        current_chat_id_for_status: int | None = None,
@@ -1017,8 +1203,12 @@ def format_entity_info(entity: Chat | User,
 
         if is_target_owner:
             info_lines.append(f"\n<b>• User Level:</b> <code>God</code>")
+        elif is_target_dev:
+            info_lines.append(f"\n<b>• User Level:</b> <code>Developer</code>")
         elif is_target_sudo:
             info_lines.append(f"\n<b>• User Level:</b> <code>Sudo</code>")
+        elif is_target_support:
+            info_lines.append(f"\n<b>• User Level:</b> <code>Support</code>")
             
         if blacklist_reason_str is not None:
             info_lines.append(f"\n<b>• Blacklisted:</b> <code>Yes</code>")
@@ -1031,6 +1221,9 @@ def format_entity_info(entity: Chat | User,
             info_lines.append(f"<b>Reason:</b> {html.escape(gban_reason_str)}")
         else:
             info_lines.append(f"\n<b>• Globally Banned:</b> <code>No</code>")
+
+        if gban_reason_str is not None or blacklist_reason_str is not None:
+            info_lines.append(f"\n<b>Appeal Chat:</b> {APPEAL_CHAT_USERNAME}")
 
     elif entity_chat_type == ChatType.CHANNEL:
         channel = entity
@@ -1088,7 +1281,9 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         update_user_in_db(target_entity)
 
     is_target_owner_flag = (target_entity.id == OWNER_ID)
+    is_target_dev_flag = is_dev_user(target_entity.id)
     is_target_sudo_flag = is_sudo_user(target_entity.id)
+    is_target_support_flag = is_support_user(target_entity.id)
     blacklist_reason_str = get_blacklist_reason(target_entity.id)
     gban_reason_str = get_gban_reason(target_entity.id)
     member_status_in_current_chat_str: str | None = None
@@ -1104,7 +1299,9 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         entity=target_entity,
         chat_member_status_str=member_status_in_current_chat_str,
         is_target_owner=is_target_owner_flag,
+        is_target_dev=is_target_dev_flag,
         is_target_sudo=is_target_sudo_flag,
+        is_target_support=is_target_support_flag,
         blacklist_reason_str=blacklist_reason_str,
         gban_reason_str=gban_reason_str,
         current_chat_id_for_status=update.effective_chat.id
@@ -1284,7 +1481,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
         
     except Exception as e:
-        await send_safe_reply(update, context, text=f"Error: Failed to ban entity: {html.escape(str(e))}")
+        await send_safe_reply(update, context, text=f"Error: Failed to ban user: {html.escape(str(e))}")
 
 async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
@@ -1345,7 +1542,7 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
         
     except Exception as e:
-        await send_safe_reply(update, context, text=f"Failed to unban entity: {html.escape(str(e))}")
+        await send_safe_reply(update, context, text=f"Failed to unban user: {html.escape(str(e))}")
 
 async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
@@ -1605,7 +1802,7 @@ async def kickme_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             return
 
     try:
-        user_display_name = create_user_html_link(target_user)
+        user_display_name = create_user_html_link(user_to_kick)
         
         await update.message.reply_text(f"Done! {user_display_name}, as you wish... You have been kicked from the chat.", parse_mode=ParseMode.HTML)
         
@@ -2050,6 +2247,9 @@ async def _find_and_process_zombies(update: Update, context: ContextTypes.DEFAUL
         await status_message.edit_text(f"An error occurred while scanning members: {html.escape(str(e))}")
         return
 
+    if not dry_run and kicked_count > 0:
+        await asyncio.sleep(1)
+
     if dry_run:
         await status_message.edit_text(
             f"✅ <b>Scan complete!</b> Found <code>{zombie_count}</code> deleted accounts in this chat.\n",
@@ -2068,7 +2268,7 @@ async def zombies_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     chat = update.effective_chat
 
     if chat.type == ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="Huh? You can't delete zombies in private chat...")
+        await send_safe_reply(update, context, text="Huh? You can't scan and delete zombies in private chat...")
         return
 
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission.", allow_bot_privileged_override=True):
@@ -2123,18 +2323,77 @@ async def slap(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: awai
 async def pat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, PAT_TEXTS, ["pat", "pat anime", "anime pat"], "pat", True, "Who to pat?")
 async def bonk(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, BONK_TEXTS, ["bonk", "anime bonk"], "bonk", True, "Who to bonk?")
 
-async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    if not is_privileged_user(user.id):
-        logger.warning(f"Unauthorized /status attempt by user {user.id}. Silently ignoring.")
+    if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /status attempt by user {user.id}.")
         return
 
     uptime_delta = datetime.now() - BOT_START_TIME 
     readable_uptime = get_readable_time_delta(uptime_delta)
+    
+    python_version = platform.python_version()
+    sqlite_version = sqlite3.sqlite_version
+
+    neofetch_output = ""
+    try:
+        process = await asyncio.create_subprocess_shell(
+            "neofetch --stdout --config none",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+
+        if stdout:
+            lines = stdout.decode('utf-8').strip().split('\n')
+            filtered_lines = []
+            for line in lines:
+                if '---' in line or '@' in line:
+                    continue
+                filtered_lines.append(line)
+            
+            neofetch_output = "\n".join(filtered_lines)
+            
+        elif stderr:
+            logger.warning(f"Neofetch returned an error: {stderr.decode('utf-8')}")
+            neofetch_output = "Neofetch not found or failed to run. Check if you have it installed | pkg install neofetch"
+
+    except FileNotFoundError:
+        logger.warning("Neofetch command not found. Skipping.")
+        neofetch_output = "Neofetch not installed."
+    except Exception as e:
+        logger.error(f"Error running neofetch: {e}")
+        neofetch_output = "An error occurred while fetching system info."
+
+    status_lines = [
+        "<b>Bot Status:</b>",
+        "<b>• State:</b> <code>Online and operational</code>",
+        f"<b>• Uptime:</b> <code>{readable_uptime}</code>",
+        "",
+        "<b>System Info:</b>",
+        f"<code>{html.escape(neofetch_output)}</code>",
+        "",
+        "<b>Software Info:</b>",
+        f"<b>• Python:</b> <code>{python_version}</code>",
+        f"<b>• python-telegram-bot:</b> <code>{ptb_version}</code>",
+        f"<b>• Telethon:</b> <code>{telethon_version}</code>",
+        f"<b>• SQLite:</b> <code>{sqlite_version}</code>",
+    ]
+
+    status_msg = "\n".join(status_lines)
+    await update.message.reply_html(status_msg)
+
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /stats attempt by user {user.id}.")
+        return
 
     known_users_count = "N/A"
     blacklisted_count = "N/A"
+    developer_users_count = "N/A"
     sudo_users_count = "N/A"
+    support_users_count = "N/A"
     gban_count = "N/A"
     chat_count = "N/A"
 
@@ -2143,69 +2402,70 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             cursor = conn.cursor()
             
             cursor.execute("SELECT COUNT(*) FROM users")
-            count_result_users = cursor.fetchone()
-            if count_result_users:
-                known_users_count = str(count_result_users[0])
+            known_users_count = str(cursor.fetchone()[0])
 
             cursor.execute("SELECT COUNT(*) FROM blacklist")
-            count_result_blacklist = cursor.fetchone()
-            if count_result_blacklist:
-                blacklisted_count = str(count_result_blacklist[0])
+            blacklisted_count = str(cursor.fetchone()[0])
+
+            cursor.execute("SELECT COUNT(*) FROM dev_users")
+            developer_users_count = str(cursor.fetchone()[0])
                 
             cursor.execute("SELECT COUNT(*) FROM sudo_users")
-            count_result_sudo = cursor.fetchone()
-            if count_result_sudo:
-                sudo_users_count = str(count_result_sudo[0])
+            sudo_users_count = str(cursor.fetchone()[0])
+
+            cursor.execute("SELECT COUNT(*) FROM support_users")
+            support_users_count = str(cursor.fetchone()[0])
 
             cursor.execute("SELECT COUNT(*) FROM global_bans")
-            count_result_gban = cursor.fetchone()
-            if count_result_gban:
-                gban_count = str(count_result_gban[0])
+            gban_count = str(cursor.fetchone()[0])
                 
             cursor.execute("SELECT COUNT(*) FROM bot_chats")
-            count_result_chats = cursor.fetchone()
-            if count_result_chats:
-                chat_count = str(count_result_chats[0])
+            chat_count = str(cursor.fetchone()[0])
             
     except sqlite3.Error as e:
-        logger.error(f"SQLite error fetching counts for /status: {e}", exc_info=True)
-        known_users_count = "DB Error"
-        blacklisted_count = "DB Error"
-        sudo_users_count = "DB Error"
-        gban_count = "DB Error"
-        chat_count = "DB Error"
-    except Exception as e:
-        logger.error(f"Unexpected error fetching counts for /status: {e}", exc_info=True)
-        known_users_count = "Error"
-        blacklisted_count = "Error"
-        sudo_users_count = "Error"
-        gban_count = "Error"
-        chat_count = "Error"
+        logger.error(f"SQLite error fetching counts for /stats: {e}", exc_info=True)
+        (known_users_count, blacklisted_count, developer_users_count, sudo_users_count, 
+         support_users_count, gban_count, chat_count) = ("DB Error",) * 7
 
-    status_lines = [
-        "<b>Bot Status:</b>\n",
-        f"<b>• State:</b> Online and operational.",
-        f"<b>• Uptime:</b> <code>{readable_uptime}</code>\n",
-        "<b>📊 Stats:</b>",
+    stats_lines = [
+        "<b>📊 Bot Database Stats:</b>\n",
         f" <b>• 💬 Chats:</b> <code>{chat_count}</code>",
         f" <b>• 👀 Known Users:</b> <code>{known_users_count}</code>",
+        f" <b>• 🛃 Developer Users:</b> <code>{developer_users_count}</code>",
         f" <b>• 🛡 Sudo Users:</b> <code>{sudo_users_count}</code>",
+        f" <b>• 👷‍♂️ Support Users:</b> <code>{support_users_count}</code>",
         f" <b>• 🚫 Blacklisted Users:</b> <code>{blacklisted_count}</code>",
         f" <b>• 🌍 Globally Banned Users:</b> <code>{gban_count}</code>"
     ]
 
-    status_msg = "\n".join(status_lines)
-    await update.message.reply_html(status_msg)
+    stats_msg = "\n".join(stats_lines)
+    await update.message.reply_html(stats_msg)
+
+async def ping_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    if not is_privileged_user(user.id):
+        logger.warning(f"Unauthorized /ping attempt by user {user.id}.")
+        return
+    
+    start_time = time.time()
+    message = await update.message.reply_html("<b>Pinging...</b>")
+    end_time = time.time()
+    latency = round((end_time - start_time) * 1000, 2)
+    await message.edit_text(
+        f"🏓 <b>Pong!</b>\n"
+        f"<b>Latency:</b> <code>{latency} ms</code>",
+        parse_mode=ParseMode.HTML
+    )
 
 async def say(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    if not is_privileged_user(user.id):
+    if not (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
         logger.warning(f"Unauthorized /say attempt by user {user.id}.")
         return
 
     args = context.args
     if not args:
-        await update.message.reply_text("Usage: /say [optional_chat_id] <your message>")
+        await update.message.reply_text("Usage: /say <optional_chat_id> [your message]")
         return
 
     target_chat_id_str = args[0]
@@ -2290,9 +2550,11 @@ async def get_gemini_response(prompt: str) -> str:
         return f"Sorry, I encountered an error while communicating with the AI: {type(e).__name__}"
 
 async def set_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
     global PUBLIC_AI_ENABLED
     
-    if update.effective_user.id != OWNER_ID:
+    if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /setai attempt by user {user.id}.")
         return
 
     if not context.args or len(context.args) != 1 or context.args[0].lower() not in ['enable', 'disable']:
@@ -2445,7 +2707,7 @@ async def chat_sinfo_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def chat_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    if not is_privileged_user(user.id):
+    if not (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
         logger.warning(f"Unauthorized /cinfo attempt by user {user.id}.")
         return
 
@@ -2667,7 +2929,7 @@ def run_speed_test_blocking():
 
 async def speedtest_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    if user.id != OWNER_ID:
+    if not is_owner_or_dev(user.id):
         logger.warning(f"Unauthorized /speedtest attempt by user {user.id}.")
         return
 
@@ -2968,7 +3230,9 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
     message = update.message
     if not message: return
     
-    if not is_privileged_user(user.id): return
+    if not (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
+        logger.warning(f"Unauthorized /blist attempt by user {user.id}.")
+        return
 
     target_entity: User | Chat | None = None
     reason: str = "No reason provided."
@@ -3000,14 +3264,17 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
 
     user_display = create_user_html_link(target_entity)
 
-    if is_user_blacklisted(target_entity.id):
-        user_display = create_user_html_link(target_entity)
-        await message.reply_html(f"ℹ️ User {user_display} is already on the blacklist.")
+    existing_blist_reason = get_blacklist_reason(target_entity.id)
+    if existing_blist_reason:
+        await message.reply_html(
+            f"ℹ️ User {user_display} (<code>{target_entity.id}</code>) is already on the blacklist.\n"
+            f"<b>Reason:</b> {html.escape(existing_blist_reason)}"
+        )
         return
 
     if add_to_blacklist(target_entity.id, user.id, reason):
         user_display = create_user_html_link(target_entity)
-        await message.reply_html(f"✅ User {user_display} has been added to the blacklist.\n<b>Reason:</b> {html.escape(reason)}")
+        await message.reply_html(f"✅ User {user_display} (<code>{target_entity.id}</code>) has been added to the blacklist.\n<b>Reason:</b> {html.escape(reason)}")
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -3031,7 +3298,9 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
 async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.message
-    if not is_privileged_user(user.id): return
+    if not (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
+        logger.warning(f"Unauthorized /unblist attempt by user {user.id}.")
+        return
 
     target_entity: User | Chat | None = None
     if message.reply_to_message:
@@ -3055,11 +3324,11 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
     user_display = create_user_html_link(target_entity)
 
     if not is_user_blacklisted(target_entity.id):
-        await message.reply_html(f"ℹ️ User {user_display} is not on the blacklist.")
+        await message.reply_html(f"ℹ️ User {user_display} (<code>{target_entity.id}</code>) is not on the blacklist.")
         return
 
     if remove_from_blacklist(target_entity.id):
-        await message.reply_html(f"✅ User {user_display} has been removed from the blacklist.")
+        await message.reply_html(f"✅ User {user_display} (<code>{target_entity.id}</code>) has been removed from the blacklist.")
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -3131,7 +3400,9 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     message = update.message
     if not message: return
 
-    if not is_privileged_user(user_who_gbans.id): return
+    if not is_privileged_user(user_who_gbans.id):
+        logger.warning(f"Unauthorized /gban attempt by user {user_who_gbans.id}.")
+        return
 
     target_entity: User | Chat | None = None
     reason: str = "No reason provided."
@@ -3162,10 +3433,15 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if is_privileged_user(target_entity.id) or target_entity.id == context.bot.id:
         await message.reply_text("LoL, looks like... Someone tried global ban privileged user. Nice Try.")
         return
-    if get_gban_reason(target_entity.id):
-        user_display = create_user_html_link(target_entity)
-        await message.reply_html(f"User {user_display} is already globally banned.")
-        return    
+
+    user_display = create_user_html_link(target_entity)
+    existing_gban_reason = get_gban_reason(target_entity.id)
+    if existing_gban_reason:
+        await message.reply_html(
+            f"ℹ️ User {user_display} (<code>{target_entity.id}</code>) is already globally banned.\n"
+            f"<b>Reason:</b> {html.escape(existing_gban_reason)}"
+        )
+        return
 
     add_to_gban(target_entity.id, user_who_gbans.id, reason)
     if chat.type != ChatType.PRIVATE and is_gban_enforced(chat.id):
@@ -3174,8 +3450,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         except Exception as e:
             logger.warning(f"Could not enforce local ban for gban in chat {chat.id}: {e}")
 
-    user_display = create_user_html_link(target_entity)
-    await message.reply_html(f"✅ User {user_display} has been globally banned.\n<b>Reason:</b> {html.escape(reason)}")
+    await message.reply_html(f"✅ User {user_display} (<code>{target_entity.id}</code>) has been globally banned.\n<b>Reason:</b> {html.escape(reason)}")
     
     try:
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -3209,7 +3484,9 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     message = update.message
     if not message: return
 
-    if not is_privileged_user(user_who_ungbans.id): return
+    if not is_privileged_user(user_who_ungbans.id):
+        logger.warning(f"Unauthorized /ungban attempt by user {user_who_ungbans.id}.")
+        return
 
     target_entity: User | Chat | None = None
     if message.reply_to_message:
@@ -3231,12 +3508,12 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     user_display = create_user_html_link(target_entity)
 
     if not get_gban_reason(target_entity.id):
-        await message.reply_html(f"User {user_display} is not globally banned.")
+        await message.reply_html(f"User {user_display} (<code>{target_entity.id}</code>) is not globally banned.")
         return
 
     remove_from_gban(target_entity.id)
 
-    await message.reply_html(f"✅ User {user_display} has been globally unbanned.\n\n<i>Propagating unban...</i>")
+    await message.reply_html(f"✅ User {user_display} (<code>{target_entity.id}</code>) has been globally unbanned.\n\n<i>Propagating unban...</i>")
     
     if context.job_queue:
         context.job_queue.run_once(propagate_unban, 1, data={'target_user_id': target_entity.id, 'command_chat_id': chat.id})
@@ -3402,12 +3679,161 @@ async def enforce_gban_command(update: Update, context: ContextTypes.DEFAULT_TYP
             "This may expose your community to users banned for severe offenses like spam, harassment, or illegal activities."
         )
 
-async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
+    admin = update.effective_user
     message = update.message
     if not message: return
     
-    if user.id != OWNER_ID: return
+    if not is_owner_or_dev(admin.id):
+        logger.warning(f"Unauthorized /addsupport attempt by user {admin.id}.")
+        return
+
+    target_user: User | None = None
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
+    else:
+        await message.reply_text("Usage: /addsupport <ID/@username/reply>")
+        return
+
+    if not target_user:
+        await message.reply_text("Skrrrt... I can't find the user.")
+        return
+
+    user_display = create_user_html_link(target_user)
+    if is_privileged_user(target_user.id):
+        await message.reply_html(f"ℹ️ User {user_display} (<code>{target_user.id}</code>) already has a privileged role. Use /setrank if want change it.")
+        return
+    
+    if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
+        await message.reply_text("🧐 This role can only be granted to users.")
+        return
+
+    if target_user.id == OWNER_ID or target_user.id == context.bot.id or target_user.is_bot:
+        await message.reply_text("This user cannot be a Support.")
+        return
+    
+    gban_reason = get_gban_reason(target_user.id)
+    if gban_reason:
+        await message.reply_html(
+            f"❌ <b>Promotion Failed!</b>\n\n"
+            f"User {user_display} (<code>{target_user.id}</code>) cannot be promoted to <code>Support</code> because they are <b>Globally Bannned</b>.\n\n"
+            f"<b>Reason:</b> {html.escape(gban_reason)}\n\n"
+            f"<i>For security reasons, this action has been blocked. "
+            f"Please remove global ban first using /ungban if you wish to proceed.</i>"
+        )
+        return
+    blist_reason = get_blacklist_reason(target_user.id)
+    if blist_reason:
+        await message.reply_html(
+            f"❌ <b>Promotion Failed!</b>\n\n"
+            f"User {user_display} (<code>{target_user.id}</code>) cannot be promoted to <code>Sudo</code> because they are on the <b>Blacklist</b>.\n\n"
+            f"<b>Reason:</b> {html.escape(blist_reason)}\n\n"
+            f"<i>For security reasons, this action has been blocked. "
+            f"Please remove the user from the blacklist first using /unblist if you wish to proceed.</i>"
+        )
+        return
+
+    if add_support_user(target_user.id, user.id):
+        await message.reply_html(f"✅ User {user_display} (<code>{target_user.id}</code>) has been granted <b>Support</b> powers.")
+        
+        try:
+            await context.bot.send_message(target_user.id, "You have been added to the Support team.")
+        except Exception as e:
+            logger.warning(f"Failed to send PM to new Support user {target_user.id}: {e}")
+
+        admin_link = create_user_html_link(admin)
+        
+        try:
+            current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            log_message = (
+                f"<b>#SUPPORT</b>\n\n"
+                f"<b>User:</b> {user_display}\n"
+                f"<b>User ID:</b> <code>{target_user.id}</code>\n"
+                f"<b>Admin:</b> {admin_link}\n"
+                f"<b>Date:</b> <code>{current_time}</code>"
+            )
+            await send_operational_log(context, log_message)
+        except Exception as e:
+            logger.error(f"Error sending #SUPPORT log: {e}", exc_info=True)
+    else:
+        await message.reply_text("Failed to add user to Support list. Check logs.")
+
+async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    admin = update.effective_user
+    message = update.message
+    if not message: return
+    
+    if not is_owner_or_dev(admin.id):
+        logger.warning(f"Unauthorized /delsupport attempt by user {admin.id}.")
+        return
+
+    target_user: User | None = None
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
+    else:
+        await message.reply_text("Usage: /delsupport <ID/@username/reply>")
+        return
+        
+    if not target_user:
+        await message.reply_text("Skrrrt... I can't find the user.")
+        return
+
+    if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
+        await message.reply_text("🧐 This role can only be revoked from users.")
+        return
+    
+    user_display = create_user_html_link(target_user)
+
+    if not is_support_user(target_user.id):
+        await message.reply_html(f"ℹ️ User {user_display} (<code>{target_user.id}</code>) is not in Support.")
+        return
+
+    if remove_support_user(target_user.id):
+        await message.reply_html(f"✅ <b>Support</b> role for user {user_display} (<code>{target_user.id}</code>) has been revoked.")
+        
+        try:
+            await context.bot.send_message(target_user.id, "You have been removed from the Support team.")
+        except Exception as e:
+            logger.warning(f"Failed to send PM to revoked Support user {target_user.id}: {e}")
+
+        admin_link = create_user_html_link(admin)
+
+        try:
+            current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            log_message = (
+                f"<b>#UNSUPPORT</b>\n\n"
+                f"<b>User:</b> {user_display}\n"
+                f"<b>User ID:</b> <code>{target_user.id}</code>\n"
+                f"<b>Admin:</b> {admin_link}\n"
+                f"<b>Date:</b> <code>{current_time}</code>"
+            )
+            await send_operational_log(context, log_message)
+        except Exception as e:
+            logger.error(f"Error sending #UNSUPPORT log: {e}", exc_info=True)
+    else:
+        await message.reply_text("Failed to remove user from Support list. Check logs.")
+
+async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    admin = update.effective_user
+    message = update.message
+    if not message: return
+    
+    if not is_owner_or_dev(admin.id):
+        logger.warning(f"Unauthorized /addsudo attempt by user {admin.id}.")
+        return
 
     target_user: User | None = None
 
@@ -3431,6 +3857,11 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if not target_user:
         await message.reply_text("Skrrrt... I can't find the user.")
         return
+
+    user_display = create_user_html_link(target_user)
+    if is_privileged_user(target_user.id):
+        await message.reply_html(f"ℹ️ User {user_display} (<code>{target_user.id}</code>) already has a privileged role. Use /setrank if want change it.")
+        return
     
     if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
         await message.reply_text("🧐 Sudo can only be granted to users.")
@@ -3440,19 +3871,13 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await message.reply_text("This user cannot be a sudo.")
         return
     
-    user_display = create_user_html_link(target_user)
-    
-    if is_sudo_user(target_user.id):
-        await message.reply_html(f"User {user_display} already has sudo powers.")
-        return
-
     gban_reason = get_gban_reason(target_user.id)
     blist_reason = get_blacklist_reason(target_user.id)
 
     if gban_reason:
         error_message = (
             f"❌ <b>Promotion Failed!</b>\n\n"
-            f"User {user_display} cannot be promoted to <code>Sudo</code> because they are <b>Globally Bannned</b>.\n\n"
+            f"User {user_display} (<code>{target_user.id}</code>) cannot be promoted to <code>Sudo</code> because they are <b>Globally Bannned</b>.\n\n"
             f"<b>Reason:</b> {html.escape(gban_reason)}\n\n"
             f"<i>For security reasons, this action has been blocked. "
             f"Please remove global ban first using /ungban if you wish to proceed.</i>"
@@ -3463,7 +3888,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if blist_reason:
         error_message = (
             f"❌ <b>Promotion Failed!</b>\n\n"
-            f"User {user_display} cannot be promoted to <code>Sudo</code> because they are on the <b>Blacklist</b>.\n\n"
+            f"User {user_display} (<code>{target_user.id}</code>) cannot be promoted to <code>Sudo</code> because they are on the <b>Blacklist</b>.\n\n"
             f"<b>Reason:</b> {html.escape(blist_reason)}\n\n"
             f"<i>For security reasons, this action has been blocked. "
             f"Please remove the user from the blacklist first using /unblist if you wish to proceed.</i>"
@@ -3472,12 +3897,14 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     if add_sudo_user(target_user.id, user.id):
-        await message.reply_html(f"✅ User {user_display} has been granted sudo powers.")
+        await message.reply_html(f"✅ User {user_display} (<code>{target_user.id}</code>) has been granted <b>Sudo</b> powers.")
         
         try:
-            await context.bot.send_message(target_user.id, "You have been granted sudo privileges by the Bot Owner.")
+            await context.bot.send_message(target_user.id, "You have been granted Sudo privileges.")
         except Exception as e:
             logger.warning(f"Failed to send PM to new sudo user {target_user.id}: {e}")
+
+        admin_link = create_user_html_link(admin)
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -3485,6 +3912,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 f"<b>#SUDO</b>\n\n"
                 f"<b>User:</b> {user_display}\n"
                 f"<b>User ID:</b> <code>{target_user.id}</code>\n"
+                f"<b>Admin:</b> {admin_link}\n"
                 f"<b>Date:</b> <code>{current_time}</code>"
             )
             await send_operational_log(context, log_message)
@@ -3495,10 +3923,13 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
+    admin = update.effective_user
     message = update.message
     if not message: return
     
-    if user.id != OWNER_ID: return
+    if not is_owner_or_dev(admin.id):
+        logger.warning(f"Unauthorized /delsudo attempt by user {admin.id}.")
+        return
 
     target_user: User | None = None
 
@@ -3534,16 +3965,18 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     user_display = create_user_html_link(target_user)
 
     if not is_sudo_user(target_user.id):
-        await message.reply_html(f"User {user_display} does not have sudo powers.")
+        await message.reply_html(f"User {user_display} (<code>{target_user.id}</code>) does not have sudo powers.")
         return
 
     if remove_sudo_user(target_user.id):
-        await message.reply_html(f"✅ Sudo powers for user {user_display} have been revoked.")
+        await message.reply_html(f"✅ <b>Sudo</b> powers for user {user_display} (<code>{target_user.id}</code>) have been revoked.")
         
         try:
-            await context.bot.send_message(target_user.id, "Your sudo privileges have been revoked by the Bot Owner.")
+            await context.bot.send_message(target_user.id, "Your sudo privileges have been revoked.")
         except Exception as e:
             logger.warning(f"Failed to send PM to revoked sudo user {target_user.id}: {e}")
+
+        admin_link = create_user_html_link(admin)
 
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -3551,6 +3984,7 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 f"<b>#UNSUDO</b>\n\n"
                 f"<b>User:</b> {user_display}\n"
                 f"<b>User ID:</b> <code>{target_user.id}</code>\n"
+                f"<b>Admin:</b> {admin_link}\n"
                 f"<b>Date:</b> <code>{current_time}</code>"
             )
             await send_operational_log(context, log_message)
@@ -3559,37 +3993,331 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     else:
         await message.reply_text("Failed to remove user from sudo list. Check logs.")
 
+async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    admin = update.effective_user
+    message = update.message
+    if not message: return
+    
+    if not is_owner_or_dev(admin.id):
+        logger.warning(f"Unauthorized /setrank attempt by user {admin.id}.")
+        return
+
+    target_user: User | None = None
+    args_for_role: list[str] = []
+
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+        args_for_role = context.args
+    elif context.args:
+        target_input = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
+        args_for_role = context.args[1:]
+    
+    if not target_user or not args_for_role:
+        await message.reply_text("Usage: /setrank <ID/@username/reply> [support/sudo/dev]")
+        return
+
+    new_role_shortcut = args_for_role[0].lower()
+
+    role_map = {
+        "support": "Support",
+        "sudo": "Sudo",
+        "dev": "Developer"
+    }
+
+    if new_role_shortcut not in role_map:
+        await message.reply_text(f"Invalid role '{html.escape(new_role_shortcut)}'. Please use one of: support, sudo, dev.")
+        return
+
+    new_role_full_name = role_map[new_role_shortcut]
+
+    if target_user.id == OWNER_ID:
+        await message.reply_text("Owner cannot have his rank changed because he has the ultimate authority.")
+        return
+
+    if not is_privileged_user(target_user.id):
+        await message.reply_text("This command can only be used on users who already have a role (Support, Sudo, or Developer).")
+        return
+
+    if is_dev_user(user.id):
+        if user.id == target_user.id:
+            await message.reply_text("You cannot change your own rank.")
+            return
+        if is_dev_user(target_user.id):
+            await message.reply_text("As a Developer, you cannot change the rank of other Developers.")
+            return
+        if new_role_shortcut == "dev":
+            await message.reply_text("As a Developer, you cannot promote others to the Developer role.")
+            return
+
+    current_role_shortcut = ""
+    if is_dev_user(target_user.id): current_role_shortcut = "dev"
+    elif is_sudo_user(target_user.id): current_role_shortcut = "sudo"
+    elif is_support_user(target_user.id): current_role_shortcut = "support"
+    
+    current_role_full_name = role_map.get(current_role_shortcut, "Unknown")
+
+    if new_role_shortcut == current_role_shortcut:
+        await message.reply_text(f"User is already a {new_role_full_name}. No changes made.")
+        return
+
+    remove_support_user(target_user.id)
+    remove_sudo_user(target_user.id)
+    remove_dev_user(target_user.id)
+
+    success = False
+    if new_role_shortcut == "support":
+        success = add_support_user(target_user.id, user.id)
+    elif new_role_shortcut == "sudo":
+        success = add_sudo_user(target_user.id, user.id)
+    elif new_role_shortcut == "dev":
+        success = add_dev_user(target_user.id, user.id)
+
+    if success:
+        user_display = create_user_html_link(target_user)
+        admin_link = create_user_html_link(admin)
+        
+        feedback_message = f"✅ User {user_display} (<code>{target_user.id}</code>) rank has been changed from <b>{current_role_full_name}</b> to <b>{new_role_full_name}</b>."
+        await message.reply_html(feedback_message)
+
+        current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+        log_message = (f"<b>#ROLECHANGED</b>\n\n"
+                       f"<b>User:</b> {user_display}\n"
+                       f"<b>User ID:</b> <code>{target_user.id}</code>\n"
+                       f"<b>Old Role:</b> <code>{current_role_full_name}</code>\n"
+                       f"<b>New Role:</b> <code>{new_role_full_name}</code>\n"
+                       f"<b>Admin:</b> {admin_link}\n"
+                       f"<b>Date:</b> <code>{current_time}</code>")
+        await send_operational_log(context, log_message)
+    else:
+        await message.reply_text("An error occurred while changing the rank. Check logs.")
+
+async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    message = update.message
+    if not message: return
+    
+    if user.id != OWNER_ID:
+        logger.warning(f"Unauthorized /adddev attempt by user {user.id}.")
+        return
+
+    target_user: User | None = None
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
+    else:
+        await message.reply_text("Usage: /adddev <ID/@username/reply>")
+        return
+
+    if not target_user:
+        await message.reply_text("Skrrrt... I can't find the user.")
+        return
+
+    user_display = create_user_html_link(target_user)
+    if is_privileged_user(target_user.id):
+        await message.reply_html(f"ℹ️ User {user_display} (<code>{target_user.id}</code>) already has a privileged role. Use /setrank if want change it.")
+        return
+    
+    if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
+        await message.reply_text("🧐 This role can only be granted to users.")
+        return
+
+    if target_user.id == OWNER_ID or target_user.id == context.bot.id or target_user.is_bot:
+        await message.reply_text("This user cannot be a Developer.")
+        return
+    
+    gban_reason = get_gban_reason(target_user.id)
+    if gban_reason:
+        await message.reply_html(
+            f"❌ <b>Promotion Failed!</b>\n\n"
+            f"User {user_display} (<code>{target_user.id}</code>) cannot be promoted to <code>Developer</code> because they are <b>Globally Bannned</b>.\n\n"
+            f"<b>Reason:</b> {html.escape(gban_reason)}\n\n"
+            f"<i>For security reasons, this action has been blocked. "
+            f"Please remove global ban first using /ungban if you wish to proceed.</i>"
+        )
+        return
+    blist_reason = get_blacklist_reason(target_user.id)
+    if blist_reason:
+        await message.reply_html(
+            f"❌ <b>Promotion Failed!</b>\n\n"
+            f"User {user_display} (<code>{target_user.id}</code>) cannot be promoted to <code>Developer</code> because they are on the <b>Blacklist</b>.\n\n"
+            f"<b>Reason:</b> {html.escape(blist_reason)}\n\n"
+            f"<i>For security reasons, this action has been blocked. "
+            f"Please remove the user from the blacklist first using /unblist if you wish to proceed.</i>"
+        )
+        return
+
+    if add_dev_user(target_user.id, user.id):
+        await message.reply_html(f"✅ User {user_display} (<code>{target_user.id}</code>) has been granted <b>Developer</b> powers.")
+        
+        try:
+            await context.bot.send_message(target_user.id, "You have been promoted to Developer by the Bot Owner.")
+        except Exception as e:
+            logger.warning(f"Failed to send PM to new Dev user {target_user.id}: {e}")
+        
+        try:
+            current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            log_message = (
+                f"<b>#DEVELOPER</b>\n\n"
+                f"<b>User:</b> {user_display}\n"
+                f"<b>User ID:</b> <code>{target_user.id}</code>\n"
+                f"<b>Date:</b> <code>{current_time}</code>"
+            )
+            await send_operational_log(context, log_message)
+        except Exception as e:
+            logger.error(f"Error sending #DEVELOPER log: {e}", exc_info=True)
+    else:
+        await message.reply_text("Failed to add user to Developer list. Check logs.")
+
+async def deldev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    message = update.message
+    if not message: return
+    
+    if user.id != OWNER_ID:
+        logger.warning(f"Unauthorized /deldev attempt by user {user.id}.")
+        return
+
+    target_user: User | None = None
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
+    else:
+        await message.reply_text("Usage: /deldev <ID/@username/reply>")
+        return
+        
+    if not target_user:
+        await message.reply_text("Skrrrt... I can't find the user.")
+        return
+
+    if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
+        await message.reply_text("🧐 This role can only be revoked from users.")
+        return
+    
+    user_display = create_user_html_link(target_user)
+
+    if not is_dev_user(target_user.id):
+        await message.reply_html(f"User {user_display} (<code>{target_user.id}</code>) is not a Developer.")
+        return
+
+    if remove_dev_user(target_user.id):
+        await message.reply_html(f"✅ <b>Developer</b> role for user {user_display} (<code>{target_user.id}</code>) has been revoked.")
+        
+        try:
+            await context.bot.send_message(target_user.id, "Your Developer role has been revoked by the Bot Owner.")
+        except Exception as e:
+            logger.warning(f"Failed to send PM to revoked Dev user {target_user.id}: {e}")
+
+        try:
+            current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            log_message = (
+                f"<b>#UNDEVELOPER</b>\n\n"
+                f"<b>User:</b> {user_display}\n"
+                f"<b>User ID:</b> <code>{target_user.id}</code>\n"
+                f"<b>Date:</b> <code>{current_time}</code>"
+            )
+            await send_operational_log(context, log_message)
+        except Exception as e:
+            logger.error(f"Error sending #UNDEVELOPER log: {e}", exc_info=True)
+    else:
+        await message.reply_text("Failed to remove user from Developer list. Check logs.")
+
 async def sudo_commands_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     chat = update.effective_chat
     
     if not is_privileged_user(user.id):
-        logger.warning(f"Unauthorized /sudocmds attempt by user {user.id}.")
         return
 
+    help_parts = []
+
+    if is_support_user(user.id) or is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
+        help_parts.append(SUPPORT_COMMANDS_TEXT)
+
+    if is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
+        help_parts.append(SUDO_COMMANDS_TEXT)
+
+    if is_dev_user(user.id) or user.id == OWNER_ID:
+        help_parts.append(DEVELOPER_COMMANDS_TEXT)
+    
+    if user.id == OWNER_ID:
+        help_parts.append(OWNER_COMMANDS_TEXT)
+    
+    final_help_text = "".join(help_parts)
+    
     if chat.type == ChatType.PRIVATE:
-        final_sudo_help = SUDO_COMMANDS_TEXT
-        if user.id == OWNER_ID:
-            final_sudo_help += "\n" + OWNER_COMMANDS_TEXT
-        await update.message.reply_html(final_sudo_help, disable_web_page_preview=True)
+        if final_help_text:
+            await update.message.reply_html(final_help_text, disable_web_page_preview=True)
+    else:
+        bot_username = context.bot.username
+        deep_link_url = f"https://t.me/{bot_username}?start=sudocmds"
+        keyboard = InlineKeyboardMarkup(
+            [[InlineKeyboardButton(text="🛡️ Get Privileged Commands (PM)", url=deep_link_url)]]
+        )
+        await send_safe_reply(update, context, text="The list of privileged commands has been sent to your private chat.", reply_markup=keyboard)
+
+async def listdevs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    if not is_owner_or_dev(user.id):
         return
 
-    bot_username = context.bot.username
-    deep_link_url = f"https://t.me/{bot_username}?start=sudocmds"
+    dev_user_tuples = get_all_dev_users_from_db()
+
+    if not dev_user_tuples:
+        await update.message.reply_text("There are currently no users with Developer role.")
+        return
+
+    response_lines = [f"<b>🛃 Developer Users List:</b>\n"]
     
-    keyboard = InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton(text="🛡️ Get Privileged Commands (PM)", url=deep_link_url)]
-        ]
-    )
-    
-    message_text = "The list of privileged commands has been sent to your private chat. Please click the button below to see it."
-    
-    await send_safe_reply(update, context, text=message_text, reply_markup=keyboard)
+    for user_id, timestamp_str in dev_user_tuples:
+        user_display_name = f"<code>{user_id}</code>"
+
+        try:
+            chat_info = await context.bot.get_chat(user_id)
+            name_parts = []
+            if chat_info.first_name: name_parts.append(html.escape(chat_info.first_name))
+            if chat_info.last_name: name_parts.append(html.escape(chat_info.last_name))
+            if chat_info.username: name_parts.append(f"(@{html.escape(chat_info.username)})")
+            
+            if name_parts:
+                user_display_name = " ".join(name_parts) + f" (<code>{user_id}</code>)"
+        except Exception:
+            user_obj_from_db = get_user_from_db_by_username(str(user_id))
+            if user_obj_from_db:
+                display_name_parts = []
+                if user_obj_from_db.first_name: display_name_parts.append(html.escape(user_obj_from_db.first_name))
+                if user_obj_from_db.last_name: display_name_parts.append(html.escape(user_obj_from_db.last_name))
+                if user_obj_from_db.username: display_name_parts.append(f"(@{html.escape(user_obj_from_db.username)})")
+                if display_name_parts:
+                    user_display_name = " ".join(display_name_parts) + f" (<code>{user_id}</code>)"
+
+        formatted_added_time = timestamp_str
+        try:
+            dt_obj = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+            formatted_added_time = dt_obj.strftime('%Y-%m-%d %H:%M')
+        except (ValueError, TypeError):
+            logger.warning(f"Could not parse timestamp '{timestamp_str}' for dev user {user_id}")
+
+        response_lines.append(f"• {user_display_name}\n<b>Added:</b> <code>{formatted_added_time}</code>\n")
+
+    message_text = "\n".join(response_lines)
+    await update.message.reply_html(message_text, disable_web_page_preview=True)
 
 async def list_sudo_users_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    if user.id != OWNER_ID:
+    if not is_owner_or_dev(user.id):
         logger.warning(f"Unauthorized /listsudo attempt by user {user.id}.")
         return
 
@@ -3640,9 +4368,57 @@ async def list_sudo_users_command(update: Update, context: ContextTypes.DEFAULT_
 
     await update.message.reply_html(message_text, disable_web_page_preview=True)
 
+async def listsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    if not is_owner_or_dev(user.id):
+        return
+
+    support_user_tuples = get_all_support_users_from_db()
+
+    if not support_user_tuples:
+        await update.message.reply_text("There are currently no users in the Support team.")
+        return
+
+    response_lines = [f"<b>👷‍♂️ Support Users List:</b>\n"]
+    
+    for user_id, timestamp_str in support_user_tuples:
+        user_display_name = f"<code>{user_id}</code>"
+
+        try:
+            chat_info = await context.bot.get_chat(user_id)
+            name_parts = []
+            if chat_info.first_name: name_parts.append(html.escape(chat_info.first_name))
+            if chat_info.last_name: name_parts.append(html.escape(chat_info.last_name))
+            if chat_info.username: name_parts.append(f"(@{html.escape(chat_info.username)})")
+            
+            if name_parts:
+                user_display_name = " ".join(name_parts) + f" (<code>{user_id}</code>)"
+        except Exception:
+            user_obj_from_db = get_user_from_db_by_username(str(user_id))
+            if user_obj_from_db:
+                display_name_parts = []
+                if user_obj_from_db.first_name: display_name_parts.append(html.escape(user_obj_from_db.first_name))
+                if user_obj_from_db.last_name: display_name_parts.append(html.escape(user_obj_from_db.last_name))
+                if user_obj_from_db.username: display_name_parts.append(f"(@{html.escape(user_obj_from_db.username)})")
+                if display_name_parts:
+                    user_display_name = " ".join(display_name_parts) + f" (<code>{user_id}</code>)"
+
+        formatted_added_time = timestamp_str
+        try:
+            dt_obj = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+            formatted_added_time = dt_obj.strftime('%Y-%m-%d %H:%M')
+        except (ValueError, TypeError):
+            logger.warning(f"Could not parse timestamp '{timestamp_str}' for support user {user_id}")
+
+        response_lines.append(f"• {user_display_name}\n<b>Added:</b> <code>{formatted_added_time}</code>\n")
+
+    message_text = "\n".join(response_lines)
+    await update.message.reply_html(message_text, disable_web_page_preview=True)
+
 async def list_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.effective_user.id != OWNER_ID:
-        logger.warning(f"Unauthorized /listgroups attempt by user {update.effective_user.id}.")
+    user = update.effective_user
+    if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /listgroups attempt by user {user.id}.")
         return
 
     bot_chats = get_all_bot_chats_from_db()
@@ -3678,7 +4454,9 @@ async def list_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_html(final_message, disable_web_page_preview=True)
 
 async def del_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.effective_user.id != OWNER_ID:
+    user = update.effective_user
+    if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /delgroup attempt by user {user.id}.")
         return
 
     if not context.args:
@@ -3715,7 +4493,9 @@ async def del_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await update.message.reply_html("\n".join(response_lines))
 
 async def clean_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.effective_user.id != OWNER_ID:
+    user = update.effective_user
+    if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /cleangroups attempt by user {user.id}.")
         return
 
     status_message = await update.message.reply_html("🧹 Starting group cache cleanup... This may take a while. Please wait.")
@@ -3770,8 +4550,9 @@ async def clean_groups_command(update: Update, context: ContextTypes.DEFAULT_TYP
         logger.error(f"Could not edit final report message: {e}")
 
 async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.effective_user.id != OWNER_ID:
-        logger.warning(f"Unauthorized /shell attempt by user {update.effective_user.id}.")
+    user = update.effective_user
+    if user.id != OWNER_ID:
+        logger.warning(f"Unauthorized /shell attempt by user {user.id}.")
         return
 
     if not context.args:
@@ -3813,8 +4594,9 @@ async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await status_message.edit_text(f"❌ <b>Error:</b> {html.escape(str(e))}")
 
 async def execute_script_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.effective_user.id != OWNER_ID:
-        logger.warning(f"Unauthorized /execute attempt by user {update.effective_user.id}.")
+    user = update.effective_user
+    if user.id != OWNER_ID:
+        logger.warning(f"Unauthorized /execute attempt by user {user.id}.")
         return
         
     if not context.args:
@@ -3874,7 +4656,9 @@ async def main() -> None:
         application.add_handler(CommandHandler("pat", pat))
         application.add_handler(CommandHandler("bonk", bonk))
         application.add_handler(CommandHandler("touch", damnbroski))
-        application.add_handler(CommandHandler("status", status))
+        application.add_handler(CommandHandler("status", status_command))
+        application.add_handler(CommandHandler("stats", stats_command))
+        application.add_handler(CommandHandler("ping", ping_command))
         application.add_handler(CommandHandler("say", say))
         application.add_handler(CommandHandler("leave", leave_chat))
         application.add_handler(CommandHandler("speedtest", speedtest_command))
@@ -3892,6 +4676,13 @@ async def main() -> None:
         application.add_handler(CommandHandler("sudocmds", sudo_commands_command))
         application.add_handler(CommandHandler("addsudo", addsudo_command))
         application.add_handler(CommandHandler("delsudo", delsudo_command))
+        application.add_handler(CommandHandler("adddev", adddev_command))
+        application.add_handler(CommandHandler("deldev", deldev_command))
+        application.add_handler(CommandHandler("listdevs", listdevs_command))
+        application.add_handler(CommandHandler("addsupport", addsupport_command))
+        application.add_handler(CommandHandler("delsupport", delsupport_command))
+        application.add_handler(CommandHandler("setrank", setrank_command))
+        application.add_handler(CommandHandler("listsupport", listsupport_command))
         application.add_handler(CommandHandler("shell", shell_command))
         application.add_handler(CommandHandler("execute", execute_script_command))
 
