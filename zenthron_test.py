@@ -1259,8 +1259,10 @@ HELP_TEXT = """
 /setgoodbye &lt;text&gt; - Set a custom goodbye message.
 /resetgoodbye - Reset the goodbye message to default.
 /setwarnlimit &lt;number&gt; - Set the warning limit for this chat.
-/enforcegban &lt;yes/no&gt; - Enable/disable Global Ban enforcement. <i>(Chat Creator only)</i>
 /cleanservice &lt;on/off&gt; - Enable or disable cleaning of service messages.
+
+<b>🔹 Chat Security</b>
+/enforcegban &lt;yes/no&gt; - Enable/disable Global Ban enforcement. <i>(Chat Creator only)</i>
 
 <b>🔹 AI Commands</b>
 /askai &lt;prompt&gt; - Ask the AI a question.
@@ -4448,7 +4450,7 @@ async def enforce_gban_command(update: Update, context: ContextTypes.DEFAULT_TYP
     user = update.effective_user
     
     if not chat or chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP]:
-        await update.message.reply_text("This command can only be used in groups.")
+        await update.message.reply_text("Huh? You can't set enforcement gban in private chat.")
         return
 
     try:
