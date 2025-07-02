@@ -2710,7 +2710,7 @@ You can use these variables in your custom messages. Each variable MUST be surro
  • <code>{chatname}</code>: The current chat's name.
 
 <b>Formatting:</b>
-Welcome messages support markdown, so you can make any elements bold, italic, etc.
+Welcome messages support html, so you can make any elements bold (&lt;b&gt;,&lt;/b&gt;) , italic (&lt;i&gt;,&lt;/i&gt;), etc.
 """
     await update.message.reply_html(help_text, disable_web_page_preview=True)
 
