@@ -2324,6 +2324,7 @@ async def bonk(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: awai
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /status attempt by user {user.id}.")
         return
 
     uptime_delta = datetime.now() - BOT_START_TIME 
@@ -2379,7 +2380,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not is_owner_or_dev(user.id):
-        logger.warning(f"Unauthorized /status attempt by user {user.id}.")
+        logger.warning(f"Unauthorized /stats attempt by user {user.id}.")
         return
 
     known_users_count = "N/A"
