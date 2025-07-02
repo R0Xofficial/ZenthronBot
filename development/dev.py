@@ -63,6 +63,7 @@ API_HASH = None
 SESSION_NAME = "zenthron_user_session"
 PUBLIC_AI_ENABLED = False
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+MAX_WARNS = 3
 
 # --- Load configuration from environment variables ---
 try:
@@ -176,19 +177,38 @@ def init_db():
                 chat_title TEXT,
                 added_at TEXT NOT NULL,
                 enforce_gban INTEGER DEFAULT 1 NOT NULL,
-        
                 welcome_enabled INTEGER DEFAULT 1 NOT NULL,
                 custom_welcome TEXT,
-        
                 goodbye_enabled INTEGER DEFAULT 1 NOT NULL,
                 custom_goodbye TEXT,
-
                 clean_service_messages INTEGER DEFAULT 0 NOT NULL
+                warn_limit INTEGER
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS notes (
+                chat_id INTEGER NOT NULL,
+                note_name TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_by_id INTEGER,
+                created_at TEXT,
+                PRIMARY KEY (chat_id, note_name)
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS warnings (
+                user_id INTEGER NOT NULL,
+                chat_id INTEGER NOT NULL,
+                reason TEXT,
+                warned_by_id INTEGER,
+                warned_at TEXT
             )
         """)
         
         conn.commit()
-        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, support_users, sudo_users, dev_users, global_bans, bot_chats ensured).")
+        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, support_users, sudo_users, dev_users, global_bans, bot_chats, notes, warnings ensured).")
     except sqlite3.Error as e:
         logger.error(f"SQLite error during DB initialization: {e}", exc_info=True)
     finally:
@@ -996,7 +1016,6 @@ def markdown_to_html(text: str) -> str:
     return text
 
 # --- Welcome/Goodbye Helpers ---
-
 def set_welcome_setting(chat_id: int, enabled: bool, text: str | None = None) -> bool:
     try:
         with sqlite3.connect(DB_NAME) as conn:
@@ -1073,7 +1092,6 @@ def set_clean_service(chat_id: int, enabled: bool) -> bool:
         return False
 
 def should_clean_service(chat_id: int) -> bool:
-    """Sprawdza, czy należy usuwać wiadomości serwisowe."""
     try:
         with sqlite3.connect(DB_NAME) as conn:
             res = conn.cursor().execute(
@@ -1084,68 +1102,188 @@ def should_clean_service(chat_id: int) -> bool:
         logger.error(f"Error checking clean service for chat {chat_id}")
         return False
 
+# --- Notes (Filters) Helper Functions ---
+def add_note(chat_id: int, note_name: str, content: str, user_id: int) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            timestamp = datetime.now(timezone.utc).isoformat()
+            conn.execute(
+                "INSERT OR REPLACE INTO notes (chat_id, note_name, content, created_by_id, created_at) VALUES (?, ?, ?, ?, ?)",
+                (chat_id, note_name.lower(), content, user_id, timestamp)
+            )
+        return True
+    except sqlite3.Error as e:
+        logger.error(f"Error adding note '{note_name}' to chat {chat_id}: {e}")
+        return False
+
+def remove_note(chat_id: int, note_name: str) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM notes WHERE chat_id = ? AND note_name = ?", (chat_id, note_name.lower()))
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"Error removing note '{note_name}' from chat {chat_id}: {e}")
+        return False
+
+def get_note(chat_id: int, note_name: str) -> str | None:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            res = conn.cursor().execute("SELECT content FROM notes WHERE chat_id = ? AND note_name = ?", (chat_id, note_name.lower())).fetchone()
+            return res[0] if res else None
+    except sqlite3.Error:
+        return None
+
+def get_all_notes(chat_id: int) -> List[str]:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            notes = conn.cursor().execute("SELECT note_name FROM notes WHERE chat_id = ? ORDER BY note_name", (chat_id,)).fetchall()
+            return [row[0] for row in notes]
+    except sqlite3.Error:
+        return []
+
+# --- Warnings Helper Functions ---
+def add_warning(chat_id: int, user_id: int, reason: str, admin_id: int) -> int:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            timestamp = datetime.now(timezone.utc).isoformat()
+            conn.execute(
+                "INSERT INTO warnings (chat_id, user_id, reason, warned_by_id, warned_at) VALUES (?, ?, ?, ?, ?)",
+                (chat_id, user_id, reason, admin_id, timestamp)
+            )
+            count = conn.cursor().execute(
+                "SELECT COUNT(*) FROM warnings WHERE chat_id = ? AND user_id = ?",
+                (chat_id, user_id)
+            ).fetchone()[0]
+            return count
+    except sqlite3.Error as e:
+        logger.error(f"Error adding warning for user {user_id} in chat {chat_id}: {e}")
+        return -1
+
+def get_warnings(chat_id: int, user_id: int) -> List[Tuple[str, int]]:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            warnings = conn.cursor().execute(
+                "SELECT reason, warned_by_id FROM warnings WHERE chat_id = ? AND user_id = ?",
+                (chat_id, user_id)
+            ).fetchall()
+            return warnings
+    except sqlite3.Error:
+        logger.error(f"Error getting warnings for user {user_id} in chat {chat_id}")
+        return []
+
+def reset_warnings(chat_id: int, user_id: int) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM warnings WHERE chat_id = ? AND user_id = ?", (chat_id, user_id))
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"Error resetting warnings for user {user_id} in chat {chat_id}: {e}")
+        return False
+
+def set_warn_limit(chat_id: int, limit: int) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT OR IGNORE INTO bot_chats (chat_id, added_at) VALUES (?, ?)", 
+                           (chat_id, datetime.now(timezone.utc).isoformat()))
+            cursor.execute("UPDATE bot_chats SET warn_limit = ? WHERE chat_id = ?", (limit, chat_id))
+        return True
+    except sqlite3.Error as e:
+        logger.error(f"Error setting warn limit for chat {chat_id}: {e}")
+        return False
+
+def get_warn_limit(chat_id: int) -> int:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            res = conn.cursor().execute("SELECT warn_limit FROM bot_chats WHERE chat_id = ?", (chat_id,)).fetchone()
+            if res and res[0] is not None and res[0] > 0:
+                return res[0]
+            # W przeciwnym razie, zwróć domyślny.
+            return MAX_WARNS
+    except sqlite3.Error:
+        logger.error(f"Error getting warn limit for chat {chat_id}")
+        return MAX_WARNS
+
 # --- Command Handlers ---
 HELP_TEXT = """
 <b>Here are the commands you can use:</b>
 
-<b>Bot Commands:</b>
+<b>🔹 General Commands</b>
 /start - Shows the welcome message.
 /help - Shows this help message.
-/github - Get the link to the source code.
+/ping - Checks the bot's latency.
+/github - Get the link to the bot's source code.
 /owner - Info about the bot owner.
-/sudocmds - List sudo commands.
+/sudocmds - List privileged commands (for authorized users).
 
-<b>User Commands:</b>
-/info &lt;ID/@user/reply&gt; - Get info about a user.
+<b>🔹 User & Chat Info</b>
+/info &lt;ID/@username/reply&gt; - Get information about a user.
 /chatinfo - Get basic info about the current chat.
+/listadmins - Show the list of administrators in this chat. <i>(Alias: /admins)</i>
+
+<b>🔹 Moderation Commands</b>
+/ban &lt;ID/@username/reply&gt; [Time] [Reason] - Ban a user.
+/unban &lt;ID/@username/reply&gt; - Unban a user.
+/mute &lt;ID/@username/reply&gt; [Time] [Reason] - Mute a user.
+/unmute &lt;ID/@username/reply&gt; - Unmute a user.
+/kick &lt;ID/@username/reply&gt; [Reason] - Kick a user.
 /kickme - Kick yourself from the chat.
-/listadmins - Show the list of administrators in the current chat.
-<i>(Alias: /admins)</i>
+/warn &lt;@username/reply&gt; [Reason] - Warn a user.
+/warnings &lt;@username/reply&gt; - Check a user's warnings.
 
-<b>Management Commands:</b>
-/ban &lt;ID/@user/reply&gt; [Time] [Reason] - Ban a user from the chat.
-/unban &lt;ID/@user/reply&gt; - Unban a user from the chat.
-/mute &lt;ID/@user/reply&gt; [Time] [Reason] - Mute a user in the chat.
-/unmute &lt;ID/@user/reply&gt; - Unmute a user in the chat.
-/kick &lt;ID/@user/reply&gt; [Reason] - Kick a user from the chat.
-/promote &lt;ID/@user/reply&gt; [Title] - Promote a user to administrator.
-/demote &lt;ID/@user/reply&gt; - Demote an administrator to a regular member.
-/pin &lt;loud|notify&gt; - Pin the replied-to message.
-/unpin - Unpin the replied-to message.
-/purge &lt;silent&gt; - Deletes messages up to the replied-to message.
-/report &lt;ID/@user/reply&gt; [reason] - Report a user to the administrators.
-/zombies &lt;clean&gt; - Check the number of deleted accounts in group; clean delete them.
+<b>🔹 Admin Tools</b>
+/promote &lt;ID/@usernamename/reply&gt; [Title] - Promote a user to admin.
+/demote &lt;ID/@usernamename/reply&gt; - Demote an admin.
+/pin &lt;loud/notify&gt; - Pin the replied-to message.
+/unpin - Unpin the currently pinned message.
+/purge &lt;silent&gt; - Delete messages up to the replied-to message.
+/report &lt;reason&gt; - Report a user to the chat admins (reply to a message).
+/zombies &lt;clean&gt; - Find and optionally remove deleted accounts.
 
-<b>Security:</b>
-/enforcegban &lt;yes/no&gt; - Enable/disable Global Ban enforcement in this chat.
-<i>(Chat Creator only)</i>
+<b>🔹 Notes</b>
+/notes - See all notes in this chat.
+/addnote &lt;name&gt; [content] - Create a new note.
+/delnote &lt;name&gt; - Delete a note.
+<i>To get a note, simply use #notename in the chat.</i>
 
-<b>AI:</b> <i>(Experimental)</i>
-/askai &lt;prompt&gt; - Ask AI something.
-<i>(Make sure the bot owner has enabled the service)</i>
+<b>🔹 Chat Settings</b>
+/welcome &lt;on/off&gt; - Enable or disable welcome messages.
+/setwelcome &lt;text&gt; - Set a custom welcome message.
+/resetwelcome - Reset the welcome message to default.
+/goodbye &lt;on/off&gt; - Enable or disable goodbye messages.
+/setgoodbye &lt;text&gt; - Set a custom goodbye message.
+/resetgoodbye - Reset the goodbye message to default.
+/setwarnlimit &lt;number&gt; - Set the warning limit for this chat.
+/enforcegban &lt;yes/no&gt; - Enable/disable Global Ban enforcement. <i>(Chat Creator only)</i>
+/cleanservice &lt;on/off&gt; - Enable or disable cleaning of service messages.
 
-<b>4FUN Commands:</b>
-/kill &lt;@user/reply&gt; - Metaphorically eliminate someone.
+<b>🔹 AI Commands</b>
+/askai <prompt&gt; - Ask the AI a question.
+
+<b>🔹 Fun Commands</b>
+/kill &lt;@username/reply&gt; - Metaphorically eliminate someone.
 /punch &lt;user/reply&gt; - Deliver a textual punch.
-/slap &lt;@user/reply&gt; - Administer a swift slap.
-/pat &lt;@user/reply&gt; - Gently pats the user to show kindness or comfort.
-/bonk &lt;@user/reply&gt; - Playfully reprimand someone with a bonk.
+/slap &lt;@username/reply&gt; - Administer a swift slap.
+/pat &lt;@username/reply&gt; - Gently pat someone.
+/bonk &lt;@username/reply&gt; - Playfully bonk someone.
 """
 
 SUPPORT_COMMANDS_TEXT = """
 <i>Note: Commands /ban, /unban, /mute, /unmute, /kick, /pin, /unpin, /purge, /promote, /demote, /zombies can be used by privileged users even if they are not chat administrators. (Use it wisely and don't overuse your power. Otherwise you may lose your privileges)</i>
 
 <b>Privileged User Commands:</b>
-/gban &lt;ID/@user/reply&gt; [Reason] - Ban a user globally.
-/ungban &lt;ID/@user/reply&gt; - Unban a user globally.
+/gban &lt;ID/@username/reply&gt; [Reason] - Ban a user globally.
+/ungban &lt;ID/@username/reply&gt; - Unban a user globally.
 /ping - Check bot ping.
 """
 
 SUDO_COMMANDS_TEXT = """
 /cinfo &lt;Optional chat ID&gt; - Get detailed info about the current or specified chat.
 /say &lt;Optional chat ID&gt; [Your text] - Send a message as the bot.
-/blist &lt;ID/@user/reply&gt; [Reason] - Add a user to the blacklist.
-/unblist &lt;ID/@user/reply&gt; - Remove a user from the blacklist.
+/blist &lt;ID/@username/reply&gt; [Reason] - Add a user to the blacklist.
+/unblist &lt;ID/@username/reply&gt; - Remove a user from the blacklist.
 """
 
 DEVELOPER_COMMANDS_TEXT = """
@@ -1157,19 +1295,19 @@ DEVELOPER_COMMANDS_TEXT = """
 /delchat &lt;ID 1&gt; [ID 2] - Remove groups from database
 /cleangroups - Remove cached groups from database automatically.
 /listsupport - List all users with support privileges.
-/addsupport &lt;ID/@user/reply&gt; - Grant Support permissions to a user.
-/delsupport &lt;ID/@user/reply&gt; - Revoke Support permissions from a user.
+/addsupport &lt;ID/@username/reply&gt; - Grant Support permissions to a user.
+/delsupport &lt;ID/@username/reply&gt; - Revoke Support permissions from a user.
 /listsudo - List all users with sudo privileges.
-/addsudo &lt;ID/@user/reply&gt; - Grant SUDO (bot admin) permissions to a user.
-/delsudo &lt;ID/@user/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
+/addsudo &lt;ID/@username/reply&gt; - Grant SUDO (bot admin) permissions to a user.
+/delsudo &lt;ID/@username/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
 /listdevs - List all users with developer privileges.
-/setrank &lt;ID/@user/reply&gt; [support/sudo/dev] - Change the rank of a privileged user.
+/setrank &lt;ID/@username/reply&gt; [support/sudo/dev] - Change the rank of a privileged user.
 """
 
 OWNER_COMMANDS_TEXT = """
 /leave &lt;Optional chat ID&gt; - Make the bot leave a chat.
-/adddev &lt;ID/@user/reply&gt; - Grant Developer (All) permissions to a user.
-/deldev &lt;ID/@user/reply&gt; - Revoke Developer (All) permissions from a user.
+/adddev &lt;ID/@username/reply&gt; - Grant Developer (All) permissions to a user.
+/deldev &lt;ID/@username/reply&gt; - Revoke Developer (All) permissions from a user.
 /shell &lt;command&gt; - Execute the command in the terminal.
 /execute &lt;file patch&gt; [args...] - Run script.
 """
@@ -2568,6 +2706,245 @@ You can use these variables in your custom messages. Each variable MUST be surro
 Welcome messages support markdown, so you can make any elements bold, italic, etc.
 """
     await update.message.reply_html(help_text, disable_web_page_preview=True)
+
+async def set_clean_service_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+    if not await _can_user_perform_action(update, context, 'can_delete_messages', "Only admins with 'delete messages' permission can manage this setting."):
+        return
+
+    if not context.args:
+        is_enabled = should_clean_service(chat.id)
+        status = "ENABLED" if is_enabled else "DISABLED"
+        await update.message.reply_html(f"Automatic cleaning of service messages is currently <b>{status}</b>.")
+        return
+
+    if context.args[0].lower() not in ['on', 'off']:
+        await update.message.reply_text("Usage: /cleanservice <on/off>")
+        return
+        
+    is_on = context.args[0].lower() == 'on'
+    
+    if is_on:
+        try:
+            bot_member = await chat.get_member(context.bot.id)
+            if not bot_member.can_delete_messages:
+                await update.message.reply_text("I can't enable this feature because I don't have permission to delete messages in this chat.")
+                return
+        except Exception as e:
+            logger.error(f"Failed to check permissions for cleanservice in {chat.id}: {e}")
+            await update.message.reply_text("Could not verify my permissions to enable this feature.")
+            return
+            
+    # Zapisanie ustawienia w bazie
+    if set_clean_service(chat.id, enabled=is_on):
+        status_text = "ENABLED" if is_on else "DISABLED"
+        await update.message.reply_html(f"✅ Automatic cleaning of service messages has been <b>{status_text}</b>.")
+    else:
+        await update.message.reply_text("An error occurred while saving the setting.")
+
+# --- Notes Command Handlers ---
+async def save_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+    if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can manage notes."):
+        return
+        
+    if len(context.args) < 2:
+        await update.message.reply_text("Usage: /addnote <notename> <content>")
+        return
+        
+    note_name = context.args[0]
+    content = update.message.text.split(' ', 2)[2]
+
+    if add_note(chat.id, note_name, content, update.effective_user.id):
+        await update.message.reply_html(f"✅ Note <code>#{note_name.lower()}</code> has been saved.")
+    else:
+        await update.message.reply_text("Failed to save the note.")
+
+async def list_notes_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    notes = get_all_notes(update.effective_chat.id)
+    if not notes:
+        await update.message.reply_text("There are no notes in this chat.")
+        return
+
+    note_list = [f"<code>#{html.escape(note)}</code>" for note in notes]
+    message = "<b>Notes in this chat:</b>\n" + "\n".join(note_list)
+    await update.message.reply_html(message)
+
+async def remove_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+    if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can manage notes."):
+        return
+
+    if not context.args:
+        await update.message.reply_text("Usage: /delnote <notename>")
+        return
+
+    note_name = context.args[0]
+    if remove_note(chat.id, note_name):
+        await update.message.reply_html(f"✅ Note <code>#{note_name.lower()}</code> has been removed.")
+    else:
+        await update.message.reply_html(f"Note <code>#{note_name.lower()}</code> not found.")
+
+async def handle_note_trigger(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.message or not update.message.text:
+        return
+    
+    text = update.message.text
+    if not text.startswith('#') or text.startswith('#/'):
+        return
+
+    note_name = text.split()[0][1:].lower()
+    chat_id = update.effective_chat.id
+
+    content = get_note(chat_id, note_name)
+    if content:
+        await update.message.reply_html(content, disable_web_page_preview=True)
+
+# --- Warnings Command Handlers ---
+async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+    warner = update.effective_user
+    
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Only admins with ban permissions can issue warnings."):
+        return
+
+    target_user: User | None = None
+    reason_parts = []
+    
+    if update.message.reply_to_message:
+        target_user = update.message.reply_to_message.from_user
+        reason_parts = context.args
+    elif context.args:
+        target_input = context.args[0]
+        resolved_entity = await resolve_user_with_telethon(context, target_input, update)
+        
+        if isinstance(resolved_entity, User):
+            target_user = resolved_entity
+        else:
+            try:
+                user_id = int(target_input)
+                target_user = User(id=user_id, first_name=f"User {user_id}", is_bot=False)
+            except ValueError:
+                pass
+        
+        reason_parts = context.args[1:]
+    
+    if not target_user:
+        await update.message.reply_text("Usage: /warn <ID/@user/reply> [reason]")
+        return
+        
+    reason = " ".join(reason_parts) or "No reason provided."
+
+    if is_privileged_user(target_user.id):
+        await update.message.reply_text("This user has immunity and cannot be warned.")
+        return
+
+    warn_count = add_warning(chat.id, target_user.id, reason, warner.id)
+    user_display = create_user_html_link(target_user)
+
+    if warn_count == -1:
+        await update.message.reply_text("A database error occurred while adding the warning.")
+        return
+
+    limit = get_warn_limit(chat.id)
+
+    await update.message.reply_html(
+        f"User {user_display} has been warned. ({warn_count}/{limit})\n"
+        f"<b>Reason:</b> {html.escape(reason)}"
+    )
+
+    if warn_count >= limit:
+        try:
+            await context.bot.ban_chat_member(chat.id, target_user.id)
+            await update.message.reply_html(
+                f"🚨 User {user_display} has reached {warn_count}/{limit} warnings and has been banned."
+            )
+            reset_warnings(chat.id, target_user.id)
+        except Exception as e:
+            await update.message.reply_text(f"Failed to ban user after reaching max warnings: {e}")
+
+async def warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    target_user: User | None = None
+    
+    if update.message.reply_to_message:
+        target_user = update.message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        resolved_entity = await resolve_user_with_telethon(context, target_input, update)
+        
+        if isinstance(resolved_entity, User):
+            target_user = resolved_entity
+        else:
+            try:
+                user_id = int(target_input)
+                target_user = User(id=user_id, first_name=f"User {user_id}", is_bot=False)
+            except ValueError:
+                pass
+    else:
+        target_user = update.effective_user
+
+    if not target_user:
+        await update.message.reply_text("Could not find that user. Please provide a valid User ID, @username, or reply to a message.")
+        return
+        
+    user_warnings = get_warnings(update.effective_chat.id, target_user.id)
+    user_display = create_user_html_link(target_user)
+    limit = get_warn_limit(update.effective_chat.id)
+
+    if not user_warnings:
+        await update.message.reply_html(f"User {user_display} has no warnings in this chat.")
+        return
+
+    message_lines = [f"<b>Warnings for {user_display}: ({len(user_warnings)}/{limit})</b>"]
+    for i, (reason, admin_id) in enumerate(user_warnings, 1):
+        message_lines.append(f"\n{i}. <b>Reason:</b> {html.escape(reason)}")
+    
+    await update.message.reply_html("\n".join(message_lines))
+
+async def reset_warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Only admins with ban permissions can reset warnings."):
+        return
+
+    target_user: User | None = None
+    if update.message.reply_to_message:
+        target_user = update.message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+    
+    if not target_user:
+        await update.message.reply_text("Usage: /resetwarns <@username/reply>")
+        return
+        
+    if reset_warnings(update.effective_chat.id, target_user.id):
+        user_display = create_user_html_link(target_user)
+        await update.message.reply_html(f"✅ Warnings for {user_display} have been reset.")
+    else:
+        await update.message.reply_text("Failed to reset warnings (or user had no warnings).")
+
+async def set_warn_limit_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Only admins with ban permissions can set the warning limit."):
+        return
+
+    if not context.args:
+        limit = get_warn_limit(chat.id)
+        await update.message.reply_html(f"The current warning limit in this chat is <b>{limit}</b>.")
+        return
+
+    try:
+        limit = int(context.args[0])
+        if limit < 1:
+            await update.message.reply_text("The warning limit must be at least 1.")
+            return
+            
+        if set_warn_limit(chat.id, limit):
+            await update.message.reply_html(f"✅ The warning limit for this chat has been set to <b>{limit}</b>.")
+        else:
+            await update.message.reply_text("Failed to set the warning limit.")
+            
+    except ValueError:
+        await update.message.reply_text("Please provide a valid number.")
     
 async def _handle_action_command(update, context, texts, gifs, name, req_target=True, msg=""):
     target_mention = None
@@ -3552,7 +3929,7 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         if not target_entity and target_input.isdigit():
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
     else:
-        await message.reply_text("Usage: /blist <ID/@user/reply> [reason]"); return
+        await message.reply_text("Usage: /blist <ID/@username/reply> [reason]"); return
     
     if not target_entity:
         await message.reply_text("Skrrrt... I can't find the user.")
@@ -4960,6 +5337,14 @@ async def main() -> None:
         application.add_handler(CommandHandler("setgoodbye", set_goodbye_command))
         application.add_handler(CommandHandler("resetgoodbye", reset_goodbye_command))
         application.add_handler(CommandHandler("welcomehelp", welcome_help_command))
+        application.add_handler(CommandHandler("cleanservice", set_clean_service_command))
+        application.add_handler(CommandHandler(["addnote", "savenote"], save_note_command))
+        application.add_handler(CommandHandler("notes", list_notes_command))
+        application.add_handler(CommandHandler(["delnote", "rmnote"], remove_note_command))
+        application.add_handler(CommandHandler("warn", warn_command))
+        application.add_handler(CommandHandler("warnings", warnings_command))
+        application.add_handler(CommandHandler("resetwarns", reset_warnings_command))
+        application.add_handler(CommandHandler("setwarnlimit", set_warn_limit_command))
         application.add_handler(CommandHandler("kill", kill))
         application.add_handler(CommandHandler("punch", punch))
         application.add_handler(CommandHandler("slap", slap))
@@ -4995,6 +5380,8 @@ async def main() -> None:
         application.add_handler(CommandHandler("listsupport", listsupport_command))
         application.add_handler(CommandHandler("shell", shell_command))
         application.add_handler(CommandHandler("execute", execute_script_command))
+
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_note_trigger), group=0)
 
         application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_group_members))
         application.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, handle_left_group_member))
