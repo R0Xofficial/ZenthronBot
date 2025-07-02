@@ -2571,6 +2571,11 @@ async def format_message_text(text: str, user: User, chat: Chat, context: Contex
 # --- Welcome/Goodbye Command Handlers ---
 async def welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't manage welcome in private chat...")
+        return
+    
     if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can manage welcome settings."):
         return
 
@@ -2611,6 +2616,11 @@ async def welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 async def set_welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't set welcome message in private chat...")
+        return
+    
     if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can set a custom welcome message."):
         return
 
@@ -2626,6 +2636,11 @@ async def set_welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def reset_welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't reset welcome message in private chat...")
+        return
+    
     if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can reset the welcome message."):
         return
 
@@ -2636,6 +2651,11 @@ async def reset_welcome_command(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't manage goodbye in private chat...")
+        return
+    
     if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can manage goodbye settings."):
         return
 
@@ -2671,6 +2691,11 @@ async def goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 async def set_goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't set goodbye message in private chat...")
+        return
+    
     if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can set a custom goodbye message."):
         return
 
@@ -2686,6 +2711,11 @@ async def set_goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         
 async def reset_goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't reset goodbye message in private chat...")
+        return
+    
     if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can reset the goodbye message."):
         return
         
@@ -2718,6 +2748,11 @@ Welcome messages support html, so you can make any elements bold (&lt;b&gt;,&lt;
 
 async def set_clean_service_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't set clean service in private chat...")
+        return
+    
     if not await _can_user_perform_action(update, context, 'can_delete_messages', "Only admins with 'delete messages' permission can manage this setting."):
         return
 
@@ -2744,7 +2779,6 @@ async def set_clean_service_command(update: Update, context: ContextTypes.DEFAUL
             await update.message.reply_text("Could not verify my permissions to enable this feature.")
             return
             
-    # Zapisanie ustawienia w bazie
     if set_clean_service(chat.id, enabled=is_on):
         status_text = "ENABLED" if is_on else "DISABLED"
         await update.message.reply_html(f"✅ Automatic cleaning of service messages has been <b>{status_text}</b>.")
@@ -2756,6 +2790,10 @@ async def save_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     chat = update.effective_chat
     user = update.effective_user
     message = update.message
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't save note in private chat...")
+        return
     
     if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can manage notes."):
         return
@@ -2799,6 +2837,11 @@ async def save_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 async def list_notes_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     notes = get_all_notes(update.effective_chat.id)
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't list notes in private chat...")
+        return
+    
     if not notes:
         await update.message.reply_text("There are no notes in this chat.")
         return
@@ -2809,6 +2852,11 @@ async def list_notes_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def remove_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't remove notes in private chat...")
+        return
+    
     if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can manage notes."):
         return
 
@@ -2823,6 +2871,11 @@ async def remove_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_html(f"Note <code>#{note_name.lower()}</code> not found.")
 
 async def handle_note_trigger(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't check notes in private chat...")
+        return
+    
     if not update.message or not update.message.text:
         return
     
@@ -2841,6 +2894,10 @@ async def handle_note_trigger(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     warner = update.effective_user
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't warn in private chat...")
+        return
     
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Only admins with ban permissions can issue warnings."):
         return
@@ -2897,6 +2954,12 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             await update.message.reply_text(f"Failed to ban user after reaching max warnings: {e}")
 
 async def warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't check warnings in private chat...")
+        return
+    
     target_user: User | None = None
     
     if update.message.reply_to_message:
@@ -2935,6 +2998,11 @@ async def warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     await update.message.reply_html("\n".join(message_lines))
 
 async def reset_warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't reset warnings in private chat...")
+        return
+    
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Only admins with ban permissions can reset warnings."):
         return
 
@@ -2957,6 +3025,11 @@ async def reset_warnings_command(update: Update, context: ContextTypes.DEFAULT_T
 
 async def set_warn_limit_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't set warning limit in private chat...")
+        return
+    
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Only admins with ban permissions can set the warning limit."):
         return
 
