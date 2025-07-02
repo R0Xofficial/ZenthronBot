@@ -936,10 +936,11 @@ async def get_themed_gif(context: ContextTypes.DEFAULT_TYPE, search_terms: list[
     params = { 
         "q": search_term, 
         "key": TENOR_API_KEY, 
-        "client_key": "my_cat_bot_project_py", 
-        "limit": 15, 
+        "client_key": "zenthron_project_py", 
+        "limit": 50, 
         "media_filter": "gif", 
-        "contentfilter": "medium" 
+        "contentfilter": "high"
+        "ar_range": "wide"
     }
     
     try:
