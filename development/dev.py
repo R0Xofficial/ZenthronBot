@@ -2980,6 +2980,43 @@ async def set_warn_limit_command(update: Update, context: ContextTypes.DEFAULT_T
             
     except ValueError:
         await update.message.reply_text("Please provide a valid number.")
+
+async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.message
+    chat = update.effective_chat
+    user = update.effective_user
+    
+    target_user: User | None = None
+    
+    if message.reply_to_message:
+        if message.reply_to_message.sender_chat:
+            target_chat = message.reply_to_message.sender_chat
+            await message.reply_html(f"<b>The ID of {html.escape(target_chat.title)} is:</b> <code>{target_chat.id}</code>")
+            return
+        else:
+            target_user = message.reply_to_message.from_user
+
+    elif context.args:
+        target_input = context.args[0]
+        if target_input.startswith('@'):
+            resolved_entity = await resolve_user_with_telethon(context, target_input, update)
+            if isinstance(resolved_entity, User):
+                target_user = resolved_entity
+            else:
+                await message.reply_text(f"Could not find a user with the username {html.escape(target_input)}.")
+                return
+        else:
+            await message.reply_text("Invalid argument. Please use @username or reply to a message to get a user's ID.")
+            return
+
+    if target_user:
+        await message.reply_html(f"<b>{html.escape(target_user.first_name)}'s ID is:</b> <code>{target_user.id}</code>")
+        return
+
+    if chat.type == ChatType.PRIVATE:
+        await message.reply_html(f"<b>Your ID is:</b> <code>{user.id}</code>")
+    else:
+        await message.reply_html(f"<b>This chat's ID is:</b> <code>{chat.id}</code>")
     
 async def _handle_action_command(update, context, texts, gifs, name, req_target=True, msg=""):
     target_mention = None
@@ -5375,6 +5412,7 @@ async def main() -> None:
         application.add_handler(CommandHandler("github", github))
         application.add_handler(CommandHandler("owner", owner_info))
         application.add_handler(CommandHandler("info", entity_info_command))
+        application.add_handler(CommandHandler("id", id_command))
         application.add_handler(CommandHandler("chatinfo", chat_sinfo_command))
         application.add_handler(CommandHandler("cinfo", chat_info_command))
         application.add_handler(CommandHandler("ban", ban_command))
