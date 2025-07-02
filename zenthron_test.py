@@ -726,7 +726,7 @@ async def _can_user_perform_action(
     user = update.effective_user
     chat = update.effective_chat
 
-    if allow_bot_privileged_override and is_privileged_user(user.id):
+    if allow_bot_privileged_override and (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
         return True
 
     try:
@@ -1275,9 +1275,11 @@ HELP_TEXT = """
 /bonk &lt;@user/reply&gt; - Playfully bonk someone.
 """
 
-SUPPORT_COMMANDS_TEXT = """
+ADMIN_NOTE_TEXT = """
 <i>Note: Commands /ban, /unban, /mute, /unmute, /kick, /pin, /unpin, /purge, /promote, /demote, /zombies can be used by privileged users even if they are not chat administrators. (Use it wisely and don't overuse your power. Otherwise you may lose your privileges)</i>
+"""
 
+SUPPORT_COMMANDS_TEXT = """
 <b>🔹 Privileged User Commands:</b>
 /gban &lt;ID/@user/reply&gt; [Reason] - Ban a user globally.
 /ungban &lt;ID/@user/reply&gt; - Unban a user globally.
@@ -1332,6 +1334,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 return
 
             help_parts = []
+
+            if is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
+                help_parts.append(ADMIN_NOTE_TEXT)
             
             if is_support_user(user.id) or is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
                 help_parts.append(SUPPORT_COMMANDS_TEXT)
@@ -5094,6 +5099,9 @@ async def sudo_commands_command(update: Update, context: ContextTypes.DEFAULT_TY
         return
 
     help_parts = []
+
+    if is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
+        help_parts.append(ADMIN_NOTE_TEXT)
 
     if is_support_user(user.id) or is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
         help_parts.append(SUPPORT_COMMANDS_TEXT)
