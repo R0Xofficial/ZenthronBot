@@ -1276,7 +1276,7 @@ HELP_TEXT = """
 """
 
 ADMIN_NOTE_TEXT = """
-<i>Note: Commands /ban, /unban, /mute, /unmute, /kick, /pin, /unpin, /purge, /promote, /demote, /zombies can be used by privileged users even if they are not chat administrators. (Use it wisely and don't overuse your power. Otherwise you may lose your privileges)</i>
+<i>Note: Commands /ban, /unban, /mute, /unmute, /kick, /pin, /unpin, /purge, /promote, /demote, /zombies can be used by sudo, developer users even if they are not chat administrators. (Use it wisely and don't overuse your power. Otherwise you may lose your privileges)</i>
 """
 
 SUPPORT_COMMANDS_TEXT = """
