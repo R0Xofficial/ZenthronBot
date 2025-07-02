@@ -2451,7 +2451,11 @@ async def ping_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     message = await update.message.reply_html("<b>Pinging...</b>")
     end_time = time.time()
     latency = round((end_time - start_time) * 1000, 2)
-    await message.edit_html(f"🏓 <b>Pong!</b>\n<b>Latency:</b> <code>{latency} ms</code>")
+    await message.edit_text(
+        f"🏓 <b>Pong!</b>\n"
+        f"<b>Latency:</b> <code>{latency} ms</code>",
+        parse_mode=ParseMode.HTML
+    )
 
 async def say(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
