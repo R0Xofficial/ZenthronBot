@@ -1219,25 +1219,25 @@ HELP_TEXT = """
 /sudocmds - List privileged commands (for authorized users).
 
 <b>🔹 User & Chat Info</b>
-/info &lt;ID/@username/reply&gt; - Get information about a user.
+/info &lt;ID/@user/reply&gt; - Get information about a user.
 /chatinfo - Get basic info about the current chat.
 /id - Get user or chat id.
 /listadmins - Show the list of administrators in this chat. <i>(Alias: /admins)</i>
 
 <b>🔹 Moderation Commands</b>
-/ban &lt;ID/@username/reply&gt; [Time] [Reason] - Ban a user.
-/unban &lt;ID/@username/reply&gt; - Unban a user.
-/mute &lt;ID/@username/reply&gt; [Time] [Reason] - Mute a user.
-/unmute &lt;ID/@username/reply&gt; - Unmute a user.
-/kick &lt;ID/@username/reply&gt; [Reason] - Kick a user.
+/ban &lt;ID/@user/reply&gt; [Time] [Reason] - Ban a user.
+/unban &lt;ID/@user/reply&gt; - Unban a user.
+/mute &lt;ID/@user/reply&gt; [Time] [Reason] - Mute a user.
+/unmute &lt;ID/@user/reply&gt; - Unmute a user.
+/kick &lt;ID/@user/reply&gt; [Reason] - Kick a user.
 /kickme - Kick yourself from the chat.
-/warn &lt;ID/@username/reply&gt; [Reason] - Warn a user.
-/warnings &lt;ID/@username/reply&gt; - Check a user's warnings.
-/resetwarns &lt;ID/@username/reply&gt; - Reset user's warnings.
+/warn &lt;ID/@user/reply&gt; [Reason] - Warn a user.
+/warnings &lt;ID/@user/reply&gt; - Check a user's warnings.
+/resetwarns &lt;ID/@user/reply&gt; - Reset user's warnings.
 
 <b>🔹 Admin Tools</b>
-/promote &lt;ID/@usernamename/reply&gt; [Title] - Promote a user to admin.
-/demote &lt;ID/@usernamename/reply&gt; - Demote an admin.
+/promote &lt;ID/@user/reply&gt; [Title] - Promote a user to admin.
+/demote &lt;ID/@user/reply&gt; - Demote an admin.
 /pin &lt;loud/notify&gt; - Pin the replied-to message.
 /unpin - Unpin the currently pinned message.
 /purge &lt;silent&gt; - Delete messages up to the replied-to message.
@@ -1268,27 +1268,27 @@ HELP_TEXT = """
 /askai &lt;prompt&gt; - Ask the AI a question.
 
 <b>🔹 Fun Commands</b>
-/kill &lt;@username/reply&gt; - Metaphorically eliminate someone.
-/punch &lt;user/reply&gt; - Deliver a textual punch.
-/slap &lt;@username/reply&gt; - Administer a swift slap.
-/pat &lt;@username/reply&gt; - Gently pat someone.
-/bonk &lt;@username/reply&gt; - Playfully bonk someone.
+/kill &lt;@user/reply&gt; - Metaphorically eliminate someone.
+/punch &lt;@user/reply&gt; - Deliver a textual punch.
+/slap &lt;@user/reply&gt; - Administer a swift slap.
+/pat &lt;@user/reply&gt; - Gently pat someone.
+/bonk &lt;@user/reply&gt; - Playfully bonk someone.
 """
 
 SUPPORT_COMMANDS_TEXT = """
 <i>Note: Commands /ban, /unban, /mute, /unmute, /kick, /pin, /unpin, /purge, /promote, /demote, /zombies can be used by privileged users even if they are not chat administrators. (Use it wisely and don't overuse your power. Otherwise you may lose your privileges)</i>
 
 <b>🔹 Privileged User Commands:</b>
-/gban &lt;ID/@username/reply&gt; [Reason] - Ban a user globally.
-/ungban &lt;ID/@username/reply&gt; - Unban a user globally.
+/gban &lt;ID/@user/reply&gt; [Reason] - Ban a user globally.
+/ungban &lt;ID/@user/reply&gt; - Unban a user globally.
 /ping - Check bot ping.
 """
 
 SUDO_COMMANDS_TEXT = """
 /cinfo &lt;Optional chat ID&gt; - Get detailed info about the current or specified chat.
 /say &lt;Optional chat ID&gt; [Your text] - Send a message as the bot.
-/blist &lt;ID/@username/reply&gt; [Reason] - Add a user to the blacklist.
-/unblist &lt;ID/@username/reply&gt; - Remove a user from the blacklist.
+/blist &lt;ID/@user/reply&gt; [Reason] - Add a user to the blacklist.
+/unblist &lt;ID/@user/reply&gt; - Remove a user from the blacklist.
 """
 
 DEVELOPER_COMMANDS_TEXT = """
@@ -1300,19 +1300,19 @@ DEVELOPER_COMMANDS_TEXT = """
 /delgroup &lt;ID 1&gt; [ID 2] - Remove groups from database
 /cleangroups - Remove cached groups from database automatically.
 /listsupport - List all users with support privileges.
-/addsupport &lt;ID/@username/reply&gt; - Grant Support permissions to a user.
-/delsupport &lt;ID/@username/reply&gt; - Revoke Support permissions from a user.
+/addsupport &lt;ID/@user/reply&gt; - Grant Support permissions to a user.
+/delsupport &lt;ID/@user/reply&gt; - Revoke Support permissions from a user.
 /listsudo - List all users with sudo privileges.
-/addsudo &lt;ID/@username/reply&gt; - Grant SUDO (bot admin) permissions to a user.
-/delsudo &lt;ID/@username/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
+/addsudo &lt;ID/@user/reply&gt; - Grant SUDO (bot admin) permissions to a user.
+/delsudo &lt;ID/@user/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
 /listdevs - List all users with developer privileges.
-/setrank &lt;ID/@username/reply&gt; [support/sudo/dev] - Change the rank of a privileged user.
+/setrank &lt;ID/@user/reply&gt; [support/sudo/dev] - Change the rank of a privileged user.
 """
 
 OWNER_COMMANDS_TEXT = """
 /leave &lt;Optional chat ID&gt; - Make the bot leave a chat.
-/adddev &lt;ID/@username/reply&gt; - Grant Developer (All) permissions to a user.
-/deldev &lt;ID/@username/reply&gt; - Revoke Developer (All) permissions from a user.
+/adddev &lt;ID/@user/reply&gt; - Grant Developer (All) permissions to a user.
+/deldev &lt;ID/@user/reply&gt; - Revoke Developer (All) permissions from a user.
 /shell &lt;command&gt; - Execute the command in the terminal.
 /execute &lt;file patch&gt; [args...] - Run script.
 """
