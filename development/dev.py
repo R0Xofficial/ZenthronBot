@@ -1260,7 +1260,7 @@ HELP_TEXT = """
 /cleanservice &lt;on/off&gt; - Enable or disable cleaning of service messages.
 
 <b>🔹 AI Commands</b>
-/askai <prompt&gt; - Ask the AI a question.
+/askai &lt;prompt&gt; - Ask the AI a question.
 
 <b>🔹 Fun Commands</b>
 /kill &lt;@username/reply&gt; - Metaphorically eliminate someone.
