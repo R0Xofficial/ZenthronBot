@@ -1,12 +1,13 @@
+
 #!/bin/bash
 # ZenthronBot - Environment file
 # Copyright (C) 2025 R0X
 # Licensed under the GNU General Public License v3.0
 # See the LICENSE file for details.
 
-# -------------------------------------------------------------
-# ---                   REQUIRED VARIABLES                  ---
-# -------------------------------------------------------------
+# --------------------------
+# --- REQUIRED VARIABLES ---
+# --------------------------
 
 # --- PTB Bot Configuration ---
 # Set your BOT token here in "".
@@ -30,9 +31,9 @@ export TELEGRAM_API_ID="PASTE_HERE"
 export TELEGRAM_API_HASH="PASTE_HERE"
 
 
-# -------------------------------------------------------------
-# ---                   OPTIONAL VARIABLES                  ---
-# -------------------------------------------------------------
+# --------------------------
+# --- OPTIONAL VARIABLES ---
+# --------------------------
 # To enable an optional feature, remove the '#' from the line beginning with 'export'.
 
 # Set your bot log ID chat/channel here in "".
@@ -61,6 +62,24 @@ export TELEGRAM_API_HASH="PASTE_HERE"
 # To enable it, remove the '#' from the line below and paste your key.
 
 # export GEMINI_API_KEY="PASTE_HERE"
+
+# ----------------------------------
+# --- Appeal Chat Configuration  ---
+# ----------------------------------
+# This variable stores the contact point for users who want to appeal a ban.
+# It is REQUIRED for the bot to start.
+#
+# You can use one of three formats:
+# 1. A username: @YourSupportChat
+# 2. A public link: https://t.me/YourSupportChat
+# 3. Any other text, e.g. "Contact the admin in the main group"
+#
+# The bot will display this text exactly as you write it.
+#
+# EXAMPLE:
+# export APPEAL_CHAT_USERNAME="@ZenthronSupport"
+
+export APPEAL_CHAT_USERNAME="PASTE_HERE"
 
 
 # -------------------------------------------------------------
