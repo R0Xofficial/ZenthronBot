@@ -1,4 +1,3 @@
-
 #!/bin/bash
 # ZenthronBot - Environment file
 # Copyright (C) 2025 R0X
