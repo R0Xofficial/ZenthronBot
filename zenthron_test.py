@@ -1285,6 +1285,8 @@ SUPPORT_COMMANDS_TEXT = """
 """
 
 SUDO_COMMANDS_TEXT = """
+/status - Show bot status.
+/stats - Show bot database stats.
 /cinfo &lt;Optional chat ID&gt; - Get detailed info about the current or specified chat.
 /say &lt;Optional chat ID&gt; [Your text] - Send a message as the bot.
 /blist &lt;ID/@user/reply&gt; [Reason] - Add a user to the blacklist.
@@ -1292,8 +1294,6 @@ SUDO_COMMANDS_TEXT = """
 """
 
 DEVELOPER_COMMANDS_TEXT = """
-/status - Show bot status.
-/stats - Show bot database stats.
 /speedtest - Perform an internet speed test.
 /setai &lt;enable/disable&gt; - Turn on or off ai access for all users. <i>(Does not apply to privileged users)</i>
 /listgroups - List all known by bot groups.
@@ -3120,7 +3120,7 @@ async def bonk(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: awai
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    if not is_owner_or_dev(user.id):
+    if not (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
         logger.warning(f"Unauthorized /status attempt by user {user.id}.")
         return
 
@@ -3180,7 +3180,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    if not is_owner_or_dev(user.id):
+    if not (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
         logger.warning(f"Unauthorized /stats attempt by user {user.id}.")
         return
 
