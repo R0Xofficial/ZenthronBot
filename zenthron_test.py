@@ -2871,6 +2871,7 @@ async def remove_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_html(f"Note <code>#{note_name.lower()}</code> not found.")
 
 async def handle_note_trigger(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
 
     if chat.type == ChatType.PRIVATE:
         await send_safe_reply(update, context, text="Huh? You can't check notes in private chat...")
