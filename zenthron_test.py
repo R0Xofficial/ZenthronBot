@@ -2318,14 +2318,66 @@ async def slap(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: awai
 async def pat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, PAT_TEXTS, ["pat", "pat anime", "anime pat"], "pat", True, "Who to pat?")
 async def bonk(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, BONK_TEXTS, ["bonk", "anime bonk"], "bonk", True, "Who to bonk?")
 
-async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
-        logger.warning(f"Unauthorized /status attempt by user {user.id}. Silently ignoring.")
         return
 
     uptime_delta = datetime.now() - BOT_START_TIME 
     readable_uptime = get_readable_time_delta(uptime_delta)
+    
+    python_version = platform.python_version()
+    sqlite_version = sqlite3.sqlite_version
+
+    neofetch_output = ""
+    try:
+        process = await asyncio.create_subprocess_shell(
+            "neofetch --stdout --config none",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+
+        if stdout:
+            lines = stdout.decode('utf-8').strip().split('\n')
+            if '@' in lines[0]:
+                neofetch_output = "\n".join(lines[1:])
+            else:
+                neofetch_output = "\n".join(lines)
+        elif stderr:
+            logger.warning(f"Neofetch returned an error: {stderr.decode('utf-8')}")
+            neofetch_output = "Neofetch not found or failed to run."
+
+    except FileNotFoundError:
+        logger.warning("Neofetch command not found. Skipping.")
+        neofetch_output = "Neofetch not installed."
+    except Exception as e:
+        logger.error(f"Error running neofetch: {e}")
+        neofetch_output = "An error occurred while fetching system info."
+
+    status_lines = [
+        "<b>Bot Status:</b>",
+        "<b>• State:</b> <code>Online and operational</code>",
+        f"<b>• Uptime:</b> <code>{readable_uptime}</code>",
+        "",
+        "<b>System Info:</b>",
+        f"<code>{html.escape(neofetch_output)}</code>",
+        "",
+        "<b>Software Info:</b>",
+        f"<b>• Python:</b> <code>{python_version}</code>",
+        f"<b>• python-telegram-bot:</b> <code>{ptb_version}</code>",
+        f"<b>• Telethon:</b> <code>{telethon_version}</code>",
+        f"<b>• SQLite:</b> <code>{sqlite_version}</code>",
+    ]
+
+    status_msg = "\n".join(status_lines)
+    await update.message.reply_html(status_msg)
+
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    if not (is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /status attempt by user {user.id}.")
+        return
 
     known_users_count = "N/A"
     blacklisted_count = "N/A"
@@ -2340,64 +2392,33 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             cursor = conn.cursor()
             
             cursor.execute("SELECT COUNT(*) FROM users")
-            count_result_users = cursor.fetchone()
-            if count_result_users:
-                known_users_count = str(count_result_users[0])
+            known_users_count = str(cursor.fetchone()[0])
 
             cursor.execute("SELECT COUNT(*) FROM blacklist")
-            count_result_blacklist = cursor.fetchone()
-            if count_result_blacklist:
-                blacklisted_count = str(count_result_blacklist[0])
+            blacklisted_count = str(cursor.fetchone()[0])
 
             cursor.execute("SELECT COUNT(*) FROM dev_users")
-            count_result_dev = cursor.fetchone()
-            if count_result_dev:
-                developer_users_count = str(count_result_dev[0])
+            developer_users_count = str(cursor.fetchone()[0])
                 
             cursor.execute("SELECT COUNT(*) FROM sudo_users")
-            count_result_sudo = cursor.fetchone()
-            if count_result_sudo:
-                sudo_users_count = str(count_result_sudo[0])
+            sudo_users_count = str(cursor.fetchone()[0])
 
             cursor.execute("SELECT COUNT(*) FROM support_users")
-            count_result_support = cursor.fetchone()
-            if count_result_support:
-                support_users_count = str(count_result_support[0])
+            support_users_count = str(cursor.fetchone()[0])
 
             cursor.execute("SELECT COUNT(*) FROM global_bans")
-            count_result_gban = cursor.fetchone()
-            if count_result_gban:
-                gban_count = str(count_result_gban[0])
+            gban_count = str(cursor.fetchone()[0])
                 
             cursor.execute("SELECT COUNT(*) FROM bot_chats")
-            count_result_chats = cursor.fetchone()
-            if count_result_chats:
-                chat_count = str(count_result_chats[0])
+            chat_count = str(cursor.fetchone()[0])
             
     except sqlite3.Error as e:
-        logger.error(f"SQLite error fetching counts for /status: {e}", exc_info=True)
-        known_users_count = "DB Error"
-        blacklisted_count = "DB Error"
-        developer_users_count = "DB Error"
-        sudo_users_count = "DB Error"
-        support_users_count = "DB Error"
-        gban_count = "DB Error"
-        chat_count = "DB Error"
-    except Exception as e:
-        logger.error(f"Unexpected error fetching counts for /status: {e}", exc_info=True)
-        known_users_count = "Error"
-        blacklisted_count = "Error"
-        developer_users_count = "Error"
-        sudo_users_count = "Error"
-        support_users_count = "Error"
-        gban_count = "Error"
-        chat_count = "Error"
+        logger.error(f"SQLite error fetching counts for /stats: {e}", exc_info=True)
+        (known_users_count, blacklisted_count, developer_users_count, sudo_users_count, 
+         support_users_count, gban_count, chat_count) = ("DB Error",) * 7
 
-    status_lines = [
-        "<b>Bot Status:</b>\n",
-        f"<b>• State:</b> Online and operational.",
-        f"<b>• Uptime:</b> <code>{readable_uptime}</code>\n",
-        "<b>📊 Stats:</b>",
+    stats_lines = [
+        "<b>📊 Bot Database Stats:</b>\n",
         f" <b>• 💬 Chats:</b> <code>{chat_count}</code>",
         f" <b>• 👀 Known Users:</b> <code>{known_users_count}</code>",
         f" <b>• 🛃 Developer Users:</b> <code>{developer_users_count}</code>",
@@ -2407,8 +2428,8 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         f" <b>• 🌍 Globally Banned Users:</b> <code>{gban_count}</code>"
     ]
 
-    status_msg = "\n".join(status_lines)
-    await update.message.reply_html(status_msg)
+    stats_msg = "\n".join(stats_lines)
+    await update.message.reply_html(stats_msg)
 
 async def say(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
@@ -4609,7 +4630,8 @@ async def main() -> None:
         application.add_handler(CommandHandler("pat", pat))
         application.add_handler(CommandHandler("bonk", bonk))
         application.add_handler(CommandHandler("touch", damnbroski))
-        application.add_handler(CommandHandler("status", status))
+        application.add_handler(CommandHandler("status", status_command))
+        application.add_handler(CommandHandler("stats", stats_command))
         application.add_handler(CommandHandler("say", say))
         application.add_handler(CommandHandler("leave", leave_chat))
         application.add_handler(CommandHandler("speedtest", speedtest_command))
