@@ -3015,7 +3015,7 @@ async def reset_warnings_command(update: Update, context: ContextTypes.DEFAULT_T
         target_user = await resolve_user_with_telethon(context, target_input, update)
     
     if not target_user:
-        await update.message.reply_text("Usage: /resetwarns <@username/reply>")
+        await update.message.reply_text("Usage: /resetwarns <ID/@username/reply>")
         return
         
     if reset_warnings(update.effective_chat.id, target_user.id):
