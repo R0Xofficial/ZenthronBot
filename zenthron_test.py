@@ -940,7 +940,6 @@ async def get_themed_gif(context: ContextTypes.DEFAULT_TYPE, search_terms: list[
         "limit": 50, 
         "media_filter": "gif", 
         "contentfilter": "high"
-        "ar_range": "wide"
     }
     
     try:
