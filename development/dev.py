@@ -181,7 +181,7 @@ def init_db():
                 custom_welcome TEXT,
                 goodbye_enabled INTEGER DEFAULT 1 NOT NULL,
                 custom_goodbye TEXT,
-                clean_service_messages INTEGER DEFAULT 0 NOT NULL
+                clean_service_messages INTEGER DEFAULT 0 NOT NULL,
                 warn_limit INTEGER
             )
         """)
