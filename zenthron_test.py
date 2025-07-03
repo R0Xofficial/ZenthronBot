@@ -5489,10 +5489,10 @@ async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             await status_message.edit_text(result_text, parse_mode=ParseMode.HTML)
 
     except asyncio.TimeoutError:
-        await status_message.edit_text("❌ <b>Error:</b> Command timed out after 60 seconds.")
+        await status_message.edit_text("<b>Error:</b> Command timed out after 60 seconds.")
     except Exception as e:
         logger.error(f"Error executing shell command '{command}': {e}", exc_info=True)
-        await status_message.edit_text(f"❌ <b>Error:</b> {html.escape(str(e))}")
+        await status_message.edit_text(f"<b>Error:</b> {html.escape(str(e))}")
 
 async def execute_script_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
