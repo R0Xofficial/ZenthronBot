@@ -3959,107 +3959,104 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
     if not update.message or not update.message.new_chat_members:
         return
     chat = update.effective_chat
+    user = update.effective_user
     
     if any(member.id == context.bot.id for member in update.message.new_chat_members):
         logger.info(f"Bot joined chat: {chat.title} ({chat.id})")
         add_chat_to_db(chat.id, chat.title or f"Untitled Chat {chat.id}")
-        
         if OWNER_ID:
             safe_chat_title = safe_escape(chat.title or f"Chat ID {chat.id}")
             link_line = f"\n<b>Link:</b> @{chat.username}" if chat.username else ""
             pm_text = (f"<b>#ADDEDTOGROUP</b>\n\n<b>Name:</b> {safe_chat_title}\n<b>ID:</b> <code>{chat.id}</code>{link_line}")
-            try:
-                await context.bot.send_message(chat_id=OWNER_ID, text=pm_text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
-            except Exception as e:
-                logger.error(f"Failed to send join notification to owner for group {chat.id}: {e}")
+            await send_operational_log(context, pm_text)
 
-    if not is_gban_enforced(chat.id):
-        return
+    should_clean = should_clean_service(chat.id)
 
-        gban_reason = get_gban_reason(member.id)
-        if gban_reason:
-            try:
-                await context.bot.ban_chat_member(chat_id=chat.id, user_id=member.id)
-                await update.message.reply_text(
-                    f"⚠️ <b>Alert!</b> This user is globally banned.\n"
-                    f"<i>Enforcing ban in this chat.</i>\n\n"
-                    f"<b>User ID:</b> <code>{member.id}</code>\n"
-                    f"<b>Reason:</b> {safe_escape(gban_reason)}",
-                    parse_mode=ParseMode.HTML
-                )
-            except Exception as e:
-                logger.error(f"Failed to enforce gban on new member {member.id} in {chat.id}: {e}")
-
-    if should_clean_service(chat.id):
-        try:
-            await update.message.delete()
-        except Exception:
-            pass
-
-    is_enabled, custom_text = get_welcome_settings(chat.id)
-    if not is_enabled:
-        return
+    welcome_enabled, custom_text = get_welcome_settings(chat.id)
+    gban_enabled = is_gban_enforced(chat.id)
 
     for member in update.message.new_chat_members:
         if member.id == context.bot.id:
             continue
-            
-        base_text = ""
-        if custom_text:
-            base_text = custom_text
-        else:
-            if member.id == OWNER_ID and OWNER_WELCOME_TEXTS:
-                base_text = random.choice(OWNER_WELCOME_TEXTS)
-            elif is_dev_user(member.id) and DEV_WELCOME_TEXTS:
-                base_text = random.choice(DEV_WELCOME_TEXTS)
-            elif is_sudo_user(member.id) and SUDO_WELCOME_TEXTS:
-                base_text = random.choice(SUDO_WELCOME_TEXTS)
-            elif is_support_user(member.id) and SUPPORT_WELCOME_TEXTS:
-                base_text = random.choice(SUPPORT_WELCOME_TEXTS)
-            elif GENERIC_WELCOME_TEXTS:
-                base_text = random.choice(GENERIC_WELCOME_TEXTS)
         
-        if not base_text:
-            continue
-
-        user_mention = member.mention_html()
-        owner_mention = f"<code>{OWNER_ID}</code>"
-        if OWNER_ID:
-            try:
-                owner_chat = await context.bot.get_chat(OWNER_ID)
-                owner_mention = owner_chat.mention_html()
-            except Exception:
-                pass
         
-        try:
-            count = await context.bot.get_chat_member_count(chat.id)
-        except Exception:
-            count = "N/A"
-
-        final_message = base_text.format(
-            first=safe_escape(member.first_name),
-            last=safe_escape(member.last_name or member.first_name),
-            fullname=safe_escape(member.full_name),
-            username=f"@{member.username}" if member.username else user_mention,
-            mention=user_mention,
-            user_mention=user_mention,
-            owner_mention=owner_mention,
-            id=member.id,
-            count=count,
-            chatname=safe_escape(chat.title or "this chat")
-        )
-
-        if final_message:
+        gban_reason = get_gban_reason(member.id) if gban_enabled else None
+        
+        if gban_reason and not is_privileged_user(member.id):
+            logger.info(f"Gbanned user {member.id} tried to join {chat.id}. Enforcing ban.")
             try:
-                await context.bot.send_message(
-                    chat_id=chat.id,
-                    text=final_message,
-                    parse_mode=ParseMode.HTML,
-                    disable_web_page_preview=True
+                await context.bot.ban_chat_member(chat_id=chat.id, user_id=member.id)
+                message_text = (
+                    f"⚠️ <b>Alert!</b> This user is globally banned.\n"
+                    f"<i>Enforcing ban in this chat.</i>\n\n"
+                    f"<b>User ID:</b> <code>{user.id}</code>\n"
+                    f"<b>Reason:</b> {safe_escape(gban_reason)}\n"
+                    f"<b>Appeal Chat:</b> {APPEAL_CHAT_USERNAME}"
                 )
+                await context.bot.send_message(chat_id=chat.id, text=message_text, parse_mode=ParseMode.HTML)
             except Exception as e:
-                logger.error(f"Failed to send welcome message for user {member.id} in chat {chat.id}: {e}")
+                logger.error(f"Failed to enforce gban on new member {member.id} in {chat.id}: {e}")
+        
+        elif welcome_enabled:
+            base_text = ""
+            if custom_text:
+                base_text = custom_text
+            else:
+                if member.id == OWNER_ID and OWNER_WELCOME_TEXTS:
+                    base_text = random.choice(OWNER_WELCOME_TEXTS)
+                elif is_dev_user(member.id) and DEV_WELCOME_TEXTS:
+                    base_text = random.choice(DEV_WELCOME_TEXTS)
+                elif is_sudo_user(member.id) and SUDO_WELCOME_TEXTS:
+                    base_text = random.choice(SUDO_WELCOME_TEXTS)
+                elif is_support_user(member.id) and SUPPORT_WELCOME_TEXTS:
+                    base_text = random.choice(SUPPORT_WELCOME_TEXTS)
+                elif GENERIC_WELCOME_TEXTS:
+                    base_text = random.choice(GENERIC_WELCOME_TEXTS)
+            
+            if base_text:
+                user_mention = member.mention_html()
+                owner_mention = f"<code>{OWNER_ID}</code>"
+                if OWNER_ID:
+                    try:
+                        owner_chat = await context.bot.get_chat(OWNER_ID)
+                        owner_mention = owner_chat.mention_html()
+                    except Exception: pass
+                
+                try:
+                    count = await context.bot.get_chat_member_count(chat.id)
+                except Exception:
+                    count = "N/A"
 
+                final_message = base_text.format(
+                    first=safe_escape(member.first_name),
+                    last=safe_escape(member.last_name or member.first_name),
+                    fullname=safe_escape(member.full_name),
+                    username=f"@{member.username}" if member.username else user_mention,
+                    mention=user_mention,
+                    user_mention=user_mention,
+                    owner_mention=owner_mention,
+                    id=member.id,
+                    count=count,
+                    chatname=safe_escape(chat.title or "this chat")
+                )
+
+                if final_message:
+                    try:
+                        await context.bot.send_message(
+                            chat_id=chat.id,
+                            text=final_message,
+                            parse_mode=ParseMode.HTML,
+                            disable_web_page_preview=True
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to send welcome message for user {member.id} in chat {chat.id}: {e}")
+
+    if should_clean:
+        try:
+            await update.message.delete()
+        except Exception:
+            pass
+            
 async def handle_left_group_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message or not update.message.left_chat_member:
         return
@@ -4288,7 +4285,8 @@ async def check_gban_on_message(update: Update, context: ContextTypes.DEFAULT_TY
                     f"⚠️ <b>Alert!</b> This user is globally banned.\n"
                     f"<i>Enforcing ban in this chat.</i>\n\n"
                     f"<b>User ID:</b> <code>{user.id}</code>\n"
-                    f"<b>Reason:</b> {safe_escape(gban_reason)}"
+                    f"<b>Reason:</b> {safe_escape(gban_reason)}\n"
+                    f"<b>Appeal Chat:</b> {APPEAL_CHAT_USERNAME}"
                 )
                 await context.bot.send_message(chat.id, text=message_text, parse_mode=ParseMode.HTML)
         except Exception as e:
