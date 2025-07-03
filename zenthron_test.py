@@ -5476,7 +5476,7 @@ async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         if stdout:
             result_text += f"<b>OUTPUT:</b>\n<code>{safe_escape(stdout.decode('utf-8', errors='ignore'))}</code>\n"
         if stderr:
-            result_text += f"<b>OUTPUT:</b>\n<code>{safe_escape(stderr.decode('utf-8', errors='ignore'))}</code>\n"
+            result_text += f"<b>INFO:</b>\n<code>{safe_escape(stderr.decode('utf-8', errors='ignore'))}</code>\n"
         if not stdout and not stderr:
             result_text = "✅ Command executed with no output."
             
