@@ -3973,9 +3973,6 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
             except Exception as e:
                 logger.error(f"Failed to send join notification to owner for group {chat.id}: {e}")
 
-    if not is_gban_enforced(chat.id):
-        return
-
     if should_clean_service(chat.id):
         try:
             await update.message.delete()
@@ -3993,29 +3990,61 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
         base_text = ""
         if custom_text:
             base_text = custom_text
-        elif member.id == OWNER_ID and OWNER_WELCOME_TEXTS:
-            owner_mention = member.mention_html()
-            base_text = random.choice(OWNER_WELCOME_TEXTS).format(owner_mention=owner_mention)
-        elif is_dev_user(member.id) and DEV_WELCOME_TEXTS:
-            user_mention = member.mention_html()
-            base_text = random.choice(DEV_WELCOME_TEXTS).format(user_mention=user_mention)
-        elif is_sudo_user(member.id) and SUDO_WELCOME_TEXTS:
-            user_mention = member.mention_html()
-            base_text = random.choice(SUDO_WELCOME_TEXTS).format(user_mention=user_mention)
-        elif is_support_user(member.id) and SUPPORT_WELCOME_TEXTS:
-            user_mention = member.mention_html()
-            base_text = random.choice(SUPPORT_WELCOME_TEXTS).format(user_mention=user_mention)
-        elif GENERIC_WELCOME_TEXTS:
-            user_mention = member.mention_html()
-            base_text = random.choice(GENERIC_WELCOME_TEXTS).format(user_mention=user_mention)
+        else:
+            if member.id == OWNER_ID and OWNER_WELCOME_TEXTS:
+                base_text = random.choice(OWNER_WELCOME_TEXTS)
+            elif is_dev_user(member.id) and DEV_WELCOME_TEXTS:
+                base_text = random.choice(DEV_WELCOME_TEXTS)
+            elif is_sudo_user(member.id) and SUDO_WELCOME_TEXTS:
+                base_text = random.choice(SUDO_WELCOME_TEXTS)
+            elif is_support_user(member.id) and SUPPORT_WELCOME_TEXTS:
+                base_text = random.choice(SUPPORT_WELCOME_TEXTS)
+            elif GENERIC_WELCOME_TEXTS:
+                base_text = random.choice(GENERIC_WELCOME_TEXTS)
         
-        if base_text:
-            final_message = await format_message_text(base_text, member, chat, context)
-            if final_message:
-                try:
-                    await context.bot.send_message(chat.id, final_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
-                except Exception as e:
-                    logger.error(f"Failed to send welcome message for user {member.id} in chat {chat.id}: {e}")
+        if not base_text:
+            continue
+
+        user_mention = member.mention_html()
+        owner_mention = f"<code>{OWNER_ID}</code>"
+        if OWNER_ID:
+            try:
+                owner_chat = await context.bot.get_chat(OWNER_ID)
+                owner_mention = owner_chat.mention_html()
+            except Exception:
+                pass
+        
+        try:
+            count = await context.bot.get_chat_member_count(chat.id)
+        except Exception:
+            count = "N/A"
+
+        final_message = base_text.format(
+            first=safe_escape(member.first_name),
+            last=safe_escape(member.last_name or member.first_name),
+            fullname=safe_escape(member.full_name),
+            username=f"@{member.username}" if member.username else user_mention,
+            mention=user_mention,
+            user_mention=user_mention,
+            owner_mention=owner_mention,
+            id=member.id,
+            count=count,
+            chatname=safe_escape(chat.title or "this chat")
+        )
+
+        if final_message:
+            try:
+                await context.bot.send_message(
+                    chat_id=chat.id,
+                    text=final_message,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True
+                )
+            except Exception as e:
+                logger.error(f"Failed to send welcome message for user {member.id} in chat {chat.id}: {e}")
+
+    if not is_gban_enforced(chat.id):
+        return
 
         gban_reason = get_gban_reason(member.id)
         if gban_reason:
