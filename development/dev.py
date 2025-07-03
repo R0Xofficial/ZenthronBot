@@ -726,7 +726,7 @@ async def _can_user_perform_action(
     user = update.effective_user
     chat = update.effective_chat
 
-    if allow_bot_privileged_override and is_privileged_user(user.id):
+    if allow_bot_privileged_override and (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
         return True
 
     try:
@@ -936,10 +936,10 @@ async def get_themed_gif(context: ContextTypes.DEFAULT_TYPE, search_terms: list[
     params = { 
         "q": search_term, 
         "key": TENOR_API_KEY, 
-        "client_key": "my_cat_bot_project_py", 
-        "limit": 15, 
+        "client_key": "zenthron_project_py", 
+        "limit": 50, 
         "media_filter": "gif", 
-        "contentfilter": "medium" 
+        "contentfilter": "high"
     }
     
     try:
@@ -1219,24 +1219,25 @@ HELP_TEXT = """
 /sudocmds - List privileged commands (for authorized users).
 
 <b>🔹 User & Chat Info</b>
-/info &lt;ID/@username/reply&gt; - Get information about a user.
+/info &lt;ID/@user/reply&gt; - Get information about a user.
 /chatinfo - Get basic info about the current chat.
+/id - Get user or chat id.
 /listadmins - Show the list of administrators in this chat. <i>(Alias: /admins)</i>
 
 <b>🔹 Moderation Commands</b>
-/ban &lt;ID/@username/reply&gt; [Time] [Reason] - Ban a user.
-/unban &lt;ID/@username/reply&gt; - Unban a user.
-/mute &lt;ID/@username/reply&gt; [Time] [Reason] - Mute a user.
-/unmute &lt;ID/@username/reply&gt; - Unmute a user.
-/kick &lt;ID/@username/reply&gt; [Reason] - Kick a user.
+/ban &lt;ID/@user/reply&gt; [Time] [Reason] - Ban a user.
+/unban &lt;ID/@user/reply&gt; - Unban a user.
+/mute &lt;ID/@user/reply&gt; [Time] [Reason] - Mute a user.
+/unmute &lt;ID/@user/reply&gt; - Unmute a user.
+/kick &lt;ID/@user/reply&gt; [Reason] - Kick a user.
 /kickme - Kick yourself from the chat.
-/warn &lt;@username/reply&gt; [Reason] - Warn a user.
-/warnings &lt;@username/reply&gt; - Check a user's warnings.
-/resetwarns &lt;@username/reply&gt; - Reset user's warnings.
+/warn &lt;ID/@user/reply&gt; [Reason] - Warn a user.
+/warnings &lt;ID/@user/reply&gt; - Check a user's warnings.
+/resetwarns &lt;ID/@user/reply&gt; - Reset user's warnings.
 
 <b>🔹 Admin Tools</b>
-/promote &lt;ID/@usernamename/reply&gt; [Title] - Promote a user to admin.
-/demote &lt;ID/@usernamename/reply&gt; - Demote an admin.
+/promote &lt;ID/@user/reply&gt; [Title] - Promote a user to admin.
+/demote &lt;ID/@user/reply&gt; - Demote an admin.
 /pin &lt;loud/notify&gt; - Pin the replied-to message.
 /unpin - Unpin the currently pinned message.
 /purge &lt;silent&gt; - Delete messages up to the replied-to message.
@@ -1250,6 +1251,7 @@ HELP_TEXT = """
 <i>To get a note, simply use #notename in the chat.</i>
 
 <b>🔹 Chat Settings</b>
+/welcomehelp - Get help with text formatting and placeholders.
 /welcome &lt;on/off&gt; - Enable or disable welcome messages.
 /setwelcome &lt;text&gt; - Set a custom welcome message.
 /resetwelcome - Reset the welcome message to default.
@@ -1257,58 +1259,62 @@ HELP_TEXT = """
 /setgoodbye &lt;text&gt; - Set a custom goodbye message.
 /resetgoodbye - Reset the goodbye message to default.
 /setwarnlimit &lt;number&gt; - Set the warning limit for this chat.
-/enforcegban &lt;yes/no&gt; - Enable/disable Global Ban enforcement. <i>(Chat Creator only)</i>
 /cleanservice &lt;on/off&gt; - Enable or disable cleaning of service messages.
+
+<b>🔹 Chat Security</b>
+/enforcegban &lt;yes/no&gt; - Enable/disable Global Ban enforcement. <i>(Chat Creator only)</i>
 
 <b>🔹 AI Commands</b>
 /askai &lt;prompt&gt; - Ask the AI a question.
 
 <b>🔹 Fun Commands</b>
-/kill &lt;@username/reply&gt; - Metaphorically eliminate someone.
-/punch &lt;user/reply&gt; - Deliver a textual punch.
-/slap &lt;@username/reply&gt; - Administer a swift slap.
-/pat &lt;@username/reply&gt; - Gently pat someone.
-/bonk &lt;@username/reply&gt; - Playfully bonk someone.
+/kill &lt;@user/reply&gt; - Metaphorically eliminate someone.
+/punch &lt;@user/reply&gt; - Deliver a textual punch.
+/slap &lt;@user/reply&gt; - Administer a swift slap.
+/pat &lt;@user/reply&gt; - Gently pat someone.
+/bonk &lt;@user/reply&gt; - Playfully bonk someone.
+"""
+
+ADMIN_NOTE_TEXT = """
+<i>Note: Commands /ban, /unban, /mute, /unmute, /kick, /pin, /unpin, /purge, /promote, /demote, /zombies can be used by sudo, developer users even if they are not chat administrators. (Use it wisely and don't overuse your power. Otherwise you may lose your privileges)</i>
 """
 
 SUPPORT_COMMANDS_TEXT = """
-<i>Note: Commands /ban, /unban, /mute, /unmute, /kick, /pin, /unpin, /purge, /promote, /demote, /zombies can be used by privileged users even if they are not chat administrators. (Use it wisely and don't overuse your power. Otherwise you may lose your privileges)</i>
-
-<b>Privileged User Commands:</b>
-/gban &lt;ID/@username/reply&gt; [Reason] - Ban a user globally.
-/ungban &lt;ID/@username/reply&gt; - Unban a user globally.
+<b>🔹 Your Privileged Commands:</b>
+/gban &lt;ID/@user/reply&gt; [Reason] - Ban a user globally.
+/ungban &lt;ID/@user/reply&gt; - Unban a user globally.
 /ping - Check bot ping.
 """
 
 SUDO_COMMANDS_TEXT = """
+/status - Show bot status.
+/stats - Show bot database stats.
 /cinfo &lt;Optional chat ID&gt; - Get detailed info about the current or specified chat.
 /say &lt;Optional chat ID&gt; [Your text] - Send a message as the bot.
-/blist &lt;ID/@username/reply&gt; [Reason] - Add a user to the blacklist.
-/unblist &lt;ID/@username/reply&gt; - Remove a user from the blacklist.
+/blist &lt;ID/@user/reply&gt; [Reason] - Add a user to the blacklist.
+/unblist &lt;ID/@user/reply&gt; - Remove a user from the blacklist.
 """
 
 DEVELOPER_COMMANDS_TEXT = """
-/status - Show bot status.
-/stats - Show bot database stats.
 /speedtest - Perform an internet speed test.
 /setai &lt;enable/disable&gt; - Turn on or off ai access for all users. <i>(Does not apply to privileged users)</i>
 /listgroups - List all known by bot groups.
-/delchat &lt;ID 1&gt; [ID 2] - Remove groups from database
+/delgroup &lt;ID 1&gt; [ID 2] - Remove groups from database
 /cleangroups - Remove cached groups from database automatically.
 /listsupport - List all users with support privileges.
-/addsupport &lt;ID/@username/reply&gt; - Grant Support permissions to a user.
-/delsupport &lt;ID/@username/reply&gt; - Revoke Support permissions from a user.
+/addsupport &lt;ID/@user/reply&gt; - Grant Support permissions to a user.
+/delsupport &lt;ID/@user/reply&gt; - Revoke Support permissions from a user.
 /listsudo - List all users with sudo privileges.
-/addsudo &lt;ID/@username/reply&gt; - Grant SUDO (bot admin) permissions to a user.
-/delsudo &lt;ID/@username/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
+/addsudo &lt;ID/@user/reply&gt; - Grant SUDO (bot admin) permissions to a user.
+/delsudo &lt;ID/@user/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
 /listdevs - List all users with developer privileges.
-/setrank &lt;ID/@username/reply&gt; [support/sudo/dev] - Change the rank of a privileged user.
+/setrank &lt;ID/@user/reply&gt; [support/sudo/dev] - Change the rank of a privileged user.
 """
 
 OWNER_COMMANDS_TEXT = """
 /leave &lt;Optional chat ID&gt; - Make the bot leave a chat.
-/adddev &lt;ID/@username/reply&gt; - Grant Developer (All) permissions to a user.
-/deldev &lt;ID/@username/reply&gt; - Revoke Developer (All) permissions from a user.
+/adddev &lt;ID/@user/reply&gt; - Grant Developer (All) permissions to a user.
+/deldev &lt;ID/@user/reply&gt; - Revoke Developer (All) permissions from a user.
 /shell &lt;command&gt; - Execute the command in the terminal.
 /execute &lt;file patch&gt; [args...] - Run script.
 """
@@ -1328,6 +1334,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 return
 
             help_parts = []
+
+            if is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
+                help_parts.append(ADMIN_NOTE_TEXT)
             
             if is_support_user(user.id) or is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
                 help_parts.append(SUPPORT_COMMANDS_TEXT)
@@ -2535,7 +2544,6 @@ async def zombies_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await _find_and_process_zombies(update, context, dry_run=True)
 
 async def format_message_text(text: str, user: User, chat: Chat, context: ContextTypes.DEFAULT_TYPE) -> str:
-    """Formatuje tekst (powitania/pożegnania), podmieniając zmienne."""
     if not text:
         return ""
         
@@ -2569,6 +2577,11 @@ async def format_message_text(text: str, user: User, chat: Chat, context: Contex
 # --- Welcome/Goodbye Command Handlers ---
 async def welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't manage welcome in private chat...")
+        return
+    
     if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can manage welcome settings."):
         return
 
@@ -2609,6 +2622,11 @@ async def welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 async def set_welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't set welcome message in private chat...")
+        return
+    
     if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can set a custom welcome message."):
         return
 
@@ -2624,6 +2642,11 @@ async def set_welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def reset_welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't reset welcome message in private chat...")
+        return
+    
     if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can reset the welcome message."):
         return
 
@@ -2634,6 +2657,11 @@ async def reset_welcome_command(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't manage goodbye in private chat...")
+        return
+    
     if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can manage goodbye settings."):
         return
 
@@ -2669,6 +2697,11 @@ async def goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 async def set_goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't set goodbye message in private chat...")
+        return
+    
     if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can set a custom goodbye message."):
         return
 
@@ -2684,6 +2717,11 @@ async def set_goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         
 async def reset_goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't reset goodbye message in private chat...")
+        return
+    
     if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can reset the goodbye message."):
         return
         
@@ -2716,6 +2754,11 @@ Welcome messages support html, so you can make any elements bold (&lt;b&gt;,&lt;
 
 async def set_clean_service_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't set clean service in private chat...")
+        return
+    
     if not await _can_user_perform_action(update, context, 'can_delete_messages', "Only admins with 'delete messages' permission can manage this setting."):
         return
 
@@ -2742,7 +2785,6 @@ async def set_clean_service_command(update: Update, context: ContextTypes.DEFAUL
             await update.message.reply_text("Could not verify my permissions to enable this feature.")
             return
             
-    # Zapisanie ustawienia w bazie
     if set_clean_service(chat.id, enabled=is_on):
         status_text = "ENABLED" if is_on else "DISABLED"
         await update.message.reply_html(f"✅ Automatic cleaning of service messages has been <b>{status_text}</b>.")
@@ -2754,6 +2796,10 @@ async def save_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     chat = update.effective_chat
     user = update.effective_user
     message = update.message
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't save note in private chat...")
+        return
     
     if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can manage notes."):
         return
@@ -2796,7 +2842,14 @@ async def save_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         await message.reply_text("Failed to save the note due to a database error.")
 
 async def list_notes_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't list notes in private chat...")
+        return
+
     notes = get_all_notes(update.effective_chat.id)
+    
     if not notes:
         await update.message.reply_text("There are no notes in this chat.")
         return
@@ -2807,6 +2860,11 @@ async def list_notes_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def remove_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't remove notes in private chat...")
+        return
+    
     if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can manage notes."):
         return
 
@@ -2821,6 +2879,8 @@ async def remove_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_html(f"Note <code>#{note_name.lower()}</code> not found.")
 
 async def handle_note_trigger(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+    
     if not update.message or not update.message.text:
         return
     
@@ -2839,6 +2899,10 @@ async def handle_note_trigger(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     warner = update.effective_user
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't warn in private chat...")
+        return
     
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Only admins with ban permissions can issue warnings."):
         return
@@ -2870,10 +2934,6 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         
     reason = " ".join(reason_parts) or "No reason provided."
 
-    if is_privileged_user(target_user.id):
-        await update.message.reply_text("This user has immunity and cannot be warned.")
-        return
-
     warn_count = add_warning(chat.id, target_user.id, reason, warner.id)
     user_display = create_user_html_link(target_user)
 
@@ -2899,6 +2959,12 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             await update.message.reply_text(f"Failed to ban user after reaching max warnings: {e}")
 
 async def warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't check warnings in private chat...")
+        return
+    
     target_user: User | None = None
     
     if update.message.reply_to_message:
@@ -2937,6 +3003,13 @@ async def warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     await update.message.reply_html("\n".join(message_lines))
 
 async def reset_warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+    user = update.effective_user
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't reset warnings in private chat...")
+        return
+    
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Only admins with ban permissions can reset warnings."):
         return
 
@@ -2948,7 +3021,7 @@ async def reset_warnings_command(update: Update, context: ContextTypes.DEFAULT_T
         target_user = await resolve_user_with_telethon(context, target_input, update)
     
     if not target_user:
-        await update.message.reply_text("Usage: /resetwarns <@username/reply>")
+        await update.message.reply_text("Usage: /resetwarns <ID/@username/reply>")
         return
         
     if reset_warnings(update.effective_chat.id, target_user.id):
@@ -2959,6 +3032,11 @@ async def reset_warnings_command(update: Update, context: ContextTypes.DEFAULT_T
 
 async def set_warn_limit_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't set warning limit in private chat...")
+        return
+    
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Only admins with ban permissions can set the warning limit."):
         return
 
@@ -3047,7 +3125,7 @@ async def bonk(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: awai
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    if not is_owner_or_dev(user.id):
+    if not (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
         logger.warning(f"Unauthorized /status attempt by user {user.id}.")
         return
 
@@ -3107,7 +3185,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    if not is_owner_or_dev(user.id):
+    if not (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
         logger.warning(f"Unauthorized /stats attempt by user {user.id}.")
         return
 
@@ -4377,7 +4455,7 @@ async def enforce_gban_command(update: Update, context: ContextTypes.DEFAULT_TYP
     user = update.effective_user
     
     if not chat or chat.type not in [ChatType.GROUP, ChatType.SUPERGROUP]:
-        await update.message.reply_text("This command can only be used in groups.")
+        await update.message.reply_text("Huh? You can't set enforcement gban in private chat.")
         return
 
     try:
@@ -5021,6 +5099,9 @@ async def sudo_commands_command(update: Update, context: ContextTypes.DEFAULT_TY
         return
 
     help_parts = []
+
+    if is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
+        help_parts.append(ADMIN_NOTE_TEXT)
 
     if is_support_user(user.id) or is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
         help_parts.append(SUPPORT_COMMANDS_TEXT)
