@@ -3983,7 +3983,6 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
         gban_reason = get_gban_reason(member.id) if gban_enabled else None
         
         if gban_reason and not is_privileged_user(member.id):
-            logger.info(f"Gbanned user {member.id} tried to join {chat.id}. Enforcing ban.")
             try:
                 await context.bot.ban_chat_member(chat_id=chat.id, user_id=member.id)
                 message_text = (
@@ -4272,7 +4271,6 @@ async def check_gban_on_message(update: Update, context: ContextTypes.DEFAULT_TY
                 return
 
             if bot_member.status == "administrator" and bot_member.can_restrict_members:
-                logger.info(f"G-banned user {user.id} detected in {chat.id}. Bot has permissions, enforcing.")
                 
                 await context.bot.ban_chat_member(chat.id, user.id)
                 
