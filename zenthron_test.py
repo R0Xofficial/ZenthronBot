@@ -1745,7 +1745,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
         
     except Exception as e:
-        await send_safe_reply(update, context, text=f"Error: Failed to ban user: {safe_escape(str(e))}")
+        await send_safe_reply(update, context, text=f"Failed to ban user: {safe_escape(str(e))}")
 
 async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
@@ -2163,7 +2163,7 @@ async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         user_display = create_user_html_link(target_user)
         await message.reply_html(f"✅ User {user_display} has been promoted with the title '<i>{safe_escape(title_to_set)}</i>'.")
     except TelegramError as e:
-        await message.reply_text(f"Error: Failed to promote user: {safe_escape(str(e))}")
+        await message.reply_text(f"Failed to promote user: {safe_escape(str(e))}")
 
 async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
@@ -2231,7 +2231,7 @@ async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             await message.reply_text("Error: User not found in this chat.")
         else:
             logger.error(f"Error during demotion: {e}")
-            await message.reply_text(f"Error: Failed to demote user. Reason: {safe_escape(str(e))}")
+            await message.reply_text(f"Failed to demote user. Reason: {safe_escape(str(e))}")
             
 async def pin_message_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
