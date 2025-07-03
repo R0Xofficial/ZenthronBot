@@ -1010,7 +1010,7 @@ def create_user_html_link(user: User) -> str:
     if not display_text:
         display_text = str(user.id)
         
-    return f'<a href="tg://user?id={user.id}">{html.escape(display_text)}</a>'
+    return f'<a href="tg://user?id={user.id}">{safe_escape(display_text)}</a>'
 
 def markdown_to_html(text: str) -> str:
     text = re.sub(
@@ -1405,7 +1405,7 @@ async def owner_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         try: owner_chat = await context.bot.get_chat(OWNER_ID); owner_mention = owner_chat.mention_html(); owner_name = owner_chat.full_name or owner_chat.username or owner_name
         except TelegramError as e: logger.warning(f"Could not fetch owner info ({OWNER_ID}): {e}")
         except Exception as e: logger.warning(f"Unexpected error fetching owner info: {e}")
-        message = (f"My God is: 👤 <b>{html.escape(owner_name)}</b> ({owner_mention})")
+        message = (f"My God is: 👤 <b>{safe_escape(owner_name)}</b> ({owner_mention})")
         await update.message.reply_html(message)
     else: await update.message.reply_text("Error: Owner information is not configured.")
 
@@ -1429,9 +1429,9 @@ def format_entity_info(entity: Chat | User,
     if is_user_type or entity_chat_type == ChatType.PRIVATE:
         user = entity
         info_lines.append(f"👤 <b>User Information:</b>\n")        
-        first_name = html.escape(getattr(user, 'first_name', "N/A") or "N/A")
-        last_name = html.escape(getattr(user, 'last_name', "") or "")
-        username_display = f"@{html.escape(user.username)}" if user.username else "N/A"
+        first_name = safe_escape(getattr(user, 'first_name', "N/A") or "N/A")
+        last_name = safe_escape(getattr(user, 'last_name', "") or "")
+        username_display = f"@{safe_escape(user.username)}" if user.username else "N/A"
         permalink_user_url = f"tg://user?id={user.id}"
         permalink_text_display = "Link" 
         permalink_html_user = f"<a href=\"{permalink_user_url}\">{permalink_text_display}</a>"
@@ -1462,7 +1462,7 @@ def format_entity_info(entity: Chat | User,
             elif chat_member_status_str == "kicked": display_status = "<code>Banned</code>"
             elif chat_member_status_str == "restricted": display_status = "<code>Muted</code>"
             elif chat_member_status_str == "not_a_member": display_status = "<code>Not in chat</code>"
-            else: display_status = f"<code>{html.escape(chat_member_status_str.replace('_', ' ').capitalize())}</code>"
+            else: display_status = f"<code>{safe_escape(chat_member_status_str.replace('_', ' ').capitalize())}</code>"
             info_lines.append(f"<b>• Status:</b> {display_status}")
 
         if is_target_owner:
@@ -1476,13 +1476,13 @@ def format_entity_info(entity: Chat | User,
             
         if blacklist_reason_str is not None:
             info_lines.append(f"\n<b>• Blacklisted:</b> <code>Yes</code>")
-            info_lines.append(f"<b>Reason:</b> {html.escape(blacklist_reason_str)}")
+            info_lines.append(f"<b>Reason:</b> {safe_escape(blacklist_reason_str)}")
         else:
             info_lines.append(f"\n<b>• Blacklisted:</b> <code>No</code>")
 
         if gban_reason_str is not None:
             info_lines.append(f"\n<b>• Globally Banned:</b> <code>Yes</code>")
-            info_lines.append(f"<b>Reason:</b> {html.escape(gban_reason_str)}")
+            info_lines.append(f"<b>Reason:</b> {safe_escape(gban_reason_str)}")
         else:
             info_lines.append(f"\n<b>• Globally Banned:</b> <code>No</code>")
 
@@ -1494,11 +1494,11 @@ def format_entity_info(entity: Chat | User,
         info_lines.append(f"📢 <b>Channel info:</b>\n")
         info_lines.append(f"<b>• ID:</b> <code>{channel.id}</code>")
         channel_name_to_display = channel.title or getattr(channel, 'first_name', None) or f"Channel {channel.id}"
-        info_lines.append(f"<b>• Title:</b> {html.escape(channel_name_to_display)}")
+        info_lines.append(f"<b>• Title:</b> {safe_escape(channel_name_to_display)}")
         
         if channel.username:
-            info_lines.append(f"<b>• Username:</b> @{html.escape(channel.username)}")
-            permalink_channel_url = f"https://t.me/{html.escape(channel.username)}"
+            info_lines.append(f"<b>• Username:</b> @{safe_escape(channel.username)}")
+            permalink_channel_url = f"https://t.me/{safe_escape(channel.username)}"
             permalink_text_display = "Link"
             permalink_channel_html = f"<a href=\"{permalink_channel_url}\">{permalink_text_display}</a>"
             info_lines.append(f"<b>• Permalink:</b> {permalink_channel_html}")
@@ -1507,12 +1507,12 @@ def format_entity_info(entity: Chat | User,
         
     elif entity_chat_type in [ChatType.GROUP, ChatType.SUPERGROUP]:
         chat = entity
-        title = html.escape(chat.title or f"{entity_chat_type.capitalize()} {chat.id}")
+        title = safe_escape(chat.title or f"{entity_chat_type.capitalize()} {chat.id}")
         info_lines.append(f"ℹ️ Entity <code>{chat.id}</code> is a <b>{entity_chat_type.capitalize()}</b> ({title}).")
         info_lines.append(f"This command primarily provides detailed info for Users and Channels.")
 
     else:
-        info_lines.append(f"❓ <b>Unknown or Unsupported Entity Type:</b> ID <code>{html.escape(str(entity_id))}</code>")
+        info_lines.append(f"❓ <b>Unknown or Unsupported Entity Type:</b> ID <code>{safe_escape(str(entity_id))}</code>")
         if entity_chat_type:
             info_lines.append(f"  • Type detected: {entity_chat_type.capitalize()}")
 
@@ -1584,7 +1584,7 @@ async def list_admins_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         administrators = await context.bot.get_chat_administrators(chat_id=chat.id)
     except TelegramError as e:
         logger.error(f"Failed to get admin list for chat {chat.id} ('{chat.title}'): {e}")
-        await update.message.reply_text(f"Skrrrt... Some supernatural force is preventing me from getting a list of administrators for this chat. Reason: {html.escape(str(e))}")
+        await update.message.reply_text(f"Skrrrt... Some supernatural force is preventing me from getting a list of administrators for this chat. Reason: {safe_escape(str(e))}")
         return
     except Exception as e:
         logger.error(f"Unexpected error getting admin list for chat {chat.id}: {e}", exc_info=True)
@@ -1595,7 +1595,7 @@ async def list_admins_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("There seem to be no admins in this chat. Unless I'm blind and need glasses 👓")
         return
 
-    chat_title_display = html.escape(chat.title or chat.first_name or f"Chat ID {chat.id}")
+    chat_title_display = safe_escape(chat.title or chat.first_name or f"Chat ID {chat.id}")
     response_lines = [f"<b>🛡️ Admin list in {chat_title_display}:</b>\n"]
 
     creator_line: str | None = None
@@ -1605,11 +1605,11 @@ async def list_admins_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         
         user_display_name = ""
         if admin_user.username:
-            user_display_name = f"<a href=\"tg://user?id={admin_user.id}\">@{html.escape(admin_user.username)}</a>"
+            user_display_name = f"<a href=\"tg://user?id={admin_user.id}\">@{safe_escape(admin_user.username)}</a>"
         elif admin_user.full_name:
-            user_display_name = f"<a href=\"tg://user?id={admin_user.id}\">{html.escape(admin_user.full_name)}</a>"
+            user_display_name = f"<a href=\"tg://user?id={admin_user.id}\">{safe_escape(admin_user.full_name)}</a>"
         elif admin_user.first_name:
-            user_display_name = f"<a href=\"tg://user?id={admin_user.id}\">{html.escape(admin_user.first_name)}</a>"
+            user_display_name = f"<a href=\"tg://user?id={admin_user.id}\">{safe_escape(admin_user.first_name)}</a>"
         else:
             user_display_name = f"<a href=\"tg://user?id={admin_user.id}\">User {admin_user.id}</a>"
 
@@ -1622,7 +1622,7 @@ async def list_admins_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             admin_info_line += " <i>(Anonymous Admin)</i>"
         
         if custom_title:
-            admin_info_line += f" (<code>{html.escape(custom_title)}</code>)"
+            admin_info_line += f" (<code>{safe_escape(custom_title)}</code>)"
         
         if admin_member.status == "creator":
             admin_info_line += " 👑"
@@ -1730,11 +1730,11 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         elif is_channel:
             await context.bot.ban_chat_sender_chat(chat_id=chat.id, sender_chat_id=target_entity.id)
         
-        display_name = create_user_html_link(target_entity) if is_user else html.escape(target_entity.title)
+        display_name = create_user_html_link(target_entity) if is_user else safe_escape(target_entity.title)
         
         response_lines = ["Success: User Banned"]
         response_lines.append(f"<b>• User:</b> {display_name} (<code>{target_entity.id}</code>)")
-        response_lines.append(f"<b>• Reason:</b> {html.escape(reason)}")
+        response_lines.append(f"<b>• Reason:</b> {safe_escape(reason)}")
         
         if is_user:
             if duration_str and until_date_for_api:
@@ -1745,7 +1745,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
         
     except Exception as e:
-        await send_safe_reply(update, context, text=f"Error: Failed to ban user: {html.escape(str(e))}")
+        await send_safe_reply(update, context, text=f"Error: Failed to ban user: {safe_escape(str(e))}")
 
 async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
@@ -1798,7 +1798,7 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         if is_user:
             display_name = create_user_html_link(target_entity)
         else:
-            display_name = html.escape(target_entity.title or f"Channel {target_entity.id}")
+            display_name = safe_escape(target_entity.title or f"Channel {target_entity.id}")
 
         response_lines = ["Success: User Unbanned"]
         response_lines.append(f"<b>• User:</b> {display_name} (<code>{target_entity.id}</code>)")
@@ -1806,7 +1806,7 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
         
     except Exception as e:
-        await send_safe_reply(update, context, text=f"Failed to unban user: {html.escape(str(e))}")
+        await send_safe_reply(update, context, text=f"Failed to unban user: {safe_escape(str(e))}")
 
 async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
@@ -1890,14 +1890,14 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
         response_lines = ["Success: User Muted"]
         response_lines.append(f"<b>• User:</b> {user_display_name} (<code>{target_user.id}</code>)")
-        response_lines.append(f"<b>• Reason:</b> {html.escape(reason)}")
+        response_lines.append(f"<b>• Reason:</b> {safe_escape(reason)}")
         if duration_str and until_date_dt:
             response_lines.append(f"<b>• Duration:</b> <code>{duration_str}</code> (until <code>{until_date_dt.strftime('%Y-%m-%d %H:%M:%S %Z')}</code>)")
         else:
             response_lines.append(f"<b>• Duration:</b> <code>Permanent</code>")
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
     except TelegramError as e:
-        await send_safe_reply(update, context, text=f"Failed to mute user: {html.escape(str(e))}")
+        await send_safe_reply(update, context, text=f"Failed to mute user: {safe_escape(str(e))}")
         
 async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
@@ -1950,7 +1950,7 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         response_lines = ["Success: User Unmuted", f"<b>• User:</b> {user_display_name} (<code>{target_user.id}</code>)"]
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
     except TelegramError as e:
-        await send_safe_reply(update, context, text=f"Failed to unmute user: {html.escape(str(e))}")
+        await send_safe_reply(update, context, text=f"Failed to unmute user: {safe_escape(str(e))}")
 
 async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
@@ -2019,10 +2019,10 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await context.bot.unban_chat_member(chat_id=chat.id, user_id=target_user.id, only_if_banned=True)
 
         user_display_name = create_user_html_link(target_user)
-        response_lines = ["Success: User Kicked", f"<b>• User:</b> {user_display_name} (<code>{target_user.id}</code>)", f"<b>• Reason:</b> {html.escape(reason)}"]
+        response_lines = ["Success: User Kicked", f"<b>• User:</b> {user_display_name} (<code>{target_user.id}</code>)", f"<b>• Reason:</b> {safe_escape(reason)}"]
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
     except TelegramError as e:
-        await send_safe_reply(update, context, text=f"Failed to kick user: {html.escape(str(e))}")
+        await send_safe_reply(update, context, text=f"Failed to kick user: {safe_escape(str(e))}")
 
 async def kickme_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
@@ -2077,7 +2077,7 @@ async def kickme_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         
     except TelegramError as e:
         logger.error(f"Failed to self-kick user {user_to_kick.id} from chat {chat.id}: {e}")
-        await update.message.reply_text(f"Error: I tried to help you leave, but something went wrong: {html.escape(str(e))}")
+        await update.message.reply_text(f"Error: I tried to help you leave, but something went wrong: {safe_escape(str(e))}")
     except Exception as e:
         logger.error(f"Unexpected error in /kickme for user {user_to_kick.id}: {e}", exc_info=True)
         await update.message.reply_text("Error: An unexpected error occurred while trying to process your /kickme request.")
@@ -2140,7 +2140,7 @@ async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             if provided_custom_title:
                 title_to_set = provided_custom_title[:16]
                 await context.bot.set_chat_administrator_custom_title(chat.id, target_user.id, title_to_set)
-                await message.reply_html(f"✅ User {user_display}'s title has been updated to '<i>{html.escape(title_to_set)}</i>'.")
+                await message.reply_html(f"✅ User {user_display}'s title has been updated to '<i>{safe_escape(title_to_set)}</i>'.")
             else:
                 await message.reply_html(f"ℹ️ User {user_display} is already an admin.")
             return
@@ -2161,9 +2161,9 @@ async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await context.bot.set_chat_administrator_custom_title(chat.id, target_user.id, title_to_set)
         
         user_display = create_user_html_link(target_user)
-        await message.reply_html(f"✅ User {user_display} has been promoted with the title '<i>{html.escape(title_to_set)}</i>'.")
+        await message.reply_html(f"✅ User {user_display} has been promoted with the title '<i>{safe_escape(title_to_set)}</i>'.")
     except TelegramError as e:
-        await message.reply_text(f"Error: Failed to promote user: {html.escape(str(e))}")
+        await message.reply_text(f"Error: Failed to promote user: {safe_escape(str(e))}")
 
 async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
@@ -2231,7 +2231,7 @@ async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             await message.reply_text("Error: User not found in this chat.")
         else:
             logger.error(f"Error during demotion: {e}")
-            await message.reply_text(f"Error: Failed to demote user. Reason: {html.escape(str(e))}")
+            await message.reply_text(f"Error: Failed to demote user. Reason: {safe_escape(str(e))}")
             
 async def pin_message_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
@@ -2288,7 +2288,7 @@ async def pin_message_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         elif "not enough rights" in error_message.lower() or "not admin" in error_message.lower():
              await send_safe_reply(update, context, text="Error: It seems I don't have enough rights to pin messages, or the target message cannot be pinned by me.")
         else:
-            await send_safe_reply(update, context, text=f"Failed to pin message: {html.escape(error_message)}")
+            await send_safe_reply(update, context, text=f"Failed to pin message: {safe_escape(error_message)}")
     except Exception as e:
         logger.error(f"Unexpected error in /pin: {e}", exc_info=True)
         await send_safe_reply(update, context, text="An unexpected error occurred while trying to pin the message.")
@@ -2331,7 +2331,7 @@ async def unpin_message_command(update: Update, context: ContextTypes.DEFAULT_TY
         if "message not found" in error_message.lower() or "message to unpin not found" in error_message.lower():
              await update.message.reply_text("Error: The message you replied to is not pinned or I can't find it.")
         else:
-            await update.message.reply_text(f"Failed to unpin message: {html.escape(error_message)}")
+            await update.message.reply_text(f"Failed to unpin message: {safe_escape(error_message)}")
     except Exception as e:
         logger.error(f"Unexpected error in /unpin: {e}", exc_info=True)
         await update.message.reply_text("An unexpected error occurred while trying to unpin the message.")
@@ -2395,7 +2395,7 @@ async def purge_messages_command(update: Update, context: ContextTypes.DEFAULT_T
             logger.error(f"TelegramError during purge batch in chat {chat.id}: {e}")
             errors_occurred = True
             if not is_silent_purge:
-                await context.bot.send_message(chat.id, text=f"Error occurred: {html.escape(str(e))}. Purge stopped.")
+                await context.bot.send_message(chat.id, text=f"Error occurred: {safe_escape(str(e))}. Purge stopped.")
             break
         except Exception as e:
             logger.error(f"Unexpected error during purge batch in chat {chat.id}: {e}", exc_info=True)
@@ -2464,12 +2464,12 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if isinstance(target_entity, User) or (isinstance(target_entity, Chat) and target_entity.type == ChatType.PRIVATE):
         target_display = create_user_html_link(target_entity)
     else:
-        target_display = html.escape(target_entity.title or f"{target_entity.id}")
+        target_display = safe_escape(target_entity.title or f"{target_entity.id}")
 
     report_message = (
         f"📢 <b>Report for @admins</b>\n\n"
         f"<b>Reported User:</b> {target_display} (<code>{target_entity.id}</code>)\n"
-        f"<b>Reason:</b> {html.escape(reason)}\n"
+        f"<b>Reason:</b> {safe_escape(reason)}\n"
         f"<b>Reported by:</b> {reporter_mention}"
     )
 
@@ -2508,7 +2508,7 @@ async def _find_and_process_zombies(update: Update, context: ContextTypes.DEFAUL
                     await asyncio.sleep(0.1)
 
     except Exception as e:
-        await status_message.edit_text(f"An error occurred while scanning members: {html.escape(str(e))}")
+        await status_message.edit_text(f"An error occurred while scanning members: {safe_escape(str(e))}")
         return
 
     if not dry_run and kicked_count > 0:
@@ -2576,14 +2576,14 @@ async def format_message_text(text: str, user: User, chat: Chat, context: Contex
         count = "N/A"
 
     replacements = {
-        "{first}": html.escape(first_name),
-        "{last}": html.escape(last_name),
-        "{fullname}": html.escape(full_name),
+        "{first}": safe_escape(first_name),
+        "{last}": safe_escape(last_name),
+        "{fullname}": safe_escape(full_name),
         "{username}": username_or_mention,
         "{mention}": user.mention_html(),
         "{id}": str(user.id),
         "{count}": str(count),
-        "{chatname}": html.escape(chat.title or "this chat"),
+        "{chatname}": safe_escape(chat.title or "this chat"),
     }
     
     for placeholder, value in replacements.items():
@@ -2871,7 +2871,7 @@ async def list_notes_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text("There are no notes in this chat.")
         return
 
-    note_list = [f"<code>#{html.escape(note)}</code>" for note in notes]
+    note_list = [f"<code>#{safe_escape(note)}</code>" for note in notes]
     message = "<b>Notes in this chat:</b>\n" + "\n".join(note_list)
     await update.message.reply_html(message)
 
@@ -2962,7 +2962,7 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     await update.message.reply_html(
         f"User {user_display} has been warned. ({warn_count}/{limit})\n"
-        f"<b>Reason:</b> {html.escape(reason)}"
+        f"<b>Reason:</b> {safe_escape(reason)}"
     )
 
     if warn_count >= limit:
@@ -3015,7 +3015,7 @@ async def warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     message_lines = [f"<b>Warnings for {user_display}: ({len(user_warnings)}/{limit})</b>"]
     for i, (reason, admin_id) in enumerate(user_warnings, 1):
-        message_lines.append(f"\n{i}. <b>Reason:</b> {html.escape(reason)}")
+        message_lines.append(f"\n{i}. <b>Reason:</b> {safe_escape(reason)}")
     
     await update.message.reply_html("\n".join(message_lines))
 
@@ -3086,7 +3086,7 @@ async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     if message.reply_to_message:
         if message.reply_to_message.sender_chat:
             target_chat = message.reply_to_message.sender_chat
-            await message.reply_html(f"<b>The ID of {html.escape(target_chat.title)} is:</b> <code>{target_chat.id}</code>")
+            await message.reply_html(f"<b>The ID of {safe_escape(target_chat.title)} is:</b> <code>{target_chat.id}</code>")
             return
         else:
             target_user = message.reply_to_message.from_user
@@ -3098,14 +3098,14 @@ async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             if isinstance(resolved_entity, User):
                 target_user = resolved_entity
             else:
-                await message.reply_text(f"Could not find a user with the username {html.escape(target_input)}.")
+                await message.reply_text(f"Could not find a user with the username {safe_escape(target_input)}.")
                 return
         else:
             await message.reply_text("Invalid argument. Please use @username or reply to a message to get a user's ID.")
             return
 
     if target_user:
-        await message.reply_html(f"<b>{html.escape(target_user.first_name)}'s ID is:</b> <code>{target_user.id}</code>")
+        await message.reply_html(f"<b>{safe_escape(target_user.first_name)}'s ID is:</b> <code>{target_user.id}</code>")
         return
 
     if chat.type == ChatType.PRIVATE:
@@ -3188,7 +3188,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         f"<b>• Uptime:</b> <code>{readable_uptime}</code>",
         "",
         "<b>System Info:</b>",
-        f"<code>{html.escape(neofetch_output)}</code>",
+        f"<code>{safe_escape(neofetch_output)}</code>",
         "",
         "<b>Software Info:</b>",
         f"<b>• Python:</b> <code>{python_version}</code>",
@@ -3334,7 +3334,7 @@ async def say(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         target_chat_info = await context.bot.get_chat(target_chat_id)
         chat_title = target_chat_info.title or target_chat_info.first_name or f"Chat ID {target_chat_id}"
-        safe_chat_title = html.escape(chat_title)
+        safe_chat_title = safe_escape(chat_title)
         logger.info(f"Target chat title for /say resolved to: '{chat_title}'")
     except TelegramError as e:
         logger.warning(f"Could not get chat info for {target_chat_id} for /say confirmation: {e}")
@@ -3462,7 +3462,7 @@ async def chat_sinfo_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         full_chat_object = await context.bot.get_chat(chat_id=chat.id)
     except TelegramError as e:
         logger.error(f"Failed to get full chat info for /chatstats in chat {chat.id}: {e}")
-        await update.message.reply_html(f"Error: Couldn't fetch detailed stats for this chat. Reason: {html.escape(str(e))}")
+        await update.message.reply_html(f"Error: Couldn't fetch detailed stats for this chat. Reason: {safe_escape(str(e))}")
         return
     except Exception as e:
         logger.error(f"Unexpected error fetching full chat info for /chatstats in chat {chat.id}: {e}", exc_info=True)
@@ -3470,14 +3470,14 @@ async def chat_sinfo_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     chat_title_display = full_chat_object.title or full_chat_object.first_name or f"Chat ID {full_chat_object.id}"
-    info_lines = [f"🔎 <b>Chat stats for: {html.escape(chat_title_display)}</b>\n"]
+    info_lines = [f"🔎 <b>Chat stats for: {safe_escape(chat_title_display)}</b>\n"]
 
     info_lines.append(f"<b>• ID:</b> <code>{full_chat_object.id}</code>")
 
     chat_description = getattr(full_chat_object, 'description', None)
     if chat_description:
         desc_preview = chat_description[:70]
-        info_lines.append(f"<b>• Description:</b> {html.escape(desc_preview)}{'...' if len(chat_description) > 70 else ''}")
+        info_lines.append(f"<b>• Description:</b> {safe_escape(desc_preview)}{'...' if len(chat_description) > 70 else ''}")
     else:
         info_lines.append(f"<b>• Description:</b> Not set")
     
@@ -3539,7 +3539,7 @@ async def chat_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 chat_object_for_details = await context.bot.get_chat(chat_id=target_chat_id)
             except TelegramError as e:
                 logger.error(f"Failed to get chat info for ID {target_chat_id}: {e}")
-                await update.message.reply_html(f"Error: Couldn't fetch info for chat ID <code>{target_chat_id}</code>. Reason: {html.escape(str(e))}.")
+                await update.message.reply_html(f"Error: Couldn't fetch info for chat ID <code>{target_chat_id}</code>. Reason: {safe_escape(str(e))}.")
                 return
             except Exception as e:
                 logger.error(f"Unexpected error fetching chat info for ID {target_chat_id}: {e}", exc_info=True)
@@ -3557,7 +3557,7 @@ async def chat_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                  logger.info(f"Privileged user {user.id} calling /cinfo for current chat: {target_chat_id}")
              except TelegramError as e:
                 logger.error(f"Failed to get full chat info for current chat ID {target_chat_id}: {e}")
-                await update.message.reply_html(f"Error: Couldn't fetch full info for current chat. Reason: {html.escape(str(e))}.")
+                await update.message.reply_html(f"Error: Couldn't fetch full info for current chat. Reason: {safe_escape(str(e))}.")
                 return
              except Exception as e:
                 logger.error(f"Unexpected error fetching full info for current chat ID {target_chat_id}: {e}", exc_info=True)
@@ -3577,7 +3577,7 @@ async def chat_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     bot_id = context.bot.id
     chat_title_display = chat_object_for_details.title or chat_object_for_details.first_name or f"Chat ID {target_chat_id}"
-    info_lines = [f"🔎 <b>Chat Information for: {html.escape(chat_title_display)}</b>\n"]
+    info_lines = [f"🔎 <b>Chat Information for: {safe_escape(chat_title_display)}</b>\n"]
 
     info_lines.append(f"<b>• ID:</b> <code>{target_chat_id}</code>")
     info_lines.append(f"<b>• Type:</b> {chat_object_for_details.type.capitalize()}")
@@ -3585,7 +3585,7 @@ async def chat_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     chat_description = getattr(chat_object_for_details, 'description', None)
     if chat_description:
         desc_preview = chat_description[:200]
-        info_lines.append(f"<b>• Description:</b> {html.escape(desc_preview)}{'...' if len(chat_description) > 200 else ''}")
+        info_lines.append(f"<b>• Description:</b> {safe_escape(desc_preview)}{'...' if len(chat_description) > 200 else ''}")
     
     if getattr(chat_object_for_details, 'photo', None):
         info_lines.append(f"<b>• Chat Photo:</b> Yes")
@@ -3607,7 +3607,7 @@ async def chat_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 chat_link_line = "<b>• Link:</b> Private group (no public link, bot cannot generate one)"
         except TelegramError as e:
             logger.warning(f"Could not create/check invite link for private chat {target_chat_id}: {e}")
-            chat_link_line = f"<b>• Link:</b> Private group (no public link, error: {html.escape(str(e))})"
+            chat_link_line = f"<b>• Link:</b> Private group (no public link, error: {safe_escape(str(e))})"
         except Exception as e:
             logger.error(f"Unexpected error with invite link for {target_chat_id}: {e}", exc_info=True)
             chat_link_line = "<b>• Link:</b> Private group (no public link, unexpected error)"
@@ -3624,7 +3624,7 @@ async def chat_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         elif str(target_chat_id).startswith("-100"):
              chat_id_for_link = str(target_chat_id).replace("-100","")
              pin_link = f"https://t.me/c/{chat_id_for_link}/{pinned_message_obj.message_id}"
-        info_lines.append(f"<b>• Pinned Message:</b> <a href=\"{pin_link}\">'{html.escape(pin_text_preview[:50])}{'...' if len(pin_text_preview) > 50 else ''}'</a>")
+        info_lines.append(f"<b>• Pinned Message:</b> <a href=\"{pin_link}\">'{safe_escape(pin_text_preview[:50])}{'...' if len(pin_text_preview) > 50 else ''}'</a>")
     
     linked_chat_id_val = getattr(chat_object_for_details, 'linked_chat_id', None)
     if linked_chat_id_val:
@@ -3652,7 +3652,7 @@ async def chat_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             admin_user = admin_member.user
             admin_name_display = f"ID: {admin_user.id if admin_user else 'N/A'}"
             if admin_user:
-                admin_name_display = admin_user.mention_html() if admin_user.username else html.escape(admin_user.full_name or admin_user.first_name or f"ID: {admin_user.id}")
+                admin_name_display = admin_user.mention_html() if admin_user.username else safe_escape(admin_user.full_name or admin_user.first_name or f"ID: {admin_user.id}")
             detail_line = f"    • {admin_name_display}"
             current_admin_status_str = getattr(admin_member, 'status', None)
             if current_admin_status_str == "creator":
@@ -3687,7 +3687,7 @@ async def chat_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         if "user not found" in str(e).lower() or "member not found" in str(e).lower():
              bot_status_lines.append("  <b>• Status:</b> Not a member")
         else:
-            bot_status_lines.append(f"  <b>• Error fetching bot status:</b> {html.escape(str(e))}")
+            bot_status_lines.append(f"  <b>• Error fetching bot status:</b> {safe_escape(str(e))}")
     except Exception as e:
         bot_status_lines.append("  <b>• Unexpected error fetching bot status.")
         logger.error(f"Unexpected error getting bot status in {target_chat_id}: {e}", exc_info=True)
@@ -3777,7 +3777,7 @@ async def speedtest_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                     dt_obj = datetime.fromisoformat(timestamp_str_val.replace("Z", "+00:00"))
                     formatted_time_val = dt_obj.strftime('%Y-%m-%d %H:%M:%S %Z') 
                 except ValueError:
-                    formatted_time_val = html.escape(timestamp_str_val)
+                    formatted_time_val = safe_escape(timestamp_str_val)
 
             server_info_dict = results.get("server", {})
             server_name_val = server_info_dict.get("name", "N/A")
@@ -3797,9 +3797,9 @@ async def speedtest_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 f" <b>• 📨 Data Sent:</b> <code>{data_sent_mb_val:.2f} MB</code>",
                 f" <b>• 📩 Data Received:</b> <code>{data_received_mb_val:.2f} MB</code>\n",
                 "<b>🖥 SERVER INFO:</b>",
-                f" <b>• 🪪 Name:</b> <code>{html.escape(server_name_val)}</code>",
-                f" <b>• 🌍 Country:</b> <code>{html.escape(server_country_val)} ({html.escape(server_cc_val)})</code>",
-                f" <b>• 🛠 Sponsor:</b> <code>{html.escape(server_sponsor_val)}</code>",
+                f" <b>• 🪪 Name:</b> <code>{safe_escape(server_name_val)}</code>",
+                f" <b>• 🌍 Country:</b> <code>{safe_escape(server_country_val)} ({safe_escape(server_cc_val)})</code>",
+                f" <b>• 🛠 Sponsor:</b> <code>{safe_escape(server_sponsor_val)}</code>",
                 f" <b>• 🧭 Latitude:</b> <code>{server_lat_val}</code>",
                 f" <b>• 🧭 Longitude:</b> <code>{server_lon_val}</code>"
             ]
@@ -3809,14 +3809,14 @@ async def speedtest_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         
         elif results and "error" in results:
             error_msg = results["error"]
-            await context.bot.edit_message_text(chat_id=message.chat_id, message_id=message.message_id, text=f"Error: Speed test failed: {html.escape(error_msg)}")
+            await context.bot.edit_message_text(chat_id=message.chat_id, message_id=message.message_id, text=f"Error: Speed test failed: {safe_escape(error_msg)}")
         else:
             await context.bot.edit_message_text(chat_id=message.chat_id, message_id=message.message_id, text="Error: Speed test failed to return results or returned an unexpected format.")
 
     except Exception as e:
         logger.error(f"Error in speedtest_command outer try-except: {e}", exc_info=True)
         try:
-            await context.bot.edit_message_text(chat_id=message.chat_id, message_id=message.message_id, text=f"An unexpected error occurred during the speed test: {html.escape(str(e))}")
+            await context.bot.edit_message_text(chat_id=message.chat_id, message_id=message.message_id, text=f"An unexpected error occurred during the speed test: {safe_escape(str(e))}")
         except Exception:
             pass
 
@@ -3867,17 +3867,17 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     try:
         target_chat_info = await context.bot.get_chat(target_chat_id_to_leave)
         chat_title_to_leave = target_chat_info.title or target_chat_info.first_name or f"Chat ID {target_chat_id_to_leave}"
-        safe_chat_title_to_leave = html.escape(chat_title_to_leave)
+        safe_chat_title_to_leave = safe_escape(chat_title_to_leave)
     except TelegramError as e:
         logger.error(f"Could not get chat info for {target_chat_id_to_leave} before leaving: {e}")
         reply_to_chat_id_for_error = chat_where_command_was_called_id
         if is_leaving_current_chat and OWNER_ID: reply_to_chat_id_for_error = OWNER_ID
         
-        error_message_text = f"❌ Cannot interact with chat <b>{safe_chat_title_to_leave}</b> (<code>{target_chat_id_to_leave}</code>): {html.escape(str(e))}. I might not be a member there."
+        error_message_text = f"❌ Cannot interact with chat <b>{safe_chat_title_to_leave}</b> (<code>{target_chat_id_to_leave}</code>): {safe_escape(str(e))}. I might not be a member there."
         if "bot is not a member" in str(e).lower() or "chat not found" in str(e).lower():
             pass 
         else:
-            error_message_text = f"⚠️ Couldn't get chat info for <code>{target_chat_id_to_leave}</code>: {html.escape(str(e))}. Will attempt to leave anyway."
+            error_message_text = f"⚠️ Couldn't get chat info for <code>{target_chat_id_to_leave}</code>: {safe_escape(str(e))}. Will attempt to leave anyway."
         
         if reply_to_chat_id_for_error:
             try: await context.bot.send_message(chat_id=reply_to_chat_id_for_error, text=error_message_text, parse_mode=ParseMode.HTML)
@@ -3904,7 +3904,7 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
                 reply_to_chat_id_for_error = chat_where_command_was_called_id
                 if is_leaving_current_chat and OWNER_ID: reply_to_chat_id_for_error = OWNER_ID
                 if reply_to_chat_id_for_error:
-                    try: await context.bot.send_message(chat_id=reply_to_chat_id_for_error, text=f"❌ Failed to send farewell to <b>{safe_chat_title_to_leave}</b> (<code>{target_chat_id_to_leave}</code>): {html.escape(str(e))}. Bot is not a member.", parse_mode=ParseMode.HTML)
+                    try: await context.bot.send_message(chat_id=reply_to_chat_id_for_error, text=f"❌ Failed to send farewell to <b>{safe_chat_title_to_leave}</b> (<code>{target_chat_id_to_leave}</code>): {safe_escape(str(e))}. Bot is not a member.", parse_mode=ParseMode.HTML)
                     except Exception as send_err: logger.error(f"Failed to send error about farewell to {reply_to_chat_id_for_error}: {send_err}")
                 return 
         except Exception as e:
@@ -3942,7 +3942,7 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             else: confirmation_target_chat_id = None
         if confirmation_target_chat_id:
             await context.bot.send_message(chat_id=confirmation_target_chat_id,
-                                           text=f"❌ Failed to leave chat <b>{safe_chat_title_to_leave}</b> (<code>{target_chat_id_to_leave}</code>): {html.escape(str(e))}", 
+                                           text=f"❌ Failed to leave chat <b>{safe_chat_title_to_leave}</b> (<code>{target_chat_id_to_leave}</code>): {safe_escape(str(e))}", 
                                            parse_mode=ParseMode.HTML)
     except Exception as e:
          logger.error(f"Unexpected error during leave process for {target_chat_id_to_leave}: {e}", exc_info=True)
@@ -3965,7 +3965,7 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
         add_chat_to_db(chat.id, chat.title or f"Untitled Chat {chat.id}")
         
         if OWNER_ID:
-            safe_chat_title = html.escape(chat.title or f"Chat ID {chat.id}")
+            safe_chat_title = safe_escape(chat.title or f"Chat ID {chat.id}")
             link_line = f"\n<b>Link:</b> @{chat.username}" if chat.username else ""
             pm_text = (f"<b>#ADDEDTOGROUP</b>\n\n<b>Name:</b> {safe_chat_title}\n<b>ID:</b> <code>{chat.id}</code>{link_line}")
             try:
@@ -4055,7 +4055,7 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
                     f"⚠️ <b>Alert!</b> This user is globally banned.\n"
                     f"<i>Enforcing ban in this chat.</i>\n\n"
                     f"<b>User ID:</b> <code>{member.id}</code>\n"
-                    f"<b>Reason:</b> {html.escape(gban_reason)}",
+                    f"<b>Reason:</b> {safe_escape(gban_reason)}",
                     parse_mode=ParseMode.HTML
                 )
             except Exception as e:
@@ -4171,13 +4171,13 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
     if existing_blist_reason:
         await message.reply_html(
             f"ℹ️ User {user_display} (<code>{target_entity.id}</code>) is already on the blacklist.\n"
-            f"<b>Reason:</b> {html.escape(existing_blist_reason)}"
+            f"<b>Reason:</b> {safe_escape(existing_blist_reason)}"
         )
         return
 
     if add_to_blacklist(target_entity.id, user.id, reason):
         user_display = create_user_html_link(target_entity)
-        await message.reply_html(f"✅ User {user_display} (<code>{target_entity.id}</code>) has been added to the blacklist.\n<b>Reason:</b> {html.escape(reason)}")
+        await message.reply_html(f"✅ User {user_display} (<code>{target_entity.id}</code>) has been added to the blacklist.\n<b>Reason:</b> {safe_escape(reason)}")
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -4188,7 +4188,7 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
                 f"<b>#BLACKLISTED</b>\n\n"
                 f"<b>User:</b> {log_user_display}\n"
                 f"<b>User ID:</b> <code>{target_entity.id}</code>\n"
-                f"<b>Reason:</b> {html.escape(reason)}\n"
+                f"<b>Reason:</b> {safe_escape(reason)}\n"
                 f"<b>Admin:</b> {admin_link}\n"
                 f"<b>Date:</b> <code>{current_time}</code>"
             )
@@ -4289,7 +4289,7 @@ async def check_gban_on_message(update: Update, context: ContextTypes.DEFAULT_TY
                     f"⚠️ <b>Alert!</b> This user is globally banned.\n"
                     f"<i>Enforcing ban in this chat.</i>\n\n"
                     f"<b>User ID:</b> <code>{user.id}</code>\n"
-                    f"<b>Reason:</b> {html.escape(gban_reason)}"
+                    f"<b>Reason:</b> {safe_escape(gban_reason)}"
                 )
                 await context.bot.send_message(chat.id, text=message_text, parse_mode=ParseMode.HTML)
         except Exception as e:
@@ -4342,7 +4342,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if existing_gban_reason:
         await message.reply_html(
             f"ℹ️ User {user_display} (<code>{target_entity.id}</code>) is already globally banned.\n"
-            f"<b>Reason:</b> {html.escape(existing_gban_reason)}"
+            f"<b>Reason:</b> {safe_escape(existing_gban_reason)}"
         )
         return
 
@@ -4353,19 +4353,19 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         except Exception as e:
             logger.warning(f"Could not enforce local ban for gban in chat {chat.id}: {e}")
 
-    await message.reply_html(f"✅ User {user_display} (<code>{target_entity.id}</code>) has been globally banned.\n<b>Reason:</b> {html.escape(reason)}")
+    await message.reply_html(f"✅ User {user_display} (<code>{target_entity.id}</code>) has been globally banned.\n<b>Reason:</b> {safe_escape(reason)}")
     
     try:
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         
         log_user_display = create_user_html_link(target_entity)
         
-        chat_name_display = html.escape(chat.title or f"{user_who_gbans.first_name}")
+        chat_name_display = safe_escape(chat.title or f"{user_who_gbans.first_name}")
         if chat.type != ChatType.PRIVATE and chat.username:
             message_link = f"https://t.me/{chat.username}/{message.message_id}"
-            chat_name_display = f"<a href='{message_link}'>{html.escape(chat.title)}</a>"
+            chat_name_display = f"<a href='{message_link}'>{safe_escape(chat.title)}</a>"
 
-        reason_display = html.escape(reason)
+        reason_display = safe_escape(reason)
         admin_link = create_user_html_link(user_who_gbans)
 
         log_message = (
@@ -4426,10 +4426,10 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         
         log_user_display = create_user_html_link(target_entity)
         
-        chat_name_display = html.escape(chat.title or f"{user_who_ungbans.first_name}")
+        chat_name_display = safe_escape(chat.title or f"{user_who_ungbans.first_name}")
         if chat.type != ChatType.PRIVATE and chat.username:
             message_link = f"https://t.me/{chat.username}/{message.message_id}"
-            chat_name_display = f"<a href='{message_link}'>{html.escape(chat.title)}</a>"
+            chat_name_display = f"<a href='{message_link}'>{safe_escape(chat.title)}</a>"
             
         admin_link = create_user_html_link(user_who_ungbans)
 
@@ -4626,7 +4626,7 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await message.reply_html(
             f"❌ <b>Promotion Failed!</b>\n\n"
             f"User {user_display} (<code>{target_user.id}</code>) cannot be promoted to <code>Support</code> because they are <b>Globally Bannned</b>.\n\n"
-            f"<b>Reason:</b> {html.escape(gban_reason)}\n\n"
+            f"<b>Reason:</b> {safe_escape(gban_reason)}\n\n"
             f"<i>For security reasons, this action has been blocked. "
             f"Please remove global ban first using /ungban if you wish to proceed.</i>"
         )
@@ -4636,7 +4636,7 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await message.reply_html(
             f"❌ <b>Promotion Failed!</b>\n\n"
             f"User {user_display} (<code>{target_user.id}</code>) cannot be promoted to <code>Sudo</code> because they are on the <b>Blacklist</b>.\n\n"
-            f"<b>Reason:</b> {html.escape(blist_reason)}\n\n"
+            f"<b>Reason:</b> {safe_escape(blist_reason)}\n\n"
             f"<i>For security reasons, this action has been blocked. "
             f"Please remove the user from the blacklist first using /unblist if you wish to proceed.</i>"
         )
@@ -4781,7 +4781,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         error_message = (
             f"❌ <b>Promotion Failed!</b>\n\n"
             f"User {user_display} (<code>{target_user.id}</code>) cannot be promoted to <code>Sudo</code> because they are <b>Globally Bannned</b>.\n\n"
-            f"<b>Reason:</b> {html.escape(gban_reason)}\n\n"
+            f"<b>Reason:</b> {safe_escape(gban_reason)}\n\n"
             f"<i>For security reasons, this action has been blocked. "
             f"Please remove global ban first using /ungban if you wish to proceed.</i>"
         )
@@ -4792,7 +4792,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         error_message = (
             f"❌ <b>Promotion Failed!</b>\n\n"
             f"User {user_display} (<code>{target_user.id}</code>) cannot be promoted to <code>Sudo</code> because they are on the <b>Blacklist</b>.\n\n"
-            f"<b>Reason:</b> {html.escape(blist_reason)}\n\n"
+            f"<b>Reason:</b> {safe_escape(blist_reason)}\n\n"
             f"<i>For security reasons, this action has been blocked. "
             f"Please remove the user from the blacklist first using /unblist if you wish to proceed.</i>"
         )
@@ -4932,7 +4932,7 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     }
 
     if new_role_shortcut not in role_map:
-        await message.reply_text(f"Invalid role '{html.escape(new_role_shortcut)}'. Please use one of: support, sudo, dev.")
+        await message.reply_text(f"Invalid role '{safe_escape(new_role_shortcut)}'. Please use one of: support, sudo, dev.")
         return
 
     new_role_full_name = role_map[new_role_shortcut]
@@ -5042,7 +5042,7 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await message.reply_html(
             f"❌ <b>Promotion Failed!</b>\n\n"
             f"User {user_display} (<code>{target_user.id}</code>) cannot be promoted to <code>Developer</code> because they are <b>Globally Bannned</b>.\n\n"
-            f"<b>Reason:</b> {html.escape(gban_reason)}\n\n"
+            f"<b>Reason:</b> {safe_escape(gban_reason)}\n\n"
             f"<i>For security reasons, this action has been blocked. "
             f"Please remove global ban first using /ungban if you wish to proceed.</i>"
         )
@@ -5052,7 +5052,7 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await message.reply_html(
             f"❌ <b>Promotion Failed!</b>\n\n"
             f"User {user_display} (<code>{target_user.id}</code>) cannot be promoted to <code>Developer</code> because they are on the <b>Blacklist</b>.\n\n"
-            f"<b>Reason:</b> {html.escape(blist_reason)}\n\n"
+            f"<b>Reason:</b> {safe_escape(blist_reason)}\n\n"
             f"<i>For security reasons, this action has been blocked. "
             f"Please remove the user from the blacklist first using /unblist if you wish to proceed.</i>"
         )
@@ -5193,9 +5193,9 @@ async def listdevs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         try:
             chat_info = await context.bot.get_chat(user_id)
             name_parts = []
-            if chat_info.first_name: name_parts.append(html.escape(chat_info.first_name))
-            if chat_info.last_name: name_parts.append(html.escape(chat_info.last_name))
-            if chat_info.username: name_parts.append(f"(@{html.escape(chat_info.username)})")
+            if chat_info.first_name: name_parts.append(safe_escape(chat_info.first_name))
+            if chat_info.last_name: name_parts.append(safe_escape(chat_info.last_name))
+            if chat_info.username: name_parts.append(f"(@{safe_escape(chat_info.username)})")
             
             if name_parts:
                 user_display_name = " ".join(name_parts) + f" (<code>{user_id}</code>)"
@@ -5203,9 +5203,9 @@ async def listdevs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             user_obj_from_db = get_user_from_db_by_username(str(user_id))
             if user_obj_from_db:
                 display_name_parts = []
-                if user_obj_from_db.first_name: display_name_parts.append(html.escape(user_obj_from_db.first_name))
-                if user_obj_from_db.last_name: display_name_parts.append(html.escape(user_obj_from_db.last_name))
-                if user_obj_from_db.username: display_name_parts.append(f"(@{html.escape(user_obj_from_db.username)})")
+                if user_obj_from_db.first_name: display_name_parts.append(safe_escape(user_obj_from_db.first_name))
+                if user_obj_from_db.last_name: display_name_parts.append(safe_escape(user_obj_from_db.last_name))
+                if user_obj_from_db.username: display_name_parts.append(f"(@{safe_escape(user_obj_from_db.username)})")
                 if display_name_parts:
                     user_display_name = " ".join(display_name_parts) + f" (<code>{user_id}</code>)"
 
@@ -5241,9 +5241,9 @@ async def list_sudo_users_command(update: Update, context: ContextTypes.DEFAULT_
         try:
             chat_info = await context.bot.get_chat(user_id)
             name_parts = []
-            if chat_info.first_name: name_parts.append(html.escape(chat_info.first_name))
-            if chat_info.last_name: name_parts.append(html.escape(chat_info.last_name))
-            if chat_info.username: name_parts.append(f"(@{html.escape(chat_info.username)})")
+            if chat_info.first_name: name_parts.append(safe_escape(chat_info.first_name))
+            if chat_info.last_name: name_parts.append(safe_escape(chat_info.last_name))
+            if chat_info.username: name_parts.append(f"(@{safe_escape(chat_info.username)})")
             
             if name_parts:
                 user_display_name = " ".join(name_parts) + f" (<code>{user_id}</code>)"
@@ -5251,9 +5251,9 @@ async def list_sudo_users_command(update: Update, context: ContextTypes.DEFAULT_
             user_obj_from_db = get_user_from_db_by_username(str(user_id))
             if user_obj_from_db:
                 display_name_parts = []
-                if user_obj_from_db.first_name: display_name_parts.append(html.escape(user_obj_from_db.first_name))
-                if user_obj_from_db.last_name: display_name_parts.append(html.escape(user_obj_from_db.last_name))
-                if user_obj_from_db.username: display_name_parts.append(f"(@{html.escape(user_obj_from_db.username)})")
+                if user_obj_from_db.first_name: display_name_parts.append(safe_escape(user_obj_from_db.first_name))
+                if user_obj_from_db.last_name: display_name_parts.append(safe_escape(user_obj_from_db.last_name))
+                if user_obj_from_db.username: display_name_parts.append(f"(@{safe_escape(user_obj_from_db.username)})")
                 if display_name_parts:
                     user_display_name = " ".join(display_name_parts) + f" (<code>{user_id}</code>)"
 
@@ -5293,9 +5293,9 @@ async def listsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         try:
             chat_info = await context.bot.get_chat(user_id)
             name_parts = []
-            if chat_info.first_name: name_parts.append(html.escape(chat_info.first_name))
-            if chat_info.last_name: name_parts.append(html.escape(chat_info.last_name))
-            if chat_info.username: name_parts.append(f"(@{html.escape(chat_info.username)})")
+            if chat_info.first_name: name_parts.append(safe_escape(chat_info.first_name))
+            if chat_info.last_name: name_parts.append(safe_escape(chat_info.last_name))
+            if chat_info.username: name_parts.append(f"(@{safe_escape(chat_info.username)})")
             
             if name_parts:
                 user_display_name = " ".join(name_parts) + f" (<code>{user_id}</code>)"
@@ -5303,9 +5303,9 @@ async def listsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             user_obj_from_db = get_user_from_db_by_username(str(user_id))
             if user_obj_from_db:
                 display_name_parts = []
-                if user_obj_from_db.first_name: display_name_parts.append(html.escape(user_obj_from_db.first_name))
-                if user_obj_from_db.last_name: display_name_parts.append(html.escape(user_obj_from_db.last_name))
-                if user_obj_from_db.username: display_name_parts.append(f"(@{html.escape(user_obj_from_db.username)})")
+                if user_obj_from_db.first_name: display_name_parts.append(safe_escape(user_obj_from_db.first_name))
+                if user_obj_from_db.last_name: display_name_parts.append(safe_escape(user_obj_from_db.last_name))
+                if user_obj_from_db.username: display_name_parts.append(f"(@{safe_escape(user_obj_from_db.username)})")
                 if display_name_parts:
                     user_display_name = " ".join(display_name_parts) + f" (<code>{user_id}</code>)"
 
@@ -5336,7 +5336,7 @@ async def list_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     response_lines = [f"<b>📊 List of all known groups; <code>{len(bot_chats)}</code> total:</b>\n\n"]
     
     for chat_id, chat_title, added_at_str in bot_chats:
-        display_title = html.escape(chat_title or "Untitled Group")
+        display_title = safe_escape(chat_title or "Untitled Group")
         
         try:
             dt_obj = datetime.fromisoformat(added_at_str.replace("Z", "+00:00"))
@@ -5380,7 +5380,7 @@ async def del_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
             else:
                 failed_chats.append(f"<code>{chat_id_to_delete}</code> (not found)")
         except ValueError:
-            failed_chats.append(f"<i>{html.escape(chat_id_str)}</i> (invalid ID)")
+            failed_chats.append(f"<i>{safe_escape(chat_id_str)}</i> (invalid ID)")
 
     response_lines = []
     if deleted_chats:
@@ -5466,7 +5466,7 @@ async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
 
     command = " ".join(context.args)
-    status_message = await update.message.reply_html(f"🔩 Executing: <code>{html.escape(command)}</code>")
+    status_message = await update.message.reply_html(f"🔩 Executing: <code>{safe_escape(command)}</code>")
 
     try:
         process = await asyncio.create_subprocess_shell(
@@ -5479,9 +5479,9 @@ async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
         result_text = ""
         if stdout:
-            result_text += f"<b>OUTPUT:</b>\n<code>{html.escape(stdout.decode('utf-8', errors='ignore'))}</code>\n"
+            result_text += f"<b>OUTPUT:</b>\n<code>{safe_escape(stdout.decode('utf-8', errors='ignore'))}</code>\n"
         if stderr:
-            result_text += f"<b>ERROR:</b>\n<code>{html.escape(stderr.decode('utf-8', errors='ignore'))}</code>\n"
+            result_text += f"<b>ERROR:</b>\n<code>{safe_escape(stderr.decode('utf-8', errors='ignore'))}</code>\n"
         if not stdout and not stderr:
             result_text = "✅ Command executed with no output."
             
@@ -5497,7 +5497,7 @@ async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await status_message.edit_text("❌ <b>Error:</b> Command timed out after 60 seconds.")
     except Exception as e:
         logger.error(f"Error executing shell command '{command}': {e}", exc_info=True)
-        await status_message.edit_text(f"❌ <b>Error:</b> {html.escape(str(e))}")
+        await status_message.edit_text(f"❌ <b>Error:</b> {safe_escape(str(e))}")
 
 async def execute_script_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
