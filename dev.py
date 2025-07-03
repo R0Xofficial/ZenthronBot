@@ -3991,7 +3991,7 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
                     f"<i>Enforcing ban in this chat.</i>\n\n"
                     f"<b>User ID:</b> <code>{user.id}</code>\n"
                     f"<b>Reason:</b> {safe_escape(gban_reason)}\n"
-                    f"<b>Appeal:</b> {APPEAL_CHAT_USERNAME}"
+                    f"<b>Appeal Chat:</b> {APPEAL_CHAT_USERNAME}"
                 )
                 await context.bot.send_message(chat_id=chat.id, text=message_text, parse_mode=ParseMode.HTML)
             except Exception as e:
@@ -4286,7 +4286,7 @@ async def check_gban_on_message(update: Update, context: ContextTypes.DEFAULT_TY
                     f"<i>Enforcing ban in this chat.</i>\n\n"
                     f"<b>User ID:</b> <code>{user.id}</code>\n"
                     f"<b>Reason:</b> {safe_escape(gban_reason)}\n"
-                    f"<b>Appeal:</b> {APPEAL_CHAT_USERNAME}"
+                    f"<b>Appeal Chat:</b> {APPEAL_CHAT_USERNAME}"
                 )
                 await context.bot.send_message(chat.id, text=message_text, parse_mode=ParseMode.HTML)
         except Exception as e:
