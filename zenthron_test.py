@@ -3973,6 +3973,23 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
             except Exception as e:
                 logger.error(f"Failed to send join notification to owner for group {chat.id}: {e}")
 
+    if not is_gban_enforced(chat.id):
+        return
+
+        gban_reason = get_gban_reason(member.id)
+        if gban_reason:
+            try:
+                await context.bot.ban_chat_member(chat_id=chat.id, user_id=member.id)
+                await update.message.reply_text(
+                    f"⚠️ <b>Alert!</b> This user is globally banned.\n"
+                    f"<i>Enforcing ban in this chat.</i>\n\n"
+                    f"<b>User ID:</b> <code>{member.id}</code>\n"
+                    f"<b>Reason:</b> {safe_escape(gban_reason)}",
+                    parse_mode=ParseMode.HTML
+                )
+            except Exception as e:
+                logger.error(f"Failed to enforce gban on new member {member.id} in {chat.id}: {e}")
+
     if should_clean_service(chat.id):
         try:
             await update.message.delete()
@@ -4042,24 +4059,6 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
                 )
             except Exception as e:
                 logger.error(f"Failed to send welcome message for user {member.id} in chat {chat.id}: {e}")
-
-    if not is_gban_enforced(chat.id):
-        return
-
-        gban_reason = get_gban_reason(member.id)
-        if gban_reason:
-            logger.info(f"Gbanned user {member.id} tried to join {chat.id}. Removing.")
-            try:
-                await context.bot.ban_chat_member(chat_id=chat.id, user_id=member.id)
-                await update.message.reply_text(
-                    f"⚠️ <b>Alert!</b> This user is globally banned.\n"
-                    f"<i>Enforcing ban in this chat.</i>\n\n"
-                    f"<b>User ID:</b> <code>{member.id}</code>\n"
-                    f"<b>Reason:</b> {safe_escape(gban_reason)}",
-                    parse_mode=ParseMode.HTML
-                )
-            except Exception as e:
-                logger.error(f"Failed to enforce gban on new member {member.id} in {chat.id}: {e}")
 
 async def handle_left_group_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message or not update.message.left_chat_member:
