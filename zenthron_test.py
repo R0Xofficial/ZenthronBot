@@ -4057,7 +4057,7 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
                 message_text = (
                     f"⚠️ <b>Alert!</b> This user is globally banned.\n"
                     f"<i>Enforcing ban in this chat.</i>\n\n"
-                    f"<b>User ID:</b> <code>{user.id}</code>\n"
+                    f"<b>User ID:</b> <code>{member.id}</code>\n"
                     f"<b>Reason:</b> {safe_escape(gban_reason)}\n"
                     f"<b>Appeal Chat:</b> {APPEAL_CHAT_USERNAME}"
                 )
