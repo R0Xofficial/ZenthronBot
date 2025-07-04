@@ -3965,10 +3965,13 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
         logger.info(f"Bot joined chat: {chat.title} ({chat.id})")
         add_chat_to_db(chat.id, chat.title or f"Untitled Chat {chat.id}")
         if OWNER_ID:
-            safe_chat_title = safe_escape(chat.title or f"Chat ID {chat.id}")
+            safe_chat_title = html.escape(chat.title or f"Chat ID {chat.id}")
             link_line = f"\n<b>Link:</b> @{chat.username}" if chat.username else ""
             pm_text = (f"<b>#ADDEDTOGROUP</b>\n\n<b>Name:</b> {safe_chat_title}\n<b>ID:</b> <code>{chat.id}</code>{link_line}")
-            await send_operational_log(context, pm_text)
+            try:
+                await context.bot.send_message(chat_id=OWNER_ID, text=pm_text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+            except Exception as e:
+                logger.error(f"Failed to send join notification to owner for group {chat.id}: {e}")
 
     should_clean = should_clean_service(chat.id)
 
