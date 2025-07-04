@@ -3965,7 +3965,7 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
         logger.info(f"Bot joined chat: {chat.title} ({chat.id})")
         add_chat_to_db(chat.id, chat.title or f"Untitled Chat {chat.id}")
         if OWNER_ID:
-            safe_chat_title = html.escape(chat.title or f"Chat ID {chat.id}")
+            safe_chat_title = safe_escape(chat.title or f"Chat ID {chat.id}")
             link_line = f"\n<b>Link:</b> @{chat.username}" if chat.username else ""
             pm_text = (f"<b>#ADDEDTOGROUP</b>\n\n<b>Name:</b> {safe_chat_title}\n<b>ID:</b> <code>{chat.id}</code>{link_line}")
             try:
@@ -4067,7 +4067,7 @@ async def handle_left_group_member(update: Update, context: ContextTypes.DEFAULT
     left_member = update.message.left_chat_member
 
     if left_member.id == context.bot.id:
-        logger.info(f"Bot was removed from chat {chat.id}.")
+        logger.info(f"Bot removed from group cache {chat.id}.")
         remove_chat_from_db(chat.id)
         return
 
@@ -4358,7 +4358,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         
         log_user_display = create_user_html_link(target_entity)
         
-        chat_name_display = safe_escape(chat.title or f"{user_who_gbans.first_name}")
+        chat_name_display = safe_escape(chat.title or f"PM {user_who_gbans.first_name}")
         if chat.type != ChatType.PRIVATE and chat.username:
             message_link = f"https://t.me/{chat.username}/{message.message_id}"
             chat_name_display = f"<a href='{message_link}'>{safe_escape(chat.title)}</a>"
@@ -4424,7 +4424,7 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         
         log_user_display = create_user_html_link(target_entity)
         
-        chat_name_display = safe_escape(chat.title or f"{user_who_ungbans.first_name}")
+        chat_name_display = safe_escape(chat.title or f"PM {user_who_ungbans.first_name}")
         if chat.type != ChatType.PRIVATE and chat.username:
             message_link = f"https://t.me/{chat.username}/{message.message_id}"
             chat_name_display = f"<a href='{message_link}'>{safe_escape(chat.title)}</a>"
