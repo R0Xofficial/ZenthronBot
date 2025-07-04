@@ -1510,7 +1510,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     target_entity: Chat | User | None = None
     
     if update.message.reply_to_message:
-        target_entity = update.message.reply_to_message.sender_chat or update.message.reply_to_message.from_user
+        target_entity = update.message.reply_to_message.from_user or update.message.reply_to_message.sender_chat
     elif context.args:
         target_input = " ".join(context.args)
         
@@ -1523,7 +1523,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
                 await update.message.reply_text(f"Error: I couldn't find the user. Most likely I've never seen him.")
                 return
     else:
-        target_entity = update.message.sender_chat or update.effective_user
+        target_entity = update.effective_user or update.message.sender_chat
 
     if not target_entity:
         await update.message.reply_text("Skrrrt... I don't know what I'm looking for...")
@@ -1657,7 +1657,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     args_after_target: list[str] = []
 
     if message.reply_to_message:
-        target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
+        target_entity = message.reply_to_message.from_user or message.reply_to_message.sender_chat
         if context.args:
             args_after_target = context.args
     elif context.args:
@@ -1750,7 +1750,7 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     target_entity: User | Chat | None = None
     
     if message.reply_to_message:
-        target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
+        target_entity = message.reply_to_message.from_user or message.reply_to_message.sender_chat
     elif context.args:
         target_arg = context.args[0]
         target_entity = await resolve_user_with_telethon(context, target_arg, update)
@@ -1809,11 +1809,11 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
-    target_user: User | None = None
+    target_entity: User | Chat | None = None
     args_after_target: list[str] = []
 
     if message.reply_to_message:
-        target_user = message.reply_to_message.from_user
+        target_entity = message.reply_to_message.from_user or message.reply_to_message.sender_chat
         if context.args:
             args_after_target = context.args
     elif context.args:
@@ -1821,24 +1821,20 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         if len(context.args) > 1:
             args_after_target = context.args[1:]
         
-        target_user = await resolve_user_with_telethon(context, target_input, update)
-        
-        if not target_user and target_input.isdigit():
-            try:
-                target_user = await context.bot.get_chat(int(target_input))
-            except:
-                logger.warning(f"Could not resolve full profile for ID {target_input} in MUTE. Proceeding with ID only.")
-                target_user = User(id=int(target_input), first_name="", is_bot=False)
-    else:
+        target_entity = await resolve_user_with_telethon(context, target_input, update)
+    
+    if not target_entity:
         await send_safe_reply(update, context, text="Usage: /mute <ID/@username/reply> [duration] [reason]")
         return
 
-    if not target_user:
-        await send_safe_reply(update, context, text=f"Skrrrt... I can't find the user.")
+    if not isinstance(target_entity, User):
+        await send_safe_reply(update, context, text="🧐 Mute can only be applied to users.")
         return
 
-    if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="🧐 Mute can only be applied to users.")
+    target_user = target_entity
+
+    if not target_user:
+        await send_safe_reply(update, context, text=f"Skrrrt... I can't find the user.")
         return
         
     duration_str: str | None = None
@@ -1899,30 +1895,26 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
-    target_user: User | None = None
+    target_entity: User | Chat | None = None
+    
     if message.reply_to_message:
-        target_user = message.reply_to_message.from_user
+        target_entity = message.reply_to_message.from_user or message.reply_to_message.sender_chat
     elif context.args:
         target_input = context.args[0]
-        
-        target_user = await resolve_user_with_telethon(context, target_input, update)
-        
-        if not target_user and target_input.isdigit():
-            try:
-                target_user = await context.bot.get_chat(int(target_input))
-            except:
-                logger.warning(f"Could not resolve full profile for ID {target_input} in UNMUTE. Proceeding with ID only.")
-                target_user = User(id=int(target_input), first_name="", is_bot=False)
-    else:
+        target_entity = await resolve_user_with_telethon(context, target_input, update)
+
+    if not target_entity:
         await send_safe_reply(update, context, text="Usage: /unmute <ID/@username/reply>")
         return
 
+    if not isinstance(target_entity, User):
+        await send_safe_reply(update, context, text="🧐 Unmute can only be applied to users.")
+        return
+        
+    target_user = target_entity
+
     if not target_user:
         await send_safe_reply(update, context, text=f"Skrrrt... I can't find the user.")
-        return
-
-    if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="🧐 Unmute can only be applied to users.")
         return
 
     permissions_to_restore = ChatPermissions(
@@ -1957,22 +1949,21 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     args_after_target: list[str] = []
 
     if message.reply_to_message:
-        target_user = message.reply_to_message.from_user
+        target_entity = message.reply_to_message.from_user or message.reply_to_message.sender_chat
         if context.args:
             args_after_target = context.args
     elif context.args:
         target_input = context.args[0]
         if len(context.args) > 1:
             args_after_target = context.args[1:]
+
+    if not isinstance(target_entity, User):
+        await send_safe_reply(update, context, text="🧐 Kick can only be applied to users.")
+        return
+
+        target_user = target_entity
         
-        target_user = await resolve_user_with_telethon(context, target_input, update)
-        
-        if not target_user and target_input.isdigit():
-            try:
-                target_user = await context.bot.get_chat(int(target_input))
-            except:
-                logger.warning(f"Could not resolve full profile for ID {target_input} in KICK. Proceeding with ID only.")
-                target_user = User(id=int(target_input), first_name="", is_bot=False)
+        target_entity = await resolve_user_with_telethon(context, target_input, update)
     else:
         await send_safe_reply(update, context, text="Usage: /kick <ID/@username/reply> [reason]")
         return
@@ -1982,10 +1973,6 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     reason: str = " ".join(args_after_target) or "No reason provided."
-
-    if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="🧐 Kick can only be applied to users.")
-        return
 
     if target_user.id == context.bot.id or target_user.id == user_who_kicks.id:
         await send_safe_reply(update, context, text="Nuh uh... This user cannot be kicked."); return
@@ -2086,19 +2073,18 @@ async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     args_for_title = list(context.args)
 
     if message.reply_to_message:
-        target_user = message.reply_to_message.from_user
+        target_entity = message.reply_to_message.from_user or message.reply_to_message.sender_chat
     elif context.args:
         target_input = context.args[0]
         args_for_title = list(context.args[1:])
+
+        if not isinstance(target_entity, User):
+            await message.reply_text("🧐 Promotion can only be applied to users.")
+            return
+
+        target_user = target_entity
         
-        target_user = await resolve_user_with_telethon(context, target_input, update)
-        
-        if not target_user and target_input.isdigit():
-            try:
-                target_user = await context.bot.get_chat(int(target_input))
-            except:
-                logger.warning(f"Could not resolve full profile for ID {target_input} in PROMOTE. Proceeding with ID only.")
-                target_user = User(id=int(target_input), first_name="", is_bot=False)
+        target_entity = await resolve_user_with_telethon(context, target_input, update)
     else:
         await message.reply_text("Usage: /promote <ID/@username/reply> [optional admin title]")
         return
@@ -2168,18 +2154,17 @@ async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     target_user: User | None = None
 
     if message.reply_to_message:
-        target_user = message.reply_to_message.from_user
+        target_entity = message.reply_to_message.from_user or message.reply_to_message.sender_chat
     elif context.args:
         target_input = context.args[0]
+
+    if not isinstance(target_entity, User):
+        await message.reply_text("🧐 Demotion can only be applied to users.")
+        return
         
-        target_user = await resolve_user_with_telethon(context, target_input, update)
+        target_user = target_entity
         
-        if not target_user and target_input.isdigit():
-            try:
-                target_user = await context.bot.get_chat(int(target_input))
-            except:
-                logger.warning(f"Could not resolve full profile for ID {target_input} in DEMOTE. Proceeding with ID only.")
-                target_user = User(id=int(target_input), first_name="", is_bot=False)
+        target_entity = await resolve_user_with_telethon(context, target_input, update)
     else:
         await message.reply_text("Usage: /demote <ID/@username/reply>")
         return
@@ -2427,7 +2412,7 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     args_for_reason = list(context.args)
 
     if message.reply_to_message:
-        target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
+        target_entity = message.reply_to_message.from_user or message.reply_to_message.sender_chat
     elif context.args:
         target_input = context.args[0]
         args_for_reason = list(context.args[1:])
@@ -2916,7 +2901,7 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     reason_parts = []
     
     if update.message.reply_to_message:
-        target_user = update.message.reply_to_message.from_user
+        target_user = update.message.reply_to_message.from_user or update.message.reply_to_message.sender_chat
         reason_parts = context.args
     elif context.args:
         target_input = context.args[0]
@@ -2973,7 +2958,7 @@ async def warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     target_user: User | None = None
     
     if update.message.reply_to_message:
-        target_user = update.message.reply_to_message.from_user
+        target_user = update.message.reply_to_message.from_user or update.message.reply_to_message.sender_chat
     elif context.args:
         target_input = context.args[0]
         resolved_entity = await resolve_user_with_telethon(context, target_input, update)
@@ -3020,7 +3005,7 @@ async def reset_warnings_command(update: Update, context: ContextTypes.DEFAULT_T
 
     target_user: User | None = None
     if update.message.reply_to_message:
-        target_user = update.message.reply_to_message.from_user
+        target_user = update.message.reply_to_message.from_user or update.message.reply_to_message.sender_chat
     elif context.args:
         target_input = context.args[0]
         target_user = await resolve_user_with_telethon(context, target_input, update)
@@ -3070,32 +3055,32 @@ async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     user = update.effective_user
     
     target_user: User | None = None
+    target_entity: Chat | User | None = None
     
     if message.reply_to_message:
-        if message.reply_to_message.sender_chat:
-            target_chat = message.reply_to_message.sender_chat
-            await message.reply_html(f"<b>The ID of {safe_escape(target_chat.title)} is:</b> <code>{target_chat.id}</code>")
-            return
-        else:
-            target_user = message.reply_to_message.from_user
-
+        target_entity = message.reply_to_message.from_user or message.reply_to_message.sender_chat
+    
     elif context.args:
         target_input = context.args[0]
         if target_input.startswith('@'):
             resolved_entity = await resolve_user_with_telethon(context, target_input, update)
             if isinstance(resolved_entity, User):
-                target_user = resolved_entity
+                target_entity = resolved_entity
             else:
                 await message.reply_text(f"Could not find a user with the username {safe_escape(target_input)}.")
                 return
         else:
             await message.reply_text("Invalid argument. Please use @username or reply to a message to get a user's ID.")
             return
-
-    if target_user:
-        await message.reply_html(f"<b>{safe_escape(target_user.first_name)}'s ID is:</b> <code>{target_user.id}</code>")
+    
+    if target_entity:
+        if isinstance(target_entity, User):
+            await message.reply_html(f"<b>{safe_escape(target_entity.first_name)}'s ID is:</b> <code>{target_entity.id}</code>")
+        else:
+            entity_name = getattr(target_entity, 'title', 'Chat/Channel')
+            await message.reply_html(f"<b>The ID of {safe_escape(entity_name)} is:</b> <code>{target_entity.id}</code>")
         return
-
+    
     if chat.type == ChatType.PRIVATE:
         await message.reply_html(f"<b>Your ID is:</b> <code>{user.id}</code>")
     else:
@@ -4127,7 +4112,7 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
     reason: str = "No reason provided."
 
     if message.reply_to_message:
-        target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
+        target_entity = message.reply_to_message.from_user or message.reply_to_message.sender_chat
         if context.args:
             reason = " ".join(context.args)
     elif context.args:
@@ -4193,7 +4178,7 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
 
     target_entity: User | Chat | None = None
     if message.reply_to_message:
-        target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
+        target_entity = message.reply_to_message.from_user or message.reply_to_message.sender_chat
     elif context.args:
         target_input = context.args[0]
         target_entity = await resolve_user_with_telethon(context, target_input, update)
@@ -4297,7 +4282,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     reason: str = "No reason provided."
 
     if message.reply_to_message:
-        target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
+        target_entity = message.reply_to_message.from_user or message.reply_to_message.sender_chat
         if context.args:
             reason = " ".join(context.args)
     elif context.args:
@@ -4379,7 +4364,7 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     target_entity: User | Chat | None = None
     if message.reply_to_message:
-        target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
+        target_entity = message.reply_to_message.from_user or message.reply_to_message.sender_chat
     elif context.args:
         target_input = context.args[0]
         target_entity = await resolve_user_with_telethon(context, target_input, update)
@@ -4580,7 +4565,7 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     target_user: User | None = None
     if message.reply_to_message:
-        target_user = message.reply_to_message.from_user
+        target_user = message.reply_to_message.from_user or message.reply_to_message.sender_chat
     elif context.args:
         target_input = context.args[0]
         target_user = await resolve_user_with_telethon(context, target_input, update)
@@ -4665,7 +4650,7 @@ async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     target_user: User | None = None
     if message.reply_to_message:
-        target_user = message.reply_to_message.from_user
+        target_user = message.reply_to_message.from_user or message.reply_to_message.sender_chat
     elif context.args:
         target_input = context.args[0]
         target_user = await resolve_user_with_telethon(context, target_input, update)
@@ -4727,7 +4712,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     target_user: User | None = None
 
     if message.reply_to_message:
-        target_user = message.reply_to_message.from_user
+        target_user = message.reply_to_message.from_user or message.reply_to_message.sender_chat
     elif context.args:
         target_input = context.args[0]
         
@@ -4823,7 +4808,7 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     target_user: User | None = None
 
     if message.reply_to_message:
-        target_user = message.reply_to_message.from_user
+        target_user = message.reply_to_message.from_user or message.reply_to_message.sender_chat
     elif context.args:
         target_input = context.args[0]
         
@@ -4896,7 +4881,7 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     args_for_role: list[str] = []
 
     if message.reply_to_message:
-        target_user = message.reply_to_message.from_user
+        target_user = message.reply_to_message.from_user or message.reply_to_message.sender_chat
         args_for_role = context.args
     elif context.args:
         target_input = context.args[0]
@@ -4996,7 +4981,7 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     target_user: User | None = None
     if message.reply_to_message:
-        target_user = message.reply_to_message.from_user
+        target_user = message.reply_to_message.from_user or message.reply_to_message.sender_chat
     elif context.args:
         target_input = context.args[0]
         target_user = await resolve_user_with_telethon(context, target_input, update)
@@ -5077,7 +5062,7 @@ async def deldev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     target_user: User | None = None
     if message.reply_to_message:
-        target_user = message.reply_to_message.from_user
+        target_user = message.reply_to_message.from_user or message.reply_to_message.sender_chat
     elif context.args:
         target_input = context.args[0]
         target_user = await resolve_user_with_telethon(context, target_input, update)
