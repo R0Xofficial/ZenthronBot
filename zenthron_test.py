@@ -4026,7 +4026,6 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
         return
     chat = update.effective_chat
     user = update.effective_user
-    member = update.effective_user
     
     if any(member.id == context.bot.id for member in update.message.new_chat_members):
         logger.info(f"Bot joined chat: {chat.title} ({chat.id})")
@@ -4058,7 +4057,7 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
                 message_text = (
                     f"⚠️ <b>Alert!</b> This user is globally banned.\n"
                     f"<i>Enforcing ban in this chat.</i>\n\n"
-                    f"<b>User ID:</b> <code>{member.id}</code>\n"
+                    f"<b>User ID:</b> <code>{user.id}</code>\n"
                     f"<b>Reason:</b> {safe_escape(gban_reason)}\n"
                     f"<b>Appeal Chat:</b> {APPEAL_CHAT_USERNAME}"
                 )
