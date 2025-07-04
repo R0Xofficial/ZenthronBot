@@ -372,13 +372,13 @@ def get_all_whitelist_users_from_db() -> List[Tuple[int, str]]:
         cursor.execute("SELECT user_id, timestamp FROM whitelist_users ORDER BY timestamp DESC")
         rows = cursor.fetchall()
         for row in rows:
-            sudo_list.append((row[0], row[1]))
+            whitelist_list.append((row[0], row[1]))
     except sqlite3.Error as e:
         logger.error(f"SQLite error fetching all whitelist users: {e}", exc_info=True)
     finally:
         if conn:
             conn.close()
-    return sudo_list
+    return whitelist_list
 
 # --- Support ---
 def add_support_user(user_id: int, added_by_id: int) -> bool:
@@ -1274,7 +1274,6 @@ def get_warn_limit(chat_id: int) -> int:
             res = conn.cursor().execute("SELECT warn_limit FROM bot_chats WHERE chat_id = ?", (chat_id,)).fetchone()
             if res and res[0] is not None and res[0] > 0:
                 return res[0]
-            # W przeciwnym razie, zwróć domyślny.
             return MAX_WARNS
     except sqlite3.Error:
         logger.error(f"Error getting warn limit for chat {chat_id}")
