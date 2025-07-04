@@ -4118,6 +4118,11 @@ async def handle_left_group_member(update: Update, context: ContextTypes.DEFAULT
     chat = update.effective_chat
     left_member = update.message.left_chat_member
 
+    gban_reason = get_gban_reason(left_member.id)
+    if gban_reason:
+        logger.info(f"Skipped goodbye message for globally banned user {left_member.id} in chat {chat.id}")
+        return
+
     if left_member.id == context.bot.id:
         logger.info(f"Bot removed from group cache {chat.id}.")
         remove_chat_from_db(chat.id)
