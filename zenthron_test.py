@@ -4657,6 +4657,7 @@ async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_T
     message = update.message
     
     if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /whitelist attempt by user {user.id}.")
         return
 
     target_user: User | None = None
@@ -4714,7 +4715,7 @@ async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-            admin_link = create_user_html_link(user)
+            admin_link = create_user_html_link(admin)
 
             log_message = (
                 f"<b>#WHITELISTED</b>\n\n"
@@ -4733,6 +4734,7 @@ async def unwhitelist_user_command(update: Update, context: ContextTypes.DEFAULT
     user = update.effective_user
     message = update.message
     if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /unwhitelist attempt by user {user.id}.")
         return
 
     target_user: User | None = None
@@ -4782,12 +4784,11 @@ async def unwhitelist_user_command(update: Update, context: ContextTypes.DEFAULT
 
 async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    admin = update.effective_user
     message = update.message
     if not message: return
     
-    if not is_owner_or_dev(admin.id):
-        logger.warning(f"Unauthorized /addsupport attempt by user {admin.id}.")
+    if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /addsupport attempt by user {user.id}.")
         return
 
     target_user: User | None = None
@@ -4848,7 +4849,7 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         except Exception as e:
             logger.warning(f"Failed to send PM to new Support user {target_user.id}: {e}")
 
-        admin_link = create_user_html_link(admin)
+        admin_link = create_user_html_link(user)
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -4867,12 +4868,11 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    admin = update.effective_user
     message = update.message
     if not message: return
     
-    if not is_owner_or_dev(admin.id):
-        logger.warning(f"Unauthorized /delsupport attempt by user {admin.id}.")
+    if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /delsupport attempt by user {user.id}.")
         return
 
     target_user: User | None = None
@@ -4909,7 +4909,7 @@ async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         except Exception as e:
             logger.warning(f"Failed to send PM to revoked Support user {target_user.id}: {e}")
 
-        admin_link = create_user_html_link(admin)
+        admin_link = create_user_html_link(user)
 
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -4928,12 +4928,11 @@ async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    admin = update.effective_user
     message = update.message
     if not message: return
     
-    if not is_owner_or_dev(admin.id):
-        logger.warning(f"Unauthorized /addsudo attempt by user {admin.id}.")
+    if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /addsudo attempt by user {user.id}.")
         return
 
     target_user: User | None = None
@@ -5005,7 +5004,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         except Exception as e:
             logger.warning(f"Failed to send PM to new sudo user {target_user.id}: {e}")
 
-        admin_link = create_user_html_link(admin)
+        admin_link = create_user_html_link(user)
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -5024,12 +5023,11 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    admin = update.effective_user
     message = update.message
     if not message: return
     
-    if not is_owner_or_dev(admin.id):
-        logger.warning(f"Unauthorized /delsudo attempt by user {admin.id}.")
+    if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /delsudo attempt by user {user.id}.")
         return
 
     target_user: User | None = None
@@ -5077,7 +5075,7 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         except Exception as e:
             logger.warning(f"Failed to send PM to revoked sudo user {target_user.id}: {e}")
 
-        admin_link = create_user_html_link(admin)
+        admin_link = create_user_html_link(user)
 
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -5096,12 +5094,11 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    admin = update.effective_user
     message = update.message
     if not message: return
     
-    if not is_owner_or_dev(admin.id):
-        logger.warning(f"Unauthorized /setrank attempt by user {admin.id}.")
+    if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /setrank attempt by user {user.id}.")
         return
 
     target_user: User | None = None
@@ -5179,7 +5176,7 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     if success:
         user_display = create_user_html_link(target_user)
-        admin_link = create_user_html_link(admin)
+        admin_link = create_user_html_link(user)
         
         feedback_message = f"✅ User {user_display} (<code>{target_user.id}</code>) rank has been changed from <b>{current_role_full_name}</b> to <b>{new_role_full_name}</b>."
         await message.reply_html(feedback_message)
@@ -5475,6 +5472,7 @@ async def list_sudo_users_command(update: Update, context: ContextTypes.DEFAULT_
 async def listsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /listsupport attempt by user {user.id}.")
         return
 
     support_user_tuples = get_all_support_users_from_db()
@@ -5522,6 +5520,7 @@ async def listsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def listwhitelist_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /listwhitelist attempt by user {user.id}.")
         return
 
     whitelist_user_tuples = get_all_whitelist_users_from_db()
