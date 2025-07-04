@@ -139,6 +139,14 @@ def init_db():
         """)
 
         cursor.execute("""
+            CREATE TABLE IF NOT EXISTS whitelist_users (
+                user_id INTEGER PRIMARY KEY,
+                added_by_id INTEGER NOT NULL,
+                timestamp TEXT NOT NULL
+            )
+        """)
+
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS support_users (
                 user_id INTEGER PRIMARY KEY,
                 added_by_id INTEGER NOT NULL,
@@ -208,7 +216,7 @@ def init_db():
         """)
         
         conn.commit()
-        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, support_users, sudo_users, dev_users, global_bans, bot_chats, notes, warnings ensured).")
+        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, whitelist_users, support_users, sudo_users, dev_users, global_bans, bot_chats, notes, warnings ensured).")
     except sqlite3.Error as e:
         logger.error(f"SQLite error during DB initialization: {e}", exc_info=True)
     finally:
@@ -322,6 +330,38 @@ async def check_blacklist_handler(update: Update, context: ContextTypes.DEFAULT_
         logger.info(f"User {user.id} ({user_mention_log}) is blacklisted. Silently ignoring and blocking interaction: '{message_text_preview}'")
         
         raise ApplicationHandlerStop
+
+# --- Whitelist ---
+def add_to_whitelist(user_id: int, added_by_id: int) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            timestamp = datetime.now(timezone.utc).isoformat()
+            conn.execute(
+                "INSERT OR IGNORE INTO whitelist_users (user_id, added_by_id, timestamp) VALUES (?, ?, ?)",
+                (user_id, added_by_id, timestamp)
+            )
+            return conn.total_changes > 0
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error adding user {user_id} to whitelist: {e}")
+        return False
+
+def remove_from_whitelist(user_id: int) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM whitelist_users WHERE user_id = ?", (user_id,))
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error removing user {user_id} from whitelist: {e}")
+        return False
+
+def is_whitelisted(user_id: int) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            res = conn.cursor().execute("SELECT 1 FROM whitelist_users WHERE user_id = ?", (user_id,)).fetchone()
+            return res is not None
+    except sqlite3.Error:
+        return False
 
 # --- Support ---
 def add_support_user(user_id: int, added_by_id: int) -> bool:
@@ -1415,6 +1455,7 @@ def format_entity_info(entity: Chat | User,
                        is_target_dev: bool = False,
                        is_target_sudo: bool = False,
                        is_target_support: bool = False,
+                       is_target_whitelist: bool = False,
                        blacklist_reason_str: str | None = None,
                        gban_reason_str: str | None = None,
                        current_chat_id_for_status: int | None = None,
@@ -1473,6 +1514,8 @@ def format_entity_info(entity: Chat | User,
             info_lines.append(f"\n<b>• User Level:</b> <code>Sudo</code>")
         elif is_target_support:
             info_lines.append(f"\n<b>• User Level:</b> <code>Support</code>")
+        elif is_target_whitelist:
+            info_lines.append(f"\n<b>• User Level:</b> <code>Whitelist</code>")
             
         if blacklist_reason_str is not None:
             info_lines.append(f"\n<b>• Blacklisted:</b> <code>Yes</code>")
@@ -1548,6 +1591,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     is_target_dev_flag = is_dev_user(target_entity.id)
     is_target_sudo_flag = is_sudo_user(target_entity.id)
     is_target_support_flag = is_support_user(target_entity.id)
+    is_target_whitelist_flag = is_whitelisted(target_entity.id)
     blacklist_reason_str = get_blacklist_reason(target_entity.id)
     gban_reason_str = get_gban_reason(target_entity.id)
     member_status_in_current_chat_str: str | None = None
@@ -1566,6 +1610,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         is_target_dev=is_target_dev_flag,
         is_target_sudo=is_target_sudo_flag,
         is_target_support=is_target_support_flag,
+        is_target_whitelist=is_target_whitelist_flag,
         blacklist_reason_str=blacklist_reason_str,
         gban_reason_str=gban_reason_str,
         current_chat_id_for_status=update.effective_chat.id
@@ -3211,6 +3256,7 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     developer_users_count = "N/A"
     sudo_users_count = "N/A"
     support_users_count = "N/A"
+    whitelist_users_count = "N/A"
     gban_count = "N/A"
     chat_count = "N/A"
 
@@ -3233,6 +3279,9 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             cursor.execute("SELECT COUNT(*) FROM support_users")
             support_users_count = str(cursor.fetchone()[0])
 
+            cursor.execute("SELECT COUNT(*) FROM whitelist_users")
+            whitelist_users_count = str(cursor.fetchone()[0])
+
             cursor.execute("SELECT COUNT(*) FROM global_bans")
             gban_count = str(cursor.fetchone()[0])
                 
@@ -3242,7 +3291,7 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     except sqlite3.Error as e:
         logger.error(f"SQLite error fetching counts for /stats: {e}", exc_info=True)
         (known_users_count, blacklisted_count, developer_users_count, sudo_users_count, 
-         support_users_count, gban_count, chat_count) = ("DB Error",) * 7
+         support_users_count, whitelist_users_count, gban_count, chat_count) = ("DB Error",) * 7
 
     stats_lines = [
         "<b>📊 Bot Database Stats:</b>\n",
@@ -3251,6 +3300,7 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         f" <b>• 🛃 Developer Users:</b> <code>{developer_users_count}</code>",
         f" <b>• 🛡 Sudo Users:</b> <code>{sudo_users_count}</code>",
         f" <b>• 👷‍♂️ Support Users:</b> <code>{support_users_count}</code>",
+        f" <b>• 🔰 Whitelist Users:</b> <code>{whitelist_users_count}</code>",
         f" <b>• 🚫 Blacklisted Users:</b> <code>{blacklisted_count}</code>",
         f" <b>• 🌍 Globally Banned Users:</b> <code>{gban_count}</code>"
     ]
@@ -4162,6 +4212,9 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
     if is_privileged_user(target_entity.id) or target_entity.id == context.bot.id:
         await message.reply_text("LoL, looks like... Someone tried blacklist privileged user. Nice Try.")
         return
+    if is_whitelisted(target_entity.id):
+        await message.reply_text("This user is on the whitelist and cannot be blacklisted.")
+        return
 
     user_display = create_user_html_link(target_entity)
 
@@ -4333,6 +4386,9 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
     if is_privileged_user(target_entity.id) or target_entity.id == context.bot.id:
         await message.reply_text("LoL, looks like... Someone tried global ban privileged user. Nice Try.")
+        return
+    if is_whitelisted(target_entity.id):
+        await message.reply_text("This user is on the whitelist and cannot be globally banned.")
         return
 
     user_display = create_user_html_link(target_entity)
@@ -4579,6 +4635,133 @@ async def enforce_gban_command(update: Update, context: ContextTypes.DEFAULT_TYP
             "<b>Notice:</b> This means users on the global ban list will be able to join and participate here. "
             "This may expose your community to users banned for severe offenses like spam, harassment, or illegal activities."
         )
+
+async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    message = update.message
+    
+    if not is_owner_or_dev(user.id):
+        return
+
+    target_user: User | None = None
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
+    else:
+        await message.reply_text("Usage: /addsupport <ID/@username/reply>")
+        return
+
+    if not target_user:
+        await message.reply_text("Skrrrt... I can't find the user.")
+        return
+        
+    if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
+        await message.reply_text("🧐 Added to Whitelist can only be users.")
+        return
+
+    user_display = create_user_html_link(target_user)
+
+    if is_privileged_user(target_user.id):
+        await message.reply_html(f"User {user_display} already has a privileged or protected role and cannot be whitelisted.")
+        return
+
+    gban_reason = get_gban_reason(target_user.id)
+    blist_reason = get_blacklist_reason(target_user.id)
+
+    gban_reason = get_gban_reason(target_user.id)
+    if gban_reason:
+        await message.reply_html(
+            f"❌ <b>Promotion Failed!</b>\n\n"
+            f"User {user_display} (<code>{target_user.id}</code>) cannot be on <code>Whitelist</code> because they are <b>Globally Bannned</b>.\n\n"
+            f"<b>Reason:</b> {safe_escape(gban_reason)}\n\n"
+            f"<i>For security reasons, this action has been blocked. "
+            f"Please remove global ban first using /ungban if you wish to proceed.</i>"
+        )
+        return
+    blist_reason = get_blacklist_reason(target_user.id)
+    if blist_reason:
+        await message.reply_html(
+            f"❌ <b>Promotion Failed!</b>\n\n"
+            f"User {user_display} (<code>{target_user.id}</code>) cannot be on <code>Whitelist</code> because they are on the <b>Blacklist</b>.\n\n"
+            f"<b>Reason:</b> {safe_escape(blist_reason)}\n\n"
+            f"<i>For security reasons, this action has been blocked. "
+            f"Please remove the user from the blacklist first using /unblist if you wish to proceed.</i>"
+        )
+        return
+
+    if add_to_whitelist(target_user.id, user.id):
+        await message.reply_html(f"✅ User {user_display} (<code>{target_user.id}</code>) has been added to the whitelist.")
+        
+        try:
+            current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            admin_link = create_user_html_link(user)
+
+            log_message = (
+                f"<b>#WHITELISTED</b>\n\n"
+                f"<b>User:</b> {user_display}\n"
+                f"<b>User ID:</b> <code>{target_user.id}</code>\n"
+                f"<b>Admin:</b> {admin_link}\n"
+                f"<b>Date:</b> <code>{current_time}</code>"
+            )
+            await send_operational_log(context, log_message)
+        except Exception as e:
+            logger.error(f"Error sending #WHITELISTED log: {e}", exc_info=True)
+    else:
+        await message.reply_text("Failed to add user to whitelist (they might be already on it).")
+
+async def unwhitelist_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    if not is_owner_or_dev(user.id):
+        return
+
+    target_user: User | None = None
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
+    else:
+        await message.reply_text("Usage: /delsupport <ID/@username/reply>")
+        return
+        
+    if not target_user:
+        await message.reply_text("Skrrrt... I can't find the user.")
+        return
+
+    if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
+        await message.reply_text("🧐 Deleted from Whitelist can only be users.")
+        return
+
+    if not is_whitelisted(target_user.id):
+        await update.message.reply_html(f"User {target_user.mention_html()} is not on the whitelist.")
+        return
+        
+    if remove_from_whitelist(target_user.id):
+        user_display = create_user_html_link(target_user)
+        await update.message.reply_html(f"✅ User {user_display} (<code>{target_user.id}</code>) has been removed from the whitelist.")
+
+        try:
+            current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            admin_link = create_user_html_link(user)
+
+            log_message = (
+                f"<b>#UNWHITELISTED</b>\n\n"
+                f"<b>User:</b> {user_display}\n"
+                f"<b>User ID:</b> <code>{target_user.id}</code>\n"
+                f"<b>Admin:</b> {admin_link}\n"
+                f"<b>Date:</b> <code>{current_time}</code>"
+            )
+            await send_operational_log(context, log_message)
+        except Exception as e:
+            logger.error(f"Error sending #UNWHITELISTED log: {e}", exc_info=True)
+    else:
+        await update.message.reply_text("Failed to remove user from the whitelist.")
 
 async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
