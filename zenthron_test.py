@@ -5849,6 +5849,7 @@ async def main() -> None:
         application.add_handler(CommandHandler("delsupport", delsupport_command))
         application.add_handler(CommandHandler("setrank", setrank_command))
         application.add_handler(CommandHandler("listsupport", listsupport_command))
+        application.add_handler(CommandHandler("listwhitelist", listwhitelist_command))
         application.add_handler(CommandHandler("shell", shell_command))
         application.add_handler(CommandHandler("execute", execute_script_command))
 
