@@ -4137,7 +4137,7 @@ async def handle_left_group_member(update: Update, context: ContextTypes.DEFAULT
         remove_chat_from_db(chat.id)
         return
         
-    if is_gban_enforced(chat.id)
+    if is_gban_enforced(chat.id):
         gban_reason = get_gban_reason(left_member.id)
         if gban_reason
             await context.bot.ban_chat_member(chat.id, left_member.id)
