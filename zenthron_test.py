@@ -4733,7 +4733,7 @@ async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-            admin_link = create_user_html_link(admin)
+            admin_link = create_user_html_link(user)
 
             log_message = (
                 f"<b>#WHITELISTED</b>\n\n"
