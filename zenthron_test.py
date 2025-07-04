@@ -4039,8 +4039,6 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
             except Exception as e:
                 logger.error(f"Failed to send join notification to owner for group {chat.id}: {e}")
 
-    should_clean = should_clean_service(chat.id)
-
     welcome_enabled, custom_text = get_welcome_settings(chat.id)
     gban_enabled = is_gban_enforced(chat.id)
 
@@ -4118,6 +4116,8 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
                         )
                     except Exception as e:
                         logger.error(f"Failed to send welcome message for user {member.id} in chat {chat.id}: {e}")
+
+    should_clean = should_clean_service(chat.id)
 
     if should_clean:
         try:
