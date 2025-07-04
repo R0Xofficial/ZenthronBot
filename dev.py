@@ -217,20 +217,8 @@ def init_db():
 
 # --- HTML dictionary ---
 def safe_escape(text: str) -> str:
-    escape_dict = {
-        "&": "&",
-        "<": "<",
-        ">": ">",
-        '"': '"',
-        "'": "’",
-    }
-
-    text_str = str(text)
-
-    for char, replacement in escape_dict.items():
-        text_str = text_str.replace(char, replacement)
-        
-    return text_str
+    escaped_text = html.escape(str(text))
+    return escaped_text.replace("'", "’")
 
 # --- Start Message ---
 async def send_startup_log(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -5464,7 +5452,7 @@ async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
 
     command = " ".join(context.args)
-    status_message = await update.message.reply_html(f"🔩 Executing: <code>{html.escape(command)}</code>")
+    status_message = await update.message.reply_html(f"🔩 Executing: <code>{safe_escape(command)}</code>")
 
     try:
         process = await asyncio.create_subprocess_shell(
@@ -5477,9 +5465,9 @@ async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
         result_text = ""
         if stdout:
-            result_text += f"<code>{html.escape(stdout.decode('utf-8', errors='ignore'))}</code>\n"
+            result_text += f"<code>{safe_escape(stdout.decode('utf-8', errors='ignore'))}</code>\n"
         if stderr:
-            result_text += f"<code>{html.escape(stderr.decode('utf-8', errors='ignore'))}</code>\n"
+            result_text += f"<code>{safe_escape(stderr.decode('utf-8', errors='ignore'))}</code>\n"
         if not stdout and not stderr:
             result_text = "✅ Command executed with no output."
             
@@ -5495,7 +5483,7 @@ async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await status_message.edit_text("<b>Error:</b> Command timed out after 60 seconds.")
     except Exception as e:
         logger.error(f"Error executing shell command '{command}': {e}", exc_info=True)
-        await status_message.edit_text(f"<b>Error:</b> {html.escape(str(e))}")
+        await status_message.edit_text(f"<b>Error:</b> {safe_escape(str(e))}")
 
 async def execute_script_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
