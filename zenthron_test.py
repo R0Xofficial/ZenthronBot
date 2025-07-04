@@ -5845,6 +5845,8 @@ async def main() -> None:
         application.add_handler(CommandHandler("adddev", adddev_command))
         application.add_handler(CommandHandler("deldev", deldev_command))
         application.add_handler(CommandHandler("listdevs", listdevs_command))
+        application.add_handler(CommandHandler("whitelist", whitelist_user_command))
+        application.add_handler(CommandHandler("unwhitelist", unwhitelist_user_command))
         application.add_handler(CommandHandler("addsupport", addsupport_command))
         application.add_handler(CommandHandler("delsupport", delsupport_command))
         application.add_handler(CommandHandler("setrank", setrank_command))
