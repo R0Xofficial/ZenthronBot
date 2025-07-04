@@ -4731,6 +4731,7 @@ async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_T
 
 async def unwhitelist_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
+    message = update.message
     if not is_owner_or_dev(user.id):
         return
 
