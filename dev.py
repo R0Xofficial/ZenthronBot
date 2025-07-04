@@ -217,8 +217,20 @@ def init_db():
 
 # --- HTML dictionary ---
 def safe_escape(text: str) -> str:
-    escaped_text = html.escape(str(text))
-    return escaped_text.replace("'", "’")
+    escape_dict = {
+        "&": "&",
+        "<": "<",
+        ">": ">",
+        '"': '"',
+        "'": "’",
+    }
+
+    text_str = str(text)
+
+    for char, replacement in escape_dict.items():
+        text_str = text_str.replace(char, replacement)
+        
+    return text_str
 
 # --- Start Message ---
 async def send_startup_log(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1205,27 +1217,11 @@ def get_warn_limit(chat_id: int) -> int:
             res = conn.cursor().execute("SELECT warn_limit FROM bot_chats WHERE chat_id = ?", (chat_id,)).fetchone()
             if res and res[0] is not None and res[0] > 0:
                 return res[0]
+            # W przeciwnym razie, zwróć domyślny.
             return MAX_WARNS
     except sqlite3.Error:
         logger.error(f"Error getting warn limit for chat {chat_id}")
         return MAX_WARNS
-
-async def _find_target_and_remaining_args(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Tuple[User | Chat | None, list[str]]:
-    message = update.message
-    parts = message.text.split()
-    target_entity: User | Chat | None = None
-    remaining_args: list[str] = []
-
-    if message.reply_to_message:
-        target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
-        remaining_args = parts[1:]
-
-    elif len(parts) > 1:
-        target_input = parts[1]
-        target_entity = await resolve_user_with_telethon(context, target_input, update)
-        remaining_args = parts[2:]
-            
-    return target_entity, remaining_args
 
 # --- Command Handlers ---
 HELP_TEXT = """
@@ -1523,9 +1519,22 @@ def format_entity_info(entity: Chat | User,
     return "\n".join(info_lines)
 
 async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    target_entity, _ = await _find_target_and_remaining_args(update, context)
-
-    if not target_entity:
+    target_entity: Chat | User | None = None
+    
+    if update.message.reply_to_message:
+        target_entity = update.message.reply_to_message.sender_chat or update.message.reply_to_message.from_user
+    elif context.args:
+        target_input = " ".join(context.args)
+        
+        target_entity = await resolve_user_with_telethon(context, target_input, update)
+        
+        if not target_entity:
+            try:
+                target_entity = await context.bot.get_chat(target_input)
+            except Exception:
+                await update.message.reply_text(f"Error: I couldn't find the user. Most likely I've never seen him.")
+                return
+    else:
         target_entity = update.message.sender_chat or update.effective_user
 
     if not target_entity:
@@ -1656,8 +1665,27 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
-    target_entity, remaining_args = await _find_target_and_remaining_args(update, context)
+    target_entity: User | Chat | None = None
+    args_after_target: list[str] = []
 
+    if message.reply_to_message:
+        target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
+        if context.args:
+            args_after_target = context.args
+    elif context.args:
+        target_input = context.args[0]
+        if len(context.args) > 1:
+            args_after_target = context.args[1:]
+        
+        target_entity = await resolve_user_with_telethon(context, target_input, update)
+        
+        if not target_entity and (target_input.isdigit() or (target_input.startswith('-') and target_input[1:].isdigit())):
+            try:
+                target_entity = await context.bot.get_chat(int(target_input))
+            except:
+                if target_input.isdigit():
+                    target_entity = User(id=int(target_input), first_name="", is_bot=False)
+    
     if not target_entity:
         await send_safe_reply(update, context, text="Usage: /ban <ID/@username/reply> [duration] [reason]")
         return
@@ -1731,10 +1759,27 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
-    target_entity, _ = await _find_target_and_remaining_args(update, context)
+    target_entity: User | Chat | None = None
+    
+    if message.reply_to_message:
+        target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
+    elif context.args:
+        target_arg = context.args[0]
+        target_entity = await resolve_user_with_telethon(context, target_arg, update)
+        
+        if not target_entity and (target_arg.isdigit() or (target_arg.startswith('-') and target_arg[1:].isdigit())):
+            try:
+                target_entity = await context.bot.get_chat(int(target_arg))
+            except:
+                if target_arg.isdigit():
+                    target_entity = User(id=int(target_arg), first_name="", is_bot=False)
+
+    else:
+        await send_safe_reply(update, context, text="Usage: /unban <ID/@username/reply>")
+        return
 
     if not target_entity:
-        await send_safe_reply(update, context, text="Usage: /unban <ID/@username/reply>")
+        await send_safe_reply(update, context, text=f"Skrrrt... I can't find the user.")
         return
         
     is_user = isinstance(target_entity, User) or (isinstance(target_entity, Chat) and target_entity.type == ChatType.PRIVATE)
@@ -1776,17 +1821,37 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
-    target_entity, remaining_args = await _find_target_and_remaining_args(update, context)
+    target_user: User | None = None
+    args_after_target: list[str] = []
 
-    if not target_entity:
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+        if context.args:
+            args_after_target = context.args
+    elif context.args:
+        target_input = context.args[0]
+        if len(context.args) > 1:
+            args_after_target = context.args[1:]
+        
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        
+        if not target_user and target_input.isdigit():
+            try:
+                target_user = await context.bot.get_chat(int(target_input))
+            except:
+                logger.warning(f"Could not resolve full profile for ID {target_input} in MUTE. Proceeding with ID only.")
+                target_user = User(id=int(target_input), first_name="", is_bot=False)
+    else:
         await send_safe_reply(update, context, text="Usage: /mute <ID/@username/reply> [duration] [reason]")
         return
 
-    if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="🧐 Mute can only be applied to users.")
+    if not target_user:
+        await send_safe_reply(update, context, text=f"Skrrrt... I can't find the user.")
         return
 
-    target_user = target_entity
+    if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="🧐 Mute can only be applied to users.")
+        return
         
     duration_str: str | None = None
     reason: str = "No reason provided."
@@ -1846,17 +1911,31 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
-    target_entity, _ = await _find_target_and_remaining_args(update, context)
-
-    if not target_entity:
+    target_user: User | None = None
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        
+        if not target_user and target_input.isdigit():
+            try:
+                target_user = await context.bot.get_chat(int(target_input))
+            except:
+                logger.warning(f"Could not resolve full profile for ID {target_input} in UNMUTE. Proceeding with ID only.")
+                target_user = User(id=int(target_input), first_name="", is_bot=False)
+    else:
         await send_safe_reply(update, context, text="Usage: /unmute <ID/@username/reply>")
         return
 
-    if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
+    if not target_user:
+        await send_safe_reply(update, context, text=f"Skrrrt... I can't find the user.")
+        return
+
+    if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
         await send_safe_reply(update, context, text="🧐 Unmute can only be applied to users.")
         return
-    
-    target_user = target_entity
 
     permissions_to_restore = ChatPermissions(
         can_send_messages=True, can_send_audios=True, can_send_documents=True,
@@ -1886,19 +1965,39 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
-    target_entity, reason_parts = await _find_target_and_remaining_args(update, context)
+    target_user: User | None = None
+    args_after_target: list[str] = []
 
-    if not target_entity:
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+        if context.args:
+            args_after_target = context.args
+    elif context.args:
+        target_input = context.args[0]
+        if len(context.args) > 1:
+            args_after_target = context.args[1:]
+        
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        
+        if not target_user and target_input.isdigit():
+            try:
+                target_user = await context.bot.get_chat(int(target_input))
+            except:
+                logger.warning(f"Could not resolve full profile for ID {target_input} in KICK. Proceeding with ID only.")
+                target_user = User(id=int(target_input), first_name="", is_bot=False)
+    else:
         await send_safe_reply(update, context, text="Usage: /kick <ID/@username/reply> [reason]")
         return
 
-    if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="🧐 Kick can only be applied to users.")
+    if not target_user:
+        await send_safe_reply(update, context, text=f"Skrrrt... I can't find the user.")
         return
 
-    target_user = target_entity
-    
-    reason = " ".join(reason_parts) if reason_parts else "No reason provided."
+    reason: str = " ".join(args_after_target) or "No reason provided."
+
+    if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="🧐 Kick can only be applied to users.")
+        return
 
     if target_user.id == context.bot.id or target_user.id == user_who_kicks.id:
         await send_safe_reply(update, context, text="Nuh uh... This user cannot be kicked."); return
@@ -1995,23 +2094,39 @@ async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if not await _can_user_perform_action(update, context, 'can_promote_members', "Why should I listen to a person with no privileges for this? You need 'can_promote_members' permission.", allow_bot_privileged_override=True):
         return
 
-    target_entity, title_parts = await _find_target_and_remaining_args(update, context)
+    target_user: User | None = None
+    args_for_title = list(context.args)
 
-    if not target_entity:
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        args_for_title = list(context.args[1:])
+        
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        
+        if not target_user and target_input.isdigit():
+            try:
+                target_user = await context.bot.get_chat(int(target_input))
+            except:
+                logger.warning(f"Could not resolve full profile for ID {target_input} in PROMOTE. Proceeding with ID only.")
+                target_user = User(id=int(target_input), first_name="", is_bot=False)
+    else:
         await message.reply_text("Usage: /promote <ID/@username/reply> [optional admin title]")
         return
-    
-    if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
-        await message.reply_text("🧐 Promotion can only be applied to users."); return
 
-    target_user = target_entity
+    if not target_user:
+        await message.reply_text(f"Skrrrt... I can't find the user..")
+        return
+
+    provided_custom_title = " ".join(args_for_title) if args_for_title else None
     
+    if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
+        await message.reply_text("🧐 Promotion can only be applied to users."); return
     if target_user.id == context.bot.id:
         await message.reply_text("Skrrrt... I'm a bot!!! I can't promote myself."); return
     if target_user.is_bot:
         await message.reply_text("Skrrrt... Bots should be promoted manually with specific rights. So... I can't help you 😱"); return
-
-    provided_custom_title = " ".join(title_parts) if title_parts else None
 
     try:
         target_chat_member = await context.bot.get_chat_member(chat.id, target_user.id)
@@ -2062,18 +2177,33 @@ async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not await _can_user_perform_action(update, context, 'can_promote_members', "Why should I listen to a person with no privileges for this? You need 'can_promote_members' permission.", allow_bot_privileged_override=True):
         return
     
-    target_entity, _ = await _find_target_and_remaining_args(update, context)
+    target_user: User | None = None
 
-    if not target_entity:
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        
+        if not target_user and target_input.isdigit():
+            try:
+                target_user = await context.bot.get_chat(int(target_input))
+            except:
+                logger.warning(f"Could not resolve full profile for ID {target_input} in DEMOTE. Proceeding with ID only.")
+                target_user = User(id=int(target_input), first_name="", is_bot=False)
+    else:
         await message.reply_text("Usage: /demote <ID/@username/reply>")
         return
+
+    if not target_user:
+        await message.reply_text(f"Skrrrt... I can't find the user..")
+        return
         
-    if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
+    if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
         await message.reply_text("🧐 Demotion can only be applied to users.")
         return
-
-    target_user = target_entity
-    
+        
     if target_user.id == context.bot.id:
         await message.reply_text("Wait a minute! I can't demote myself. It's a paradox 😱.")
         return
@@ -2305,12 +2435,20 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     except TelegramError as e:
         logger.warning(f"Could not get status for reporter {reporter.id} in /report: {e}")
 
-    target_entity, reason_parts = await _find_target_and_remaining_args(update, context)
+    target_entity: Chat | User | None = None
+    args_for_reason = list(context.args)
 
+    if message.reply_to_message:
+        target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        args_for_reason = list(context.args[1:])
+        target_entity = await resolve_user_with_telethon(context, target_input, update)
+    
     if not target_entity:
         return
-
-    reason = " ".join(reason_parts) if reason_parts else "No specific reason provided."
+        
+    reason = " ".join(args_for_reason) if args_for_reason else "No specific reason provided."
 
     try:
         target_member = await chat.get_member(target_entity.id)
@@ -2786,15 +2924,32 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Only admins with ban permissions can issue warnings."):
         return
 
-    target_entity, reason_parts = await _find_target_and_remaining_args(update, context)
-
-    if not target_entity:
-        await update.message.reply_text("Usage: /warn <ID/@username/reply> [reason]")
+    target_user: User | None = None
+    reason_parts = []
+    
+    if update.message.reply_to_message:
+        target_user = update.message.reply_to_message.from_user
+        reason_parts = context.args
+    elif context.args:
+        target_input = context.args[0]
+        resolved_entity = await resolve_user_with_telethon(context, target_input, update)
+        
+        if isinstance(resolved_entity, User):
+            target_user = resolved_entity
+        else:
+            try:
+                user_id = int(target_input)
+                target_user = User(id=user_id, first_name=f"User {user_id}", is_bot=False)
+            except ValueError:
+                pass
+        
+        reason_parts = context.args[1:]
+    
+    if not target_user:
+        await update.message.reply_text("Usage: /warn <ID/@user/reply> [reason]")
         return
         
-    target_user = target_entity
-    
-    reason = " ".join(reason_parts) if reason_parts else "No reason provided."
+    reason = " ".join(reason_parts) or "No reason provided."
 
     warn_count = add_warning(chat.id, target_user.id, reason, warner.id)
     user_display = create_user_html_link(target_user)
@@ -2827,12 +2982,28 @@ async def warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await send_safe_reply(update, context, text="Huh? You can't check warnings in private chat...")
         return
     
-    target_entity, _ = await _find_target_and_remaining_args(update, context)
-
-    if not target_entity:
-        target_entity = update.effective_user
+    target_user: User | None = None
+    
+    if update.message.reply_to_message:
+        target_user = update.message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        resolved_entity = await resolve_user_with_telethon(context, target_input, update)
         
-    target_user = target_entity
+        if isinstance(resolved_entity, User):
+            target_user = resolved_entity
+        else:
+            try:
+                user_id = int(target_input)
+                target_user = User(id=user_id, first_name=f"User {user_id}", is_bot=False)
+            except ValueError:
+                pass
+    else:
+        target_user = update.effective_user
+
+    if not target_user:
+        await update.message.reply_text("Could not find that user. Please provide a valid User ID, @username, or reply to a message.")
+        return
         
     user_warnings = get_warnings(update.effective_chat.id, target_user.id)
     user_display = create_user_html_link(target_user)
@@ -2859,13 +3030,16 @@ async def reset_warnings_command(update: Update, context: ContextTypes.DEFAULT_T
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Only admins with ban permissions can reset warnings."):
         return
 
-    target_entity, _ = await _find_target_and_remaining_args(update, context)
-
-    if not target_entity:
-        await update.message.reply_text("Usage: /resetwarns <@username/reply>")
+    target_user: User | None = None
+    if update.message.reply_to_message:
+        target_user = update.message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+    
+    if not target_user:
+        await update.message.reply_text("Usage: /resetwarns <ID/@username/reply>")
         return
-        
-    target_user = target_entity
         
     if reset_warnings(update.effective_chat.id, target_user.id):
         user_display = create_user_html_link(target_user)
@@ -2907,20 +3081,37 @@ async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     chat = update.effective_chat
     user = update.effective_user
     
-    target_entity, _ = await _find_target_and_remaining_args(update, context)
-
-    if target_entity:
-        if isinstance(target_entity, User):
-            await message.reply_html(f"<b>{safe_escape(target_entity.first_name)}'s ID is:</b> <code>{target_entity.id}</code>")
-        else:
-            entity_name = getattr(target_entity, 'title', 'Chat/Channel')
-            await message.reply_html(f"<b>The ID of {safe_escape(entity_name)} is:</b> <code>{target_entity.id}</code>")
+    target_user: User | None = None
     
-    else:
-        if chat.type == ChatType.PRIVATE:
-            await message.reply_html(f"<b>Your ID is:</b> <code>{user.id}</code>")
+    if message.reply_to_message:
+        if message.reply_to_message.sender_chat:
+            target_chat = message.reply_to_message.sender_chat
+            await message.reply_html(f"<b>The ID of {safe_escape(target_chat.title)} is:</b> <code>{target_chat.id}</code>")
+            return
         else:
-            await message.reply_html(f"<b>This chat's ID is:</b> <code>{chat.id}</code>")
+            target_user = message.reply_to_message.from_user
+
+    elif context.args:
+        target_input = context.args[0]
+        if target_input.startswith('@'):
+            resolved_entity = await resolve_user_with_telethon(context, target_input, update)
+            if isinstance(resolved_entity, User):
+                target_user = resolved_entity
+            else:
+                await message.reply_text(f"Could not find a user with the username {safe_escape(target_input)}.")
+                return
+        else:
+            await message.reply_text("Invalid argument. Please use @username or reply to a message to get a user's ID.")
+            return
+
+    if target_user:
+        await message.reply_html(f"<b>{safe_escape(target_user.first_name)}'s ID is:</b> <code>{target_user.id}</code>")
+        return
+
+    if chat.type == ChatType.PRIVATE:
+        await message.reply_html(f"<b>Your ID is:</b> <code>{user.id}</code>")
+    else:
+        await message.reply_html(f"<b>This chat's ID is:</b> <code>{chat.id}</code>")
     
 async def _handle_action_command(update, context, texts, gifs, name, req_target=True, msg=""):
     target_mention = None
@@ -3944,21 +4135,33 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         logger.warning(f"Unauthorized /blist attempt by user {user.id}.")
         return
 
-    target_entity, reason_parts = await _find_target_and_remaining_args(update, context)
+    target_entity: User | Chat | None = None
+    reason: str = "No reason provided."
 
+    if message.reply_to_message:
+        target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
+        if context.args:
+            reason = " ".join(context.args)
+    elif context.args:
+        target_input = context.args[0]
+        if len(context.args) > 1:
+            reason = " ".join(context.args[1:])
+        target_entity = await resolve_user_with_telethon(context, target_input, update)
+        if not target_entity and target_input.isdigit():
+            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+    else:
+        await message.reply_text("Usage: /blist <ID/@username/reply> [reason]"); return
+    
     if not target_entity:
-        await message.reply_text("Usage: /blist <ID/@username/reply> [reason]")
+        await message.reply_text("Skrrrt... I can't find the user.")
         return
 
     if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
         await message.reply_text("🧐 This action can only be applied to users.")
         return
-    
     if is_privileged_user(target_entity.id) or target_entity.id == context.bot.id:
         await message.reply_text("LoL, looks like... Someone tried blacklist privileged user. Nice Try.")
         return
-
-    reason = " ".join(reason_parts) if reason_parts else "No reason provided."
 
     user_display = create_user_html_link(target_entity)
 
@@ -4000,18 +4203,24 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
         logger.warning(f"Unauthorized /unblist attempt by user {user.id}.")
         return
 
-    target_entity, _ = await _find_target_and_remaining_args(update, context)
-    
-    if not target_entity:
-        await message.reply_text("Specify a user ID/@username (or reply) to unblacklist."); 
-        return
+    target_entity: User | Chat | None = None
+    if message.reply_to_message:
+        target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        target_entity = await resolve_user_with_telethon(context, target_input, update)
+        if not target_entity and target_input.isdigit():
+            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+    else:
+        await message.reply_text("Specify a user ID/@username (or reply) to unblacklist."); return
         
+    if not target_entity:
+        await message.reply_text("Skrrrt... I can't find the user."); return
+    
     if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
-        await message.reply_text("🧐 This action can only be applied to users."); 
-        return
+        await message.reply_text("🧐 This action can only be applied to users."); return
     if target_entity.id == OWNER_ID:
-        await message.reply_text("WHAT? The Owner is never on the blacklist."); 
-        return
+        await message.reply_text("WHAT? The Owner is never on the blacklist."); return
 
     user_display = create_user_html_link(target_entity)
 
@@ -4096,12 +4305,29 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         logger.warning(f"Unauthorized /gban attempt by user {user_who_gbans.id}.")
         return
 
-    target_entity, reason_parts = await _find_target_and_remaining_args(update, context)
-    reason = " ".join(reason_parts) if reason_parts else "No reason provided."
+    target_entity: User | Chat | None = None
+    reason: str = "No reason provided."
 
-    if not target_entity:
+    if message.reply_to_message:
+        target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
+        if context.args:
+            reason = " ".join(context.args)
+    elif context.args:
+        target_input = context.args[0]
+        if len(context.args) > 1:
+            reason = " ".join(context.args[1:])
+        
+        target_entity = await resolve_user_with_telethon(context, target_input, update)
+        
+        if not target_entity and target_input.isdigit():
+            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+    else:
         await message.reply_text("Usage: /gban <ID/@username/reply> [reason]"); return
     
+    if not target_entity:
+        await message.reply_text(f"Skrrrt... I can't find the user.");
+        return
+
     if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
         await message.reply_text("🧐 This action can only be applied to users.")
         return
@@ -4163,11 +4389,20 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         logger.warning(f"Unauthorized /ungban attempt by user {user_who_ungbans.id}.")
         return
 
-    target_entity, _ = await _find_target_and_remaining_args(update, context)
-
-    if not target_entity:
+    target_entity: User | Chat | None = None
+    if message.reply_to_message:
+        target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        target_entity = await resolve_user_with_telethon(context, target_input, update)
+        if not target_entity and target_input.isdigit():
+            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+    else:
         await message.reply_text("Usage: /ungban <ID/@username/reply>"); return
-    
+        
+    if not target_entity:
+        await message.reply_text("Skrrrt... I can't find the user."); return
+
     if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
         await message.reply_text("🧐 This action can only be applied to users."); return
 
@@ -4355,10 +4590,20 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         logger.warning(f"Unauthorized /addsupport attempt by user {admin.id}.")
         return
 
-    target_user, _ = await _find_target_and_remaining_args(update, context)
+    target_user: User | None = None
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
+    else:
+        await message.reply_text("Usage: /addsupport <ID/@username/reply>")
+        return
 
     if not target_user:
-        await message.reply_text("Usage: /addsupport <ID/@username/reply>")
+        await message.reply_text("Skrrrt... I can't find the user.")
         return
 
     user_display = create_user_html_link(target_user)
@@ -4430,10 +4675,20 @@ async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         logger.warning(f"Unauthorized /delsupport attempt by user {admin.id}.")
         return
 
-    target_user, _ = await _find_target_and_remaining_args(update, context)
-
-    if not target_user:
+    target_user: User | None = None
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
+    else:
         await message.reply_text("Usage: /delsupport <ID/@username/reply>")
+        return
+        
+    if not target_user:
+        await message.reply_text("Skrrrt... I can't find the user.")
         return
 
     if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
@@ -4481,10 +4736,27 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         logger.warning(f"Unauthorized /addsudo attempt by user {admin.id}.")
         return
 
-    target_user, _ = await _find_target_and_remaining_args(update, context)
+    target_user: User | None = None
+
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        
+        if not target_user and target_input.isdigit():
+            try:
+                target_user = await context.bot.get_chat(int(target_input))
+            except:
+                logger.warning(f"Could not resolve full profile for ID {target_input} in ADDSUDO. Creating a minimal User object.")
+                target_user = User(id=int(target_input), first_name="", is_bot=False)
+    else:
+        await message.reply_text("Usage: /addsudo <ID/@username/reply>")
+        return
 
     if not target_user:
-        await message.reply_text("Usage: /addsudo <ID/@username/reply>")
+        await message.reply_text("Skrrrt... I can't find the user.")
         return
 
     user_display = create_user_html_link(target_user)
@@ -4560,10 +4832,27 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         logger.warning(f"Unauthorized /delsudo attempt by user {admin.id}.")
         return
 
-    target_user, _ = await _find_target_and_remaining_args(update, context)
+    target_user: User | None = None
 
-    if not target_user:
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        
+        if not target_user and target_input.isdigit():
+            try:
+                target_user = await context.bot.get_chat(int(target_input))
+            except:
+                logger.warning(f"Could not resolve full profile for ID {target_input} in DELSUDO. Creating a minimal User object.")
+                target_user = User(id=int(target_input), first_name="", is_bot=False)
+    else:
         await message.reply_text("Usage: /delsudo <ID/@username/reply>")
+        return
+        
+    if not target_user:
+        await message.reply_text("Skrrrt... I can't find the user..")
         return
 
     if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
@@ -4615,18 +4904,30 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         logger.warning(f"Unauthorized /setrank attempt by user {admin.id}.")
         return
 
-    target_user, remaining_args = await _find_target_and_remaining_args(update, context)
-    new_role_shortcut = remaining_args[0].lower() if remaining_args else None    
+    target_user: User | None = None
+    args_for_role: list[str] = []
+
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+        args_for_role = context.args
+    elif context.args:
+        target_input = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
+        args_for_role = context.args[1:]
+    
+    if not target_user or not args_for_role:
+        await message.reply_text("Usage: /setrank <ID/@username/reply> [support/sudo/dev]")
+        return
+
+    new_role_shortcut = args_for_role[0].lower()
 
     role_map = {
         "support": "Support",
         "sudo": "Sudo",
         "dev": "Developer"
     }
-
-    if not target_user or not new_role_shortcut:
-        await message.reply_text("Usage: /setrank <ID/@username/reply> [support/sudo/dev]")
-        return
 
     if new_role_shortcut not in role_map:
         await message.reply_text(f"Invalid role '{safe_escape(new_role_shortcut)}'. Please use one of: support, sudo, dev.")
@@ -4705,10 +5006,20 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         logger.warning(f"Unauthorized /adddev attempt by user {user.id}.")
         return
 
-    target_user, _ = await _find_target_and_remaining_args(update, context)
+    target_user: User | None = None
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
+    else:
+        await message.reply_text("Usage: /adddev <ID/@username/reply>")
+        return
 
     if not target_user:
-        await message.reply_text("Usage: /adddev <ID/@username/reply>")
+        await message.reply_text("Skrrrt... I can't find the user.")
         return
 
     user_display = create_user_html_link(target_user)
@@ -4776,10 +5087,20 @@ async def deldev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         logger.warning(f"Unauthorized /deldev attempt by user {user.id}.")
         return
 
-    target_user, _ = await _find_target_and_remaining_args(update, context)
-
-    if not target_user:
+    target_user: User | None = None
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
+    else:
         await message.reply_text("Usage: /deldev <ID/@username/reply>")
+        return
+        
+    if not target_user:
+        await message.reply_text("Skrrrt... I can't find the user.")
         return
 
     if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
@@ -5143,7 +5464,7 @@ async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
 
     command = " ".join(context.args)
-    status_message = await update.message.reply_html(f"🔩 Executing: <code>{safe_escape(command)}</code>")
+    status_message = await update.message.reply_html(f"🔩 Executing: <code>{html.escape(command)}</code>")
 
     try:
         process = await asyncio.create_subprocess_shell(
@@ -5156,9 +5477,9 @@ async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
         result_text = ""
         if stdout:
-            result_text += f"<code>{safe_escape(stdout.decode('utf-8', errors='ignore'))}</code>\n"
+            result_text += f"<code>{html.escape(stdout.decode('utf-8', errors='ignore'))}</code>\n"
         if stderr:
-            result_text += f"<code>{safe_escape(stderr.decode('utf-8', errors='ignore'))}</code>\n"
+            result_text += f"<code>{html.escape(stderr.decode('utf-8', errors='ignore'))}</code>\n"
         if not stdout and not stderr:
             result_text = "✅ Command executed with no output."
             
@@ -5174,7 +5495,7 @@ async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await status_message.edit_text("<b>Error:</b> Command timed out after 60 seconds.")
     except Exception as e:
         logger.error(f"Error executing shell command '{command}': {e}", exc_info=True)
-        await status_message.edit_text(f"<b>Error:</b> {safe_escape(str(e))}")
+        await status_message.edit_text(f"<b>Error:</b> {html.escape(str(e))}")
 
 async def execute_script_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
