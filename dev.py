@@ -3968,7 +3968,10 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
             safe_chat_title = safe_escape(chat.title or f"Chat ID {chat.id}")
             link_line = f"\n<b>Link:</b> @{chat.username}" if chat.username else ""
             pm_text = (f"<b>#ADDEDTOGROUP</b>\n\n<b>Name:</b> {safe_chat_title}\n<b>ID:</b> <code>{chat.id}</code>{link_line}")
-            await send_operational_log(context, pm_text)
+            try:
+                await context.bot.send_message(chat_id=OWNER_ID, text=pm_text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+            except Exception as e:
+                logger.error(f"Failed to send join notification to owner for group {chat.id}: {e}")
 
     should_clean = should_clean_service(chat.id)
 
@@ -3983,7 +3986,6 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
         gban_reason = get_gban_reason(member.id) if gban_enabled else None
         
         if gban_reason and not is_privileged_user(member.id):
-            logger.info(f"Gbanned user {member.id} tried to join {chat.id}. Enforcing ban.")
             try:
                 await context.bot.ban_chat_member(chat_id=chat.id, user_id=member.id)
                 message_text = (
@@ -4065,7 +4067,7 @@ async def handle_left_group_member(update: Update, context: ContextTypes.DEFAULT
     left_member = update.message.left_chat_member
 
     if left_member.id == context.bot.id:
-        logger.info(f"Bot was removed from chat {chat.id}.")
+        logger.info(f"Bot removed from group cache {chat.id}.")
         remove_chat_from_db(chat.id)
         return
 
@@ -4272,7 +4274,6 @@ async def check_gban_on_message(update: Update, context: ContextTypes.DEFAULT_TY
                 return
 
             if bot_member.status == "administrator" and bot_member.can_restrict_members:
-                logger.info(f"G-banned user {user.id} detected in {chat.id}. Bot has permissions, enforcing.")
                 
                 await context.bot.ban_chat_member(chat.id, user.id)
                 
@@ -4357,7 +4358,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         
         log_user_display = create_user_html_link(target_entity)
         
-        chat_name_display = safe_escape(chat.title or f"{user_who_gbans.first_name}")
+        chat_name_display = safe_escape(chat.title or f"PM with {user_who_gbans.first_name}")
         if chat.type != ChatType.PRIVATE and chat.username:
             message_link = f"https://t.me/{chat.username}/{message.message_id}"
             chat_name_display = f"<a href='{message_link}'>{safe_escape(chat.title)}</a>"
@@ -4423,7 +4424,7 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         
         log_user_display = create_user_html_link(target_entity)
         
-        chat_name_display = safe_escape(chat.title or f"{user_who_ungbans.first_name}")
+        chat_name_display = safe_escape(chat.title or f"PM with {user_who_ungbans.first_name}")
         if chat.type != ChatType.PRIVATE and chat.username:
             message_link = f"https://t.me/{chat.username}/{message.message_id}"
             chat_name_display = f"<a href='{message_link}'>{safe_escape(chat.title)}</a>"
@@ -5463,7 +5464,7 @@ async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
 
     command = " ".join(context.args)
-    status_message = await update.message.reply_html(f"🔩 Executing: <code>{safe_escape(command)}</code>")
+    status_message = await update.message.reply_html(f"🔩 Executing: <code>{html.escape(command)}</code>")
 
     try:
         process = await asyncio.create_subprocess_shell(
@@ -5476,9 +5477,9 @@ async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
         result_text = ""
         if stdout:
-            result_text += f"<b>OUTPUT:</b>\n<code>{safe_escape(stdout.decode('utf-8', errors='ignore'))}</code>\n"
+            result_text += f"<code>{html.escape(stdout.decode('utf-8', errors='ignore'))}</code>\n"
         if stderr:
-            result_text += f"<b>ERROR:</b>\n<code>{safe_escape(stderr.decode('utf-8', errors='ignore'))}</code>\n"
+            result_text += f"<code>{html.escape(stderr.decode('utf-8', errors='ignore'))}</code>\n"
         if not stdout and not stderr:
             result_text = "✅ Command executed with no output."
             
@@ -5491,10 +5492,10 @@ async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             await status_message.edit_text(result_text, parse_mode=ParseMode.HTML)
 
     except asyncio.TimeoutError:
-        await status_message.edit_text("❌ <b>Error:</b> Command timed out after 60 seconds.")
+        await status_message.edit_text("<b>Error:</b> Command timed out after 60 seconds.")
     except Exception as e:
         logger.error(f"Error executing shell command '{command}': {e}", exc_info=True)
-        await status_message.edit_text(f"❌ <b>Error:</b> {safe_escape(str(e))}")
+        await status_message.edit_text(f"<b>Error:</b> {html.escape(str(e))}")
 
 async def execute_script_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
