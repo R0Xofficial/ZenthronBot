@@ -4026,6 +4026,7 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
         return
     chat = update.effective_chat
     user = update.effective_user
+    member = update.effective_user
     
     if any(member.id == context.bot.id for member in update.message.new_chat_members):
         logger.info(f"Bot joined chat: {chat.title} ({chat.id})")
