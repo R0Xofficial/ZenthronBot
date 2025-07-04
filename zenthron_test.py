@@ -363,6 +363,23 @@ def is_whitelisted(user_id: int) -> bool:
     except sqlite3.Error:
         return False
 
+def get_all_whitelist_users_from_db() -> List[Tuple[int, str]]:
+    conn = None
+    whitelist_list = []
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("SELECT user_id, timestamp FROM whitelist_users ORDER BY timestamp DESC")
+        rows = cursor.fetchall()
+        for row in rows:
+            sudo_list.append((row[0], row[1]))
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error fetching all whitelist users: {e}", exc_info=True)
+    finally:
+        if conn:
+            conn.close()
+    return sudo_list
+
 # --- Support ---
 def add_support_user(user_id: int, added_by_id: int) -> bool:
     """Adds a user to the Support list."""
@@ -5469,6 +5486,53 @@ async def listsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     response_lines = [f"<b>👷‍♂️ Support Users List:</b>\n"]
     
     for user_id, timestamp_str in support_user_tuples:
+        user_display_name = f"<code>{user_id}</code>"
+
+        try:
+            chat_info = await context.bot.get_chat(user_id)
+            name_parts = []
+            if chat_info.first_name: name_parts.append(safe_escape(chat_info.first_name))
+            if chat_info.last_name: name_parts.append(safe_escape(chat_info.last_name))
+            if chat_info.username: name_parts.append(f"(@{safe_escape(chat_info.username)})")
+            
+            if name_parts:
+                user_display_name = " ".join(name_parts) + f" (<code>{user_id}</code>)"
+        except Exception:
+            user_obj_from_db = get_user_from_db_by_username(str(user_id))
+            if user_obj_from_db:
+                display_name_parts = []
+                if user_obj_from_db.first_name: display_name_parts.append(safe_escape(user_obj_from_db.first_name))
+                if user_obj_from_db.last_name: display_name_parts.append(safe_escape(user_obj_from_db.last_name))
+                if user_obj_from_db.username: display_name_parts.append(f"(@{safe_escape(user_obj_from_db.username)})")
+                if display_name_parts:
+                    user_display_name = " ".join(display_name_parts) + f" (<code>{user_id}</code>)"
+
+        formatted_added_time = timestamp_str
+        try:
+            dt_obj = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+            formatted_added_time = dt_obj.strftime('%Y-%m-%d %H:%M')
+        except (ValueError, TypeError):
+            logger.warning(f"Could not parse timestamp '{timestamp_str}' for support user {user_id}")
+
+        response_lines.append(f"• {user_display_name}\n<b>Added:</b> <code>{formatted_added_time}</code>\n")
+
+    message_text = "\n".join(response_lines)
+    await update.message.reply_html(message_text, disable_web_page_preview=True)
+
+async def listwhitelist_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    if not is_owner_or_dev(user.id):
+        return
+
+    whitelist_user_tuples = get_all_whitelist_users_from_db()
+
+    if not whitelist_user_tuples:
+        await update.message.reply_text("There are currently no users in the Whitelist.")
+        return
+
+    response_lines = [f"<b>🔰 Whitelist Users List:</b>\n"]
+    
+    for user_id, timestamp_str in whitelist_user_tuples:
         user_display_name = f"<code>{user_id}</code>"
 
         try:
