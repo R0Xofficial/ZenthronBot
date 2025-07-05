@@ -1555,27 +1555,27 @@ def format_entity_info(entity: Chat | User,
         if chat_member_obj:
             status = chat_member_obj.status
             display_status = ""
-        
-            if status == "creator":
-                display_status = "<code>Creator</code> 👑"
+    
+            can_send = getattr(chat_member_obj, 'can_send_messages', None)
+    
+            if can_send is False:
+                display_status = "<code>Muted</code>"
+            
+            elif status == "creator":
+                display_status = "<code>Creator</code>"
             elif status == "administrator":
-                display_status = "<code>Administrator</code> 🛡️"
-            elif status == "left":
-                display_status = "<code>Left</code>"
+                display_status = "<code>Admin</code>"
             elif status == "kicked":
                 display_status = "<code>Banned</code>"
-            elif status == "restricted":
-                if getattr(chat_member_obj, 'can_send_messages', True) is False:
-                    display_status = "<code>Muted</code> 🔇"
-                else:
-                    display_status = "<code>Member (Special Permissions)</code>"
-            elif status == "member":
-                display_status = "<code>Member</code>"
-            elif status == "not_a_member":
-                 display_status = "<code>Not in chat</code>"
+            elif status == "left":
+                display_status = "<code>Not in chat</code>"
+            
+            elif status == "restricted" and can_send is True:
+                display_status = "<code>Member (Special Permissions)</code>"
+    
             else:
-                display_status = f"<code>{safe_escape(status.replace('_', ' ').capitalize())}</code>"
-        
+                display_status = "<code>Member</code>"
+            
             info_lines.append(f"<b>• Status:</b> {display_status}")
 
         if is_target_owner:
