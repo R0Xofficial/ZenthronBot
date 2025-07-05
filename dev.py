@@ -4091,6 +4091,31 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
                 await context.bot.send_message(chat_id=OWNER_ID, text=pm_text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
             except Exception as e:
                 logger.error(f"Failed to send join notification to owner for group {chat.id}: {e}")
+        try:
+            bot_username = context.bot.username
+            
+            welcome_message_to_group = (
+                f"👋 Hello! I'm <b>Zenthron</b>, your new group assistant.\n\n"
+                f"I'm here to help you manage the chat and have some fun. "
+                f"To see what I can do, click button 'Get Help in PM'.\n\n"
+                f"I was added by {update.message.from_user.mention_html()}. "
+                f"I'm Still on Work In Progress [WIP]. Various bugs and security holes may appear for which we are not responsible [You add at your own risk]. For any questions or issues, please contact our support team at {APPEAL_CHAT_USERNAME}."
+            )
+            
+            keyboard = InlineKeyboardMarkup(
+                [[InlineKeyboardButton(text="📬 Get Help in PM", url=f"https://t.me/{bot_username}?start=help")]]
+            )
+
+            await context.bot.send_message(
+                chat_id=chat.id,
+                text=welcome_message_to_group,
+                parse_mode=ParseMode.HTML,
+                reply_markup=keyboard,
+                disable_web_page_preview=True
+            )
+        except Exception as e:
+            logger.error(f"Failed to send introduction message to new group {chat.id}: {e}")
+        return
 
     welcome_enabled, custom_text = get_welcome_settings(chat.id)
 
