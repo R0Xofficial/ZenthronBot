@@ -1560,18 +1560,21 @@ def format_entity_info(entity: Chat | User,
             display_status = "<code>Creator</code>"
         elif status == ChatMemberStatus.ADMINISTRATOR:
             display_status = "<code>Administrator</code>"
-        elif status == ChatMemberStatus.MEMBER:
-            display_status = "<code>Member</code>"
         elif status == ChatMemberStatus.LEFT:
-            display_status = "<code>Not in chat</code>"
+            display_status = "<code>Left</code>"
         elif status == ChatMemberStatus.KICKED:
             display_status = "<code>Banned</code>"
-        elif status == ChatMemberStatus.RESTRICTED:
+        elif status in [ChatMemberStatus.MEMBER, ChatMemberStatus.RESTRICTED]:
             if chat_member_obj.can_send_messages is False:
-                display_status = "<code>Muted</code> 🔇"
+                display_status = "<code>Muted</code>"
             else:
-                display_status = "<code>Member (Special Permissions)</code>"
-        
+                if status == ChatMemberStatus.RESTRICTED:
+                    display_status = "<code>Member (Special Permissions)</code>"
+                else:
+                    display_status = "<code>Member</code>"
+        else:
+            display_status = f"<code>{status.capitalize()}</code>"
+
         if display_status:
             info_lines.append(f"<b>• Status:</b> {display_status}")
 
