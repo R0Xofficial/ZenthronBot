@@ -1509,6 +1509,7 @@ async def owner_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 def format_entity_info(entity: Chat | User,
                        chat_member_obj: telegram.ChatMember | None = None,
+                       chat_member_status_str: str | None = None,
                        is_target_owner: bool = False,
                        is_target_dev: bool = False,
                        is_target_sudo: bool = False,
@@ -1556,27 +1557,24 @@ def format_entity_info(entity: Chat | User,
             status = chat_member_obj.status
             display_status = ""
     
-            can_send = getattr(chat_member_obj, 'can_send_messages', None)
-    
-            if can_send is False:
-                display_status = "<code>Muted</code>"
-            
-            elif status == "creator":
+            if status == "creator":
                 display_status = "<code>Creator</code>"
             elif status == "administrator":
-                display_status = "<code>Admin</code>"
+                display_status = "<code>Administrator</code>"
             elif status == "kicked":
                 display_status = "<code>Banned</code>"
             elif status == "left":
                 display_status = "<code>Not in chat</code>"
-            
-            elif status == "restricted" and can_send is True:
-                display_status = "<code>Member (Special Permissions)</code>"
-    
-            else:
+            elif status == "restricted":
+                if getattr(chat_member_obj, 'can_send_messages', True) is False:
+                    display_status = "<code>Muted</code>"
+                else:
+                    display_status = "<code>Member (Special Permissions)</code>"
+            elif status == "member":
                 display_status = "<code>Member</code>"
             
-            info_lines.append(f"<b>• Status:</b> {display_status}")
+            if display_status:
+                info_lines.append(f"<b>• Status:</b> {display_status}")
 
         if is_target_owner:
             info_lines.append(f"\n<b>• User Level:</b> <code>God</code>")
@@ -1667,13 +1665,11 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     blacklist_reason_str = get_blacklist_reason(target_entity.id)
     gban_reason_str = get_gban_reason(target_entity.id)
     chat_member_obj: telegram.ChatMember | None = None
-
     if isinstance(target_entity, User) and update.effective_chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
         try:
             chat_member_obj = await context.bot.get_chat_member(update.effective_chat.id, target_entity.id)
-            print(f"DEBUG: Zawartość obiektu chat_member_obj: {chat_member_obj}")
         except TelegramError:
-            pass
+            pass 
 
     info_message = format_entity_info(
         entity=target_entity,
