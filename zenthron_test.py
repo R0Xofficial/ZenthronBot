@@ -1297,16 +1297,16 @@ def get_warn_limit(chat_id: int) -> int:
         return MAX_WARNS
 
 async def handle_bot_permission_changes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not update.chat_member:
+    if not update.my_chat_member:
         return
 
-    new_status = update.chat_member.new_chat_member
+    new_status = update.my_chat_member.new_chat_member
     
     if new_status.user.id != context.bot.id:
         return
 
-    if new_status.status in [ChatMemberStatus.MEMBER, ChatMemberStatus.RESTRICTED] and new_status.can_send_messages is False:
-        chat = update.chat_member.chat
+    if new_status.can_send_messages is False:
+        chat = update.my_chat_member.chat
         logger.warning(f"Bot was muted in chat {chat.title} ({chat.id}). Leaving automatically.")
         try:
             if OWNER_ID:
@@ -1320,7 +1320,7 @@ async def handle_bot_permission_changes(update: Update, context: ContextTypes.DE
             await context.bot.leave_chat(chat.id)
         except Exception as e:
             logger.error(f"Error during automatic leave from chat {chat.id}: {e}")
-            
+
 # --- Command Handlers ---
 HELP_TEXT = """
 <b>Here are the commands you can use:</b>
@@ -1508,7 +1508,7 @@ async def owner_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     else: await update.message.reply_text("Error: Owner information is not configured.")
 
 def format_entity_info(entity: Chat | User,
-                       chat_member_status_str: str | None = None,
+                       chat_member_obj: telegram.ChatMember | None = None,
                        is_target_owner: bool = False,
                        is_target_dev: bool = False,
                        is_target_sudo: bool = False,
