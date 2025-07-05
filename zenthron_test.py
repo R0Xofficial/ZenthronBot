@@ -4041,11 +4041,6 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
     welcome_enabled, custom_text = get_welcome_settings(chat.id)
 
     for member in update.message.new_chat_members:
-        gban_reason = get_gban_reason(member.id)
-        if gban_reason and not is_privileged_user(member.id):
-            logger.info(f"Skipped welcome message for globally banned user {member.id} in chat {chat.id}")
-            return
-
         base_text = ""
         is_privileged_join = True
 
@@ -4122,11 +4117,6 @@ async def handle_left_group_member(update: Update, context: ContextTypes.DEFAULT
     
     chat = update.effective_chat
     left_member = update.message.left_chat_member
-
-    gban_reason = get_gban_reason(left_member.id)
-    if gban_reason:
-        logger.info(f"Skipped goodbye message for globally banned user {left_member.id} in chat {chat.id}")
-        return
 
     if left_member.id == context.bot.id:
         logger.info(f"Bot removed from group cache {chat.id}.")
@@ -5877,8 +5867,8 @@ async def main() -> None:
 
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_note_trigger), group=0)
         
-        application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, check_gban_on_entry), group=-1)
         application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_group_members))
+        application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, check_gban_on_entry))
         application.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, handle_left_group_member))
 
         if application.job_queue:
