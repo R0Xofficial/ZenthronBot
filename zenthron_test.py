@@ -1300,43 +1300,27 @@ async def handle_bot_permission_changes(update: Update, context: ContextTypes.DE
     if not update.chat_member:
         return
 
-    chat = update.chat_member.chat
-    new_member_status = update.chat_member.new_chat_member
+    new_status = update.chat_member.new_chat_member
     
-    if new_member_status.user.id != context.bot.id:
+    if new_status.user.id != context.bot.id:
         return
 
-    if new_member_status.status == ChatMemberStatus.ADMINISTRATOR:
-        if hasattr(new_member_status, 'can_post_messages') and not new_member_status.can_post_messages:
-            is_muted = True
-        else:
-            is_muted = False
-    
-    elif new_member_status.status == ChatMemberStatus.MEMBER and new_member_status.can_send_messages is False:
-        is_muted = True
-    
-    elif new_member_status.status == ChatMemberStatus.RESTRICTED and new_member_status.can_send_messages is False:
-        is_muted = True
-        
-    else:
-        is_muted = False
-
-    if is_muted:
+    if new_status.status in [ChatMemberStatus.MEMBER, ChatMemberStatus.RESTRICTED] and new_status.can_send_messages is False:
+        chat = update.chat_member.chat
         logger.warning(f"Bot was muted in chat {chat.title} ({chat.id}). Leaving automatically.")
         try:
             if OWNER_ID:
                 log_text = (
                     f"<b>#AUTOLEAVE</b> (Muted)\n\n"
                     f"Bot automatically left the chat <b>{safe_escape(chat.title)}</b> (<code>{chat.id}</code>) "
-                    f"because it was muted and can no longer send messages."
+                    f"because it lost the permission to send messages."
                 )
                 await context.bot.send_message(chat_id=OWNER_ID, text=log_text, parse_mode=ParseMode.HTML)
 
             await context.bot.leave_chat(chat.id)
-            
         except Exception as e:
             logger.error(f"Error during automatic leave from chat {chat.id}: {e}")
-
+            
 # --- Command Handlers ---
 HELP_TEXT = """
 <b>Here are the commands you can use:</b>
@@ -1568,16 +1552,27 @@ def format_entity_info(entity: Chat | User,
             f"<b>• Language Code:</b> <code>{language_code_val if language_code_val else 'N/A'}</code>"
         ])
 
-        if chat_member_status_str and current_chat_id_for_status != user.id and current_chat_id_for_status is not None:
-            display_status = ""
-            if chat_member_status_str == "creator": display_status = "<code>Creator</code>"
-            elif chat_member_status_str == "administrator": display_status = "<code>Admin</code>"
-            elif chat_member_status_str == "member": display_status = "<code>Member</code>"
-            elif chat_member_status_str == "left": display_status = "<code>Not in chat</code>"
-            elif chat_member_status_str == "kicked": display_status = "<code>Banned</code>"
-            elif chat_member_status_str == "restricted": display_status = "<code>Muted</code>"
-            elif chat_member_status_str == "not_a_member": display_status = "<code>Not in chat</code>"
-            else: display_status = f"<code>{safe_escape(chat_member_status_str.replace('_', ' ').capitalize())}</code>"
+    if chat_member_obj:
+        status = chat_member_obj.status
+        display_status = ""
+
+        if status == ChatMemberStatus.CREATOR:
+            display_status = "<code>Creator</code>"
+        elif status == ChatMemberStatus.ADMINISTRATOR:
+            display_status = "<code>Administrator</code>"
+        elif status == ChatMemberStatus.MEMBER:
+            display_status = "<code>Member</code>"
+        elif status == ChatMemberStatus.LEFT:
+            display_status = "<code>Not in chat</code>"
+        elif status == ChatMemberStatus.KICKED:
+            display_status = "<code>Banned</code>"
+        elif status == ChatMemberStatus.RESTRICTED:
+            if chat_member_obj.can_send_messages is False:
+                display_status = "<code>Muted</code> 🔇"
+            else:
+                display_status = "<code>Member (Special Permissions)</code>"
+        
+        if display_status:
             info_lines.append(f"<b>• Status:</b> {display_status}")
 
         if is_target_owner:
@@ -1669,7 +1664,6 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     blacklist_reason_str = get_blacklist_reason(target_entity.id)
     gban_reason_str = get_gban_reason(target_entity.id)
     chat_member_obj: telegram.ChatMember | None = None
-    
     if isinstance(target_entity, User) and update.effective_chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
         try:
             chat_member_obj = await context.bot.get_chat_member(update.effective_chat.id, target_entity.id)
@@ -1678,7 +1672,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     info_message = format_entity_info(
         entity=target_entity,
-        chat_member_status_str=member_status_in_current_chat_str,
+        chat_member_obj=chat_member_obj,
         is_target_owner=is_target_owner_flag,
         is_target_dev=is_target_dev_flag,
         is_target_sudo=is_target_sudo_flag,
