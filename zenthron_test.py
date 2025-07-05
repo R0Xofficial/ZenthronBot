@@ -1589,7 +1589,7 @@ def format_entity_info(entity: Chat | User,
             info_lines.append(f"\n<b>• User Level:</b> <code>Sudo</code>")
         elif is_target_support:
             info_lines.append(f"\n<b>• User Level:</b> <code>Support</code>")
-        elif is_target_whitelist:
+        elif is_target_whitelisted:
             info_lines.append(f"\n<b>• User Level:</b> <code>Whitelist</code>")
             
         if blacklist_reason_str is not None:
