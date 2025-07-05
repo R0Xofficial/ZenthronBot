@@ -1555,13 +1555,13 @@ def format_entity_info(entity: Chat | User,
         if chat_member_obj:
             status = chat_member_obj.status
             display_status = ""
-
+        
             if status == ChatMemberStatus.OWNER:
                 display_status = "<code>Creator</code>"
             elif status == ChatMemberStatus.ADMINISTRATOR:
-                display_status = "<code>Administrator</code>"
+                display_status = "<code>Admin</code>"
             elif status == ChatMemberStatus.LEFT:
-                display_status = "<code>Left</code>"
+                display_status = "<code>Not in chat</code>"
             elif status == ChatMemberStatus.BANNED:
                 display_status = "<code>Banned</code>"
             elif status == ChatMemberStatus.RESTRICTED:
@@ -1570,16 +1570,13 @@ def format_entity_info(entity: Chat | User,
                 else:
                     display_status = "<code>Member (Special Permissions)</code>"
             elif status == ChatMemberStatus.MEMBER:
-                chat = bot_context.bot_data.get(current_chat_id_for_status)
-                if chat and chat.permissions and chat.permissions.can_send_messages is True and chat_member_obj.can_send_messages is None:
-                    display_status = "<code>Muted</code>"
+                if chat_permissions and chat_permissions.can_send_messages is True:
+                     display_status = "<code>Member</code>"
                 else:
-                    display_status = "<code>Member</code>"
-            else:
-                display_status = f"<code>{status.capitalize()}</code>"
-
+                     display_status = "<code>Member</code>"
+        
             if display_status:
-                info_lines.append(f"<b>• Status in this chat:</b> {display_status}")
+                info_lines.append(f"<b>• Status:</b> {display_status}")
 
         if is_target_owner:
             info_lines.append(f"\n<b>• User Level:</b> <code>God</code>")
@@ -1659,8 +1656,16 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("Skrrrt... I don't know what I'm looking for...")
         return
 
-    if isinstance(target_entity, User):
-        update_user_in_db(target_entity)
+    chat_member_obj: telegram.ChatMember | None = None
+    chat_permissions: telegram.ChatPermissions | None = None
+
+    if isinstance(target_entity, User) and update.effective_chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
+        try:
+            chat_member_obj = await context.bot.get_chat_member(update.effective_chat.id, target_entity.id)
+            full_chat_obj = await context.bot.get_chat(update.effective_chat.id)
+            chat_permissions = full_chat_obj.permissions
+        except TelegramError:
+            pass
 
     is_target_owner_flag = (target_entity.id == OWNER_ID)
     is_target_dev_flag = is_dev_user(target_entity.id)
@@ -1679,6 +1684,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     info_message = format_entity_info(
         entity=target_entity,
         chat_member_obj=chat_member_obj,
+        chat_permissions=chat_permissions,
         is_target_owner=is_target_owner_flag,
         is_target_dev=is_target_dev_flag,
         is_target_sudo=is_target_sudo_flag,
