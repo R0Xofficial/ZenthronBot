@@ -1568,7 +1568,7 @@ def format_entity_info(entity: Chat | User,
                 if getattr(chat_member_obj, 'can_send_messages', True) is False:
                     display_status = "<code>Muted</code>"
                 else:
-                    display_status = "<code>Member (Special Permissions)</code>"
+                    display_status = "<code>Member (Exception)</code>"
             elif status == "member":
                 if getattr(chat_member_obj, 'can_send_messages', True) is False:
                      display_status = "<code>Muted</code>"
