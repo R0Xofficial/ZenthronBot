@@ -109,6 +109,18 @@ if not APPEAL_CHAT_USERNAME:
 else:
     logger.info(f"Appeal chat loaded: {APPEAL_CHAT_USERNAME}")
 
+try:
+    appeal_chat_id_str = os.getenv("APPEAL_CHAT_ID")
+    if appeal_chat_id_str:
+        APPEAL_CHAT_ID = int(appeal_chat_id_str)
+        logger.info(f"Appeal Chat ID loaded: {APPEAL_CHAT_ID}")
+    else:
+        raise ValueError("APPEAL_CHAT_ID environment variable not set or empty")
+except (ValueError, TypeError) as e:
+    logger.critical(f"CRITICAL: Invalid or missing APPEAL_CHAT_ID: {e}")
+    print(f"\n--- FATAL ERROR --- \nInvalid or missing APPEAL_CHAT_ID. It must be a numeric chat ID.")
+    exit(1)
+
 # --- Database Initialization ---
 def init_db():
     conn = None
@@ -332,8 +344,7 @@ async def check_blacklist_handler(update: Update, context: ContextTypes.DEFAULT_
     always_allowed_commands = ['/start', '/help', '/info', '/id']
     appeal_chat_allowed_commands = ['/notes', '/warns', '/warnings']
 
-    appeal_chat_id = context.bot_data.get('appeal_chat_id')
-    is_in_appeal_chat = (appeal_chat_id is not None and chat.id == appeal_chat_id)
+    is_in_appeal_chat = (chat.id == APPEAL_CHAT_ID)
 
     command = message.text.split()[0].lower()
 
