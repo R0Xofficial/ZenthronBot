@@ -3079,10 +3079,10 @@ async def undo_warn_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     if remove_warning_by_id(warn_id_to_remove):
-        new_text = query.message.text_html + "\n\n<i>(Warn undone by " + user_who_clicked.mention_html() + ")</i>"
+        new_text = query.message.text_html + "\n\n<i>(Warn deleted by " + user_who_clicked.mention_html() + ")</i>"
         await query.edit_message_text(new_text, parse_mode=ParseMode.HTML, reply_markup=None)
     else:
-        await query.edit_message_text(query.message.text_html + "\n\n<i>(This warn was already undone or could not be found.)</i>", parse_mode=ParseMode.HTML, reply_markup=None)
+        await query.edit_message_text(query.message.text_html + "\n\n<i>(This warn was already deleted or could not be found.)</i>", parse_mode=ParseMode.HTML, reply_markup=None)
 
 async def warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
