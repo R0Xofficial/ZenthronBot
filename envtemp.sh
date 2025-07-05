@@ -80,6 +80,10 @@ export TELEGRAM_API_HASH="PASTE_HERE"
 
 export APPEAL_CHAT_USERNAME="PASTE_HERE"
 
+# ID of the chat where the bot should have special permissions for blacklisted people.
+# Use the /id command in this chat to find out. Remember the minus sign at the beginning for groups. 
+export APPEAL_CHAT_ID="PASTE_HERE" 
+
 
 # -------------------------------------------------------------
 echo "Environment variables set."
