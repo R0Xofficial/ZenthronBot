@@ -30,7 +30,7 @@ from telethon import TelegramClient
 from telethon.tl.types import User as TelethonUser, Channel as TelethonChannel
 from telegram import Update, User, Chat, constants, ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ChatType, ParseMode, ChatMemberStatus
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ApplicationHandlerStop, JobQueue, CallbackQueryHandler
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ApplicationHandlerStop, JobQueue, CallbackQueryHandler, ChatMemberHandler
 from telegram.error import TelegramError, BadRequest
 from telegram.request import HTTPXRequest
 from datetime import datetime, timezone, timedelta
@@ -1296,6 +1296,31 @@ def get_warn_limit(chat_id: int) -> int:
         logger.error(f"Error getting warn limit for chat {chat_id}")
         return MAX_WARNS
 
+async def handle_bot_permission_changes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.my_chat_member:
+        return
+
+    new_status = update.my_chat_member.new_chat_member
+    
+    if new_status.user.id != context.bot.id:
+        return
+
+    if new_status.status == ChatMemberStatus.RESTRICTED and new_status.can_send_messages is False:
+        chat = update.my_chat_member.chat
+        logger.warning(f"Bot was muted in chat {chat.title} ({chat.id}). Leaving automatically.")
+        try:
+            if OWNER_ID:
+                log_text = (
+                    f"<b>#AUTOLEAVE</b>\n"
+                    f"Bot automatically left the chat <b>{safe_escape(chat.title)}</b> (<code>{chat.id}</code>) "
+                    f"because it lost the permission to send messages."
+                )
+                await context.bot.send_message(chat_id=OWNER_ID, text=log_text, parse_mode=ParseMode.HTML)
+            
+            await context.bot.leave_chat(chat.id)
+        except Exception as e:
+            logger.error(f"Error during automatic leave from chat {chat.id}: {e}")
+
 # --- Command Handlers ---
 HELP_TEXT = """
 <b>Here are the commands you can use:</b>
@@ -1412,7 +1437,7 @@ OWNER_COMMANDS_TEXT = """
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     
-    welcome_message = f"Welcome, {user.mention_html()}! I am a Zenthron. Your Telegram group assistant.\nUse /help to see available commands."
+    welcome_message = f"Welcome, {user.mention_html()}! I am a Zenthron. Your Telegram group assistant.\nUse /help to see available commands.\n\n<i>I'm Still a Work In Progress [WIP]. Various bugs and security holes may appear for which Bot creators are not responsible [You add me to group at your own risk]. For any questions or issues, please contact our support team at {APPEAL_CHAT_USERNAME}.</i>"
     
     if context.args:
         if context.args[0] == 'help':
@@ -1483,7 +1508,7 @@ async def owner_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     else: await update.message.reply_text("Error: Owner information is not configured.")
 
 def format_entity_info(entity: Chat | User,
-                       chat_member_status_str: str | None = None,
+                       chat_member_obj: telegram.ChatMember | None = None,
                        is_target_owner: bool = False,
                        is_target_dev: bool = False,
                        is_target_sudo: bool = False,
@@ -1527,17 +1552,34 @@ def format_entity_info(entity: Chat | User,
             f"<b>• Language Code:</b> <code>{language_code_val if language_code_val else 'N/A'}</code>"
         ])
 
-        if chat_member_status_str and current_chat_id_for_status != user.id and current_chat_id_for_status is not None:
+        if chat_member_obj:
+            status = chat_member_obj.status
             display_status = ""
-            if chat_member_status_str == "creator": display_status = "<code>Creator</code>"
-            elif chat_member_status_str == "administrator": display_status = "<code>Admin</code>"
-            elif chat_member_status_str == "member": display_status = "<code>Member</code>"
-            elif chat_member_status_str == "left": display_status = "<code>Not in chat</code>"
-            elif chat_member_status_str == "kicked": display_status = "<code>Banned</code>"
-            elif chat_member_status_str == "restricted": display_status = "<code>Muted</code>"
-            elif chat_member_status_str == "not_a_member": display_status = "<code>Not in chat</code>"
-            else: display_status = f"<code>{safe_escape(chat_member_status_str.replace('_', ' ').capitalize())}</code>"
-            info_lines.append(f"<b>• Status:</b> {display_status}")
+    
+            if status == "creator":
+                display_status = "<code>Creator</code>"
+            elif status == "administrator":
+                display_status = "<code>Administrator</code>"
+            elif status == "kicked":
+                display_status = "<code>Banned</code>"
+            elif status == "left":
+                display_status = "<code>Not in chat</code>"
+            elif status == "restricted":
+                if getattr(chat_member_obj, 'can_send_messages', True) is False:
+                    display_status = "<code>Muted</code>"
+                else:
+                    display_status = "<code>Member (Exception)</code>"
+            elif status == "member":
+                if getattr(chat_member_obj, 'can_send_messages', True) is False:
+                     display_status = "<code>Muted</code>"
+                else:
+                     display_status = "<code>Member</code>"
+
+            elif status == "not_a_member":
+                display_status = "<code>Not in chat</code>"
+            
+            if display_status:
+                info_lines.append(f"<b>• Status:</b> {display_status}")
 
         if is_target_owner:
             info_lines.append(f"\n<b>• User Level:</b> <code>God</code>")
@@ -1627,18 +1669,17 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     is_target_whitelist_flag = is_whitelisted(target_entity.id)
     blacklist_reason_str = get_blacklist_reason(target_entity.id)
     gban_reason_str = get_gban_reason(target_entity.id)
-    member_status_in_current_chat_str: str | None = None
+    chat_member_obj: telegram.ChatMember | None = None
     
     if isinstance(target_entity, User) and update.effective_chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
         try:
-            chat_member = await context.bot.get_chat_member(update.effective_chat.id, target_entity.id)
-            member_status_in_current_chat_str = chat_member.status
+            chat_member_obj = await context.bot.get_chat_member(update.effective_chat.id, target_entity.id)
         except TelegramError:
-            member_status_in_current_chat_str = "not_a_member"
+            pass 
 
     info_message = format_entity_info(
         entity=target_entity,
-        chat_member_status_str=member_status_in_current_chat_str,
+        chat_member_obj=chat_member_obj,
         is_target_owner=is_target_owner_flag,
         is_target_dev=is_target_dev_flag,
         is_target_sudo=is_target_sudo_flag,
@@ -2677,7 +2718,7 @@ async def welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await send_safe_reply(update, context, text="Huh? You can't manage welcome in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can manage welcome settings.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_change_info', "Why should I listen to a person with no privileges for this? You need 'can_change_info' permission.", allow_bot_privileged_override=False):
         return
 
     if context.args and context.args[0].lower() in ['on', 'off']:
@@ -2722,7 +2763,7 @@ async def set_welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await send_safe_reply(update, context, text="Huh? You can't set welcome message in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can set a custom welcome message.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_change_info', "Why should I listen to a person with no privileges for this? You need 'can_change_info' permission.", allow_bot_privileged_override=False):
         return
 
     if not context.args:
@@ -2742,7 +2783,7 @@ async def reset_welcome_command(update: Update, context: ContextTypes.DEFAULT_TY
         await send_safe_reply(update, context, text="Huh? You can't reset welcome message in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can reset the welcome message.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_change_info', "Why should I listen to a person with no privileges for this? You need 'can_change_info' permission.", allow_bot_privileged_override=False):
         return
 
     if set_welcome_setting(chat.id, enabled=True, text=None):
@@ -2757,7 +2798,7 @@ async def goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await send_safe_reply(update, context, text="Huh? You can't manage goodbye in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can manage goodbye settings.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_change_info', "Why should I listen to a person with no privileges for this? You need 'can_change_info' permission.", allow_bot_privileged_override=False):
         return
 
     if context.args and context.args[0].lower() in ['on', 'off']:
@@ -2797,7 +2838,7 @@ async def set_goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await send_safe_reply(update, context, text="Huh? You can't set goodbye message in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can set a custom goodbye message.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_change_info', "Why should I listen to a person with no privileges for this? You need 'can_change_info' permission.", allow_bot_privileged_override=False):
         return
 
     if not context.args:
@@ -2817,7 +2858,7 @@ async def reset_goodbye_command(update: Update, context: ContextTypes.DEFAULT_TY
         await send_safe_reply(update, context, text="Huh? You can't reset goodbye message in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can reset the goodbye message.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_change_info', "Why should I listen to a person with no privileges for this? You need 'can_change_info' permission.", allow_bot_privileged_override=False):
         return
         
     if set_goodbye_setting(chat.id, enabled=True, text=None):
@@ -2854,7 +2895,7 @@ async def set_clean_service_command(update: Update, context: ContextTypes.DEFAUL
         await send_safe_reply(update, context, text="Huh? You can't set clean service in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_delete_messages', "Only admins with 'delete messages' permission can manage this setting.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_delete_messages', "Why should I listen to a person with no privileges for this? You need 'can_delete_messages' permission.", allow_bot_privileged_override=False):
         return
 
     if not context.args:
@@ -2896,7 +2937,7 @@ async def save_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         await send_safe_reply(update, context, text="Huh? You can't save note in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can manage notes.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_change_info', "Why should I listen to a person with no privileges for this? You need 'can_change_info' permission.", allow_bot_privileged_override=False):
         return
         
     note_name = ""
@@ -2960,7 +3001,7 @@ async def remove_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await send_safe_reply(update, context, text="Huh? You can't remove notes in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can manage notes.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_change_info', "Why should I listen to a person with no privileges for this? You need 'can_change_info' permission.", allow_bot_privileged_override=False):
         return
 
     if not context.args:
@@ -2996,7 +3037,7 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     warner = update.effective_user
     message = update.message
     
-    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Only admins with ban permissions can issue warnings."):
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
     target_user: User | None = None
@@ -3142,7 +3183,7 @@ async def reset_warnings_command(update: Update, context: ContextTypes.DEFAULT_T
         await send_safe_reply(update, context, text="Huh? You can't reset warnings in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Only admins with ban permissions can reset warnings."):
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
     target_user: User | None = None
@@ -3169,7 +3210,7 @@ async def set_warn_limit_command(update: Update, context: ContextTypes.DEFAULT_T
         await send_safe_reply(update, context, text="Huh? You can't set warning limit in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Only admins with ban permissions can set the warning limit.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission.", allow_bot_privileged_override=False):
         return
 
     if not context.args:
@@ -4099,7 +4140,7 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
                 f"I'm here to help you manage the chat and have some fun. "
                 f"To see what I can do, click button 'Get Help in PM'.\n\n"
                 f"I was added by {update.message.from_user.mention_html()}.\n"
-                f"I'm Still a Work In Progress [WIP]. Various bugs and security holes may appear for which we are not responsible [You add at your own risk]. For any questions or issues, please contact our support team at {APPEAL_CHAT_USERNAME}."
+                f"<i>I'm Still a Work In Progress [WIP]. Various bugs and security holes may appear for which Bot creators are not responsible [You add at your own risk]. For any questions or issues, please contact our support team at {APPEAL_CHAT_USERNAME}.</i>"
             )
             
             keyboard = InlineKeyboardMarkup(
@@ -4226,6 +4267,18 @@ async def handle_left_group_member(update: Update, context: ContextTypes.DEFAULT
                 await context.bot.send_message(chat.id, final_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
             except Exception as e:
                 logger.error(f"Failed to send goodbye message in chat {chat.id}: {e}")
+
+async def handle_bot_banned(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    update_data = update.my_chat_member
+    if not update_data:
+        return
+        
+    if (update_data.new_chat_member.user.id == context.bot.id and
+            update_data.new_chat_member.status == ChatMemberStatus.BANNED):
+        
+        chat = update_data.chat
+        logger.warning(f"Bot was banned from chat {chat.title} ({chat.id}). Removing from DB.")
+        remove_chat_from_db(chat.id)
 
 async def send_operational_log(context: ContextTypes.DEFAULT_TYPE, message: str, parse_mode: str = ParseMode.HTML) -> None:
     """
@@ -5864,6 +5917,7 @@ async def main() -> None:
         application.bot_data['telethon_client'] = telethon_client
         logger.info("Telethon client has been injected into bot_data.")
 
+        application.add_handler(ChatMemberHandler(handle_bot_permission_changes, ChatMemberHandler.MY_CHAT_MEMBER))
         application.add_handler(MessageHandler(filters.COMMAND, check_blacklist_handler), group=-1)
         application.add_handler(MessageHandler(filters.ALL & (~filters.UpdateType.EDITED_MESSAGE), log_user_from_interaction), group=10)
         application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND) & filters.ChatType.GROUPS, check_gban_on_message), group=-2)
@@ -5950,6 +6004,7 @@ async def main() -> None:
         application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, check_gban_on_entry), group=-1)
         application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_group_members))
         application.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, handle_left_group_member))
+        application.add_handler(ChatMemberHandler(handle_bot_banned, ChatMemberHandler.MY_CHAT_MEMBER))
 
         if application.job_queue:
             application.job_queue.run_once(send_startup_log, when=1)
