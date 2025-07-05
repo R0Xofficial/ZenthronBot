@@ -1561,8 +1561,8 @@ def format_entity_info(entity: Chat | User,
         elif status == ChatMemberStatus.ADMINISTRATOR:
             display_status = "<code>Administrator</code>"
         elif status == ChatMemberStatus.LEFT:
-            display_status = "<code>Left</code>"
-        elif status == ChatMemberStatus.KICKED:
+            display_status = "<code>Not in chat</code>"
+        elif status == ChatMemberStatus.BANNED:
             display_status = "<code>Banned</code>"
         elif status in [ChatMemberStatus.MEMBER, ChatMemberStatus.RESTRICTED]:
             if chat_member_obj.can_send_messages is False:
