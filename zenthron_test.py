@@ -1296,6 +1296,47 @@ def get_warn_limit(chat_id: int) -> int:
         logger.error(f"Error getting warn limit for chat {chat_id}")
         return MAX_WARNS
 
+async def handle_bot_permission_changes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.chat_member:
+        return
+
+    chat = update.chat_member.chat
+    new_member_status = update.chat_member.new_chat_member
+    
+    if new_member_status.user.id != context.bot.id:
+        return
+
+    if new_member_status.status == ChatMemberStatus.ADMINISTRATOR:
+        if hasattr(new_member_status, 'can_post_messages') and not new_member_status.can_post_messages:
+            is_muted = True
+        else:
+            is_muted = False
+    
+    elif new_member_status.status == ChatMemberStatus.MEMBER and new_member_status.can_send_messages is False:
+        is_muted = True
+    
+    elif new_member_status.status == ChatMemberStatus.RESTRICTED and new_member_status.can_send_messages is False:
+        is_muted = True
+        
+    else:
+        is_muted = False
+
+    if is_muted:
+        logger.warning(f"Bot was muted in chat {chat.title} ({chat.id}). Leaving automatically.")
+        try:
+            if OWNER_ID:
+                log_text = (
+                    f"<b>#AUTOLEAVE</b> (Muted)\n\n"
+                    f"Bot automatically left the chat <b>{safe_escape(chat.title)}</b> (<code>{chat.id}</code>) "
+                    f"because it was muted and can no longer send messages."
+                )
+                await context.bot.send_message(chat_id=OWNER_ID, text=log_text, parse_mode=ParseMode.HTML)
+
+            await context.bot.leave_chat(chat.id)
+            
+        except Exception as e:
+            logger.error(f"Error during automatic leave from chat {chat.id}: {e}")
+
 # --- Command Handlers ---
 HELP_TEXT = """
 <b>Here are the commands you can use:</b>
@@ -1627,14 +1668,13 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     is_target_whitelist_flag = is_whitelisted(target_entity.id)
     blacklist_reason_str = get_blacklist_reason(target_entity.id)
     gban_reason_str = get_gban_reason(target_entity.id)
-    member_status_in_current_chat_str: str | None = None
+    chat_member_obj: telegram.ChatMember | None = None
     
     if isinstance(target_entity, User) and update.effective_chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
-        try:
-            chat_member = await context.bot.get_chat_member(update.effective_chat.id, target_entity.id)
-            member_status_in_current_chat_str = chat_member.status
-        except TelegramError:
-            member_status_in_current_chat_str = "not_a_member"
+    try:
+        chat_member_obj = await context.bot.get_chat_member(update.effective_chat.id, target_entity.id)
+    except TelegramError:
+        pass
 
     info_message = format_entity_info(
         entity=target_entity,
