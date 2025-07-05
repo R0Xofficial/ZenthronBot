@@ -5871,6 +5871,7 @@ async def main() -> None:
         application.add_handler(CommandHandler("notes", list_notes_command))
         application.add_handler(CommandHandler(["delnote", "rmnote"], remove_note_command))
         application.add_handler(CommandHandler("warn", warn_command))
+        application.add_handler(CallbackQueryHandler(undo_warn_callback, pattern=r"^undo_warn_"))
         application.add_handler(CommandHandler(["warnings", "warns"], warnings_command))
         application.add_handler(CommandHandler("resetwarns", reset_warnings_command))
         application.add_handler(CommandHandler("setwarnlimit", set_warn_limit_command))
