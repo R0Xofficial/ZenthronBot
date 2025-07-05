@@ -3027,13 +3027,9 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         if target_member.status in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
             await message.reply_text("Chat Creator and Administrators cannot be warned.")
             return
-        except TelegramError as e:
-            if "user not found" not in str(e).lower():
-                logger.warning(f"Could not get chat member status for warn target {target_user.id}: {e}")
-
-    if is_privileged_user(target_user.id):
-        await message.reply_text("This user has immunity and cannot be warned.")
-        return
+    except TelegramError as e:
+        if "user not found" not in str(e).lower():
+            logger.warning(f"Could not get chat member status for warn target {target_user.id}: {e}")
 
     new_warn_id, warn_count = add_warning(chat.id, target_user.id, reason, warner.id)
     user_display = create_user_html_link(target_user)
