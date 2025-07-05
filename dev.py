@@ -860,7 +860,7 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
         return entity_from_db
 
     try:
-        logger.info(f"Trying to resolve '{target_input}' with PTB's get_chat.")
+        logger.info(f"Resolving '{target_input}' using PTB...")
         ptb_entity = await context.bot.get_chat(target_input)
         if ptb_entity:
             if isinstance(ptb_entity, User):
@@ -4118,11 +4118,6 @@ async def handle_left_group_member(update: Update, context: ContextTypes.DEFAULT
     chat = update.effective_chat
     left_member = update.message.left_chat_member
 
-    gban_reason = get_gban_reason(left_member.id)
-    if gban_reason:
-        logger.info(f"Skipped goodbye message for globally banned user {left_member.id} in chat {chat.id}")
-        return
-
     if left_member.id == context.bot.id:
         logger.info(f"Bot removed from group cache {chat.id}.")
         remove_chat_from_db(chat.id)
@@ -4333,8 +4328,6 @@ async def check_gban_on_entry(update: Update, context: ContextTypes.DEFAULT_TYPE
                 await context.bot.send_message(chat.id, text=message_text, parse_mode=ParseMode.HTML)
             except Exception as e:
                 logger.error(f"Failed to enforce gban on new member {member.id} in {chat.id}: {e}")
-
-                raise ApplicationHandlerStop
 
 async def check_gban_on_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.effective_chat or update.effective_chat.type == ChatType.PRIVATE:
@@ -4733,7 +4726,7 @@ async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-            admin_link = create_user_html_link(admin)
+            admin_link = create_user_html_link(user)
 
             log_message = (
                 f"<b>#WHITELISTED</b>\n\n"
@@ -5873,8 +5866,8 @@ async def main() -> None:
         application.add_handler(CommandHandler("execute", execute_script_command))
 
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_note_trigger), group=0)
-        
-        application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, check_gban_on_entry))
+
+        application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, check_gban_on_entry), group=-1)
         application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_group_members))
         application.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, handle_left_group_member))
 
