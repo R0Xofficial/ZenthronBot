@@ -1671,10 +1671,10 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     chat_member_obj: telegram.ChatMember | None = None
     
     if isinstance(target_entity, User) and update.effective_chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
-    try:
-        chat_member_obj = await context.bot.get_chat_member(update.effective_chat.id, target_entity.id)
-    except TelegramError:
-        pass
+        try:
+            chat_member_obj = await context.bot.get_chat_member(update.effective_chat.id, target_entity.id)
+        except TelegramError:
+            pass
 
     info_message = format_entity_info(
         entity=target_entity,
