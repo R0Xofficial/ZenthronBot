@@ -1671,6 +1671,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     if isinstance(target_entity, User) and update.effective_chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
         try:
             chat_member_obj = await context.bot.get_chat_member(update.effective_chat.id, target_entity.id)
+            print(f"DEBUG: Zawartość obiektu chat_member_obj: {chat_member_obj}")
         except TelegramError:
             pass
 
