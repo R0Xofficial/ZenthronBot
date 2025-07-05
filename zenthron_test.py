@@ -1564,14 +1564,18 @@ def format_entity_info(entity: Chat | User,
             display_status = "<code>Not in chat</code>"
         elif status == ChatMemberStatus.BANNED:
             display_status = "<code>Banned</code>"
+        
         elif status in [ChatMemberStatus.MEMBER, ChatMemberStatus.RESTRICTED]:
-            if chat_member_obj.can_send_messages is False:
+            can_send = getattr(chat_member_obj, 'can_send_messages', True)
+
+            if can_send is False:
                 display_status = "<code>Muted</code>"
             else:
                 if status == ChatMemberStatus.RESTRICTED:
                     display_status = "<code>Member (Special Permissions)</code>"
                 else:
                     display_status = "<code>Member</code>"
+        
         else:
             display_status = f"<code>{status.capitalize()}</code>"
 
