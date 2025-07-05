@@ -1412,7 +1412,7 @@ OWNER_COMMANDS_TEXT = """
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     
-    welcome_message = f"Welcome, {user.mention_html()}! I am a Zenthron. Your Telegram group assistant.\nUse /help to see available commands."
+    welcome_message = f"Welcome, {user.mention_html()}! I am a Zenthron. Your Telegram group assistant.\nUse /help to see available commands.\n\n<i>I'm Still a Work In Progress [WIP]. Various bugs and security holes may appear for which Bot creators are not responsible [You add me to group at your own risk]. For any questions or issues, please contact our support team at {APPEAL_CHAT_USERNAME}.</i>"
     
     if context.args:
         if context.args[0] == 'help':
@@ -4099,7 +4099,7 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
                 f"I'm here to help you manage the chat and have some fun. "
                 f"To see what I can do, click button 'Get Help in PM'.\n\n"
                 f"I was added by {update.message.from_user.mention_html()}.\n"
-                f"I'm Still a Work In Progress [WIP]. Various bugs and security holes may appear for which Bot creators are not responsible [You add at your own risk]. For any questions or issues, please contact our support team at {APPEAL_CHAT_USERNAME}."
+                f"<i>I'm Still a Work In Progress [WIP]. Various bugs and security holes may appear for which Bot creators are not responsible [You add at your own risk]. For any questions or issues, please contact our support team at {APPEAL_CHAT_USERNAME}.</i>"
             )
             
             keyboard = InlineKeyboardMarkup(
