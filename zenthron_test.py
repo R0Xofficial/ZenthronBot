@@ -1683,7 +1683,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         is_target_dev=is_target_dev_flag,
         is_target_sudo=is_target_sudo_flag,
         is_target_support=is_target_support_flag,
-        is_target_whitelist=is_target_whitelist_flag,
+        is_target_whitelisted=is_target_whitelist_flag,
         blacklist_reason_str=blacklist_reason_str,
         gban_reason_str=gban_reason_str,
         current_chat_id_for_status=update.effective_chat.id
