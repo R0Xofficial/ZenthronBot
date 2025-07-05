@@ -1509,7 +1509,6 @@ async def owner_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 def format_entity_info(entity: Chat | User,
                        chat_member_obj: telegram.ChatMember | None = None,
-                       chat_member_status_str: str | None = None,
                        is_target_owner: bool = False,
                        is_target_dev: bool = False,
                        is_target_sudo: bool = False,
