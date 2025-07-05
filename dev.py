@@ -316,21 +316,40 @@ def is_user_blacklisted(user_id: int) -> bool:
 
 # --- Blacklist Check Handler ---
 async def check_blacklist_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not update.message or not update.effective_user:
+    message = update.effective_message
+    if not message or not message.text or not update.effective_user:
         return
 
     user = update.effective_user
+    chat = update.effective_chat
 
     if user.id == OWNER_ID:
         return
+        
+    if not is_user_blacklisted(user.id):
+        return
 
-    if is_user_blacklisted(user.id):
-        user_mention_log = f"@{user.username}" if user.username else str(user.id)
-        message_text_preview = update.message.text[:50] if update.message.text else "[No text content]"
-        
-        logger.info(f"User {user.id} ({user_mention_log}) is blacklisted. Silently ignoring and blocking interaction: '{message_text_preview}'")
-        
-        raise ApplicationHandlerStop
+    always_allowed_commands = ['/start', '/help', '/info', '/id']
+    appeal_chat_allowed_commands = ['/notes', '/warns', '/warnings']
+
+    appeal_chat_id = context.bot_data.get('appeal_chat_id')
+    is_in_appeal_chat = (appeal_chat_id is not None and chat.id == appeal_chat_id)
+
+    command = message.text.split()[0].lower()
+
+    if command in always_allowed_commands:
+        return
+    
+    if is_in_appeal_chat and command in appeal_chat_allowed_commands:
+        logger.info(f"Allowing command '{command}' for blacklisted user {user.id} in appeal chat.")
+        return
+
+    user_mention_log = f"@{user.username}" if user.username else str(user.id)
+    message_text_preview = message.text[:50]
+    
+    logger.info(f"User {user.id} ({user_mention_log}) is blacklisted. Blocking command: '{message_text_preview}'")
+    
+    raise ApplicationHandlerStop
 
 # --- Whitelist ---
 def add_to_whitelist(user_id: int, added_by_id: int) -> bool:
