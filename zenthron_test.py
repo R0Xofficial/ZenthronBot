@@ -1508,7 +1508,7 @@ async def owner_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     else: await update.message.reply_text("Error: Owner information is not configured.")
 
 def format_entity_info(entity: Chat | User,
-                       chat_member_status_str: str | None = None,
+                       chat_member_obj: telegram.ChatMember | None = None,
                        is_target_owner: bool = False,
                        is_target_dev: bool = False,
                        is_target_sudo: bool = False,
@@ -1552,17 +1552,34 @@ def format_entity_info(entity: Chat | User,
             f"<b>• Language Code:</b> <code>{language_code_val if language_code_val else 'N/A'}</code>"
         ])
 
-        if chat_member_status_str and current_chat_id_for_status != user.id and current_chat_id_for_status is not None:
+        if chat_member_obj:
+            status = chat_member_obj.status
             display_status = ""
-            if chat_member_status_str == "creator": display_status = "<code>Creator</code>"
-            elif chat_member_status_str == "administrator": display_status = "<code>Admin</code>"
-            elif chat_member_status_str == "member": display_status = "<code>Member</code>"
-            elif chat_member_status_str == "left": display_status = "<code>Not in chat</code>"
-            elif chat_member_status_str == "kicked": display_status = "<code>Banned</code>"
-            elif chat_member_status_str == "restricted": display_status = "<code>Restricted</code>"
-            elif chat_member_status_str == "not_a_member": display_status = "<code>Not in chat</code>"
-            else: display_status = f"<code>{safe_escape(chat_member_status_str.replace('_', ' ').capitalize())}</code>"
-            info_lines.append(f"<b>• Status:</b> {display_status}")
+    
+            if status == "creator":
+                display_status = "<code>Creator</code>"
+            elif status == "administrator":
+                display_status = "<code>Administrator</code>"
+            elif status == "kicked":
+                display_status = "<code>Banned</code>"
+            elif status == "left":
+                display_status = "<code>Not in chat</code>"
+            elif status == "restricted":
+                if getattr(chat_member_obj, 'can_send_messages', True) is False:
+                    display_status = "<code>Muted</code>"
+                else:
+                    display_status = "<code>Member (Special Permissions)</code>"
+            elif status == "member":
+                if getattr(chat_member_obj, 'can_send_messages', True) is False:
+                     display_status = "<code>Muted</code>"
+                else:
+                     display_status = "<code>Member</code>"
+
+            elif status == "not_a_member":
+                display_status = "<code>Not in chat</code>"
+            
+            if display_status:
+                info_lines.append(f"<b>• Status:</b> {display_status}")
 
         if is_target_owner:
             info_lines.append(f"\n<b>• User Level:</b> <code>God</code>")
@@ -1652,18 +1669,17 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     is_target_whitelist_flag = is_whitelisted(target_entity.id)
     blacklist_reason_str = get_blacklist_reason(target_entity.id)
     gban_reason_str = get_gban_reason(target_entity.id)
-    member_status_in_current_chat_str: str | None = None
+    chat_member_obj: telegram.ChatMember | None = None
     
     if isinstance(target_entity, User) and update.effective_chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
         try:
-            chat_member = await context.bot.get_chat_member(update.effective_chat.id, target_entity.id)
-            member_status_in_current_chat_str = chat_member.status
+            chat_member_obj = await context.bot.get_chat_member(update.effective_chat.id, target_entity.id)
         except TelegramError:
-            member_status_in_current_chat_str = "not_a_member"
+            pass 
 
     info_message = format_entity_info(
         entity=target_entity,
-        chat_member_status_str=member_status_in_current_chat_str,
+        chat_member_obj=chat_member_obj,
         is_target_owner=is_target_owner_flag,
         is_target_dev=is_target_dev_flag,
         is_target_sudo=is_target_sudo_flag,
