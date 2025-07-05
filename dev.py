@@ -3021,6 +3021,11 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         
     reason = " ".join(reason_parts) or "No reason provided."
 
+    target_user = await context.bot.get_chat_member(chat.id, target_user.id)
+            if target_user.status in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
+                await send_safe_reply(update, context, text="Chat Creator and Administrators cannot be warned.")
+                return
+
     if is_privileged_user(target_user.id):
         await message.reply_text("This user has immunity and cannot be warned.")
         return
