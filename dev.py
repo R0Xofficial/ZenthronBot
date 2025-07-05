@@ -30,7 +30,7 @@ from telethon import TelegramClient
 from telethon.tl.types import User as TelethonUser, Channel as TelethonChannel
 from telegram import Update, User, Chat, constants, ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ChatType, ParseMode, ChatMemberStatus
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ApplicationHandlerStop, JobQueue
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ApplicationHandlerStop, JobQueue, CallbackQueryHandler
 from telegram.error import TelegramError, BadRequest
 from telegram.request import HTTPXRequest
 from datetime import datetime, timezone, timedelta
@@ -207,6 +207,7 @@ def init_db():
 
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS warnings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 chat_id INTEGER NOT NULL,
                 reason TEXT,
@@ -1217,22 +1218,38 @@ def get_all_notes(chat_id: int) -> List[str]:
         return []
 
 # --- Warnings Helper Functions ---
-def add_warning(chat_id: int, user_id: int, reason: str, admin_id: int) -> int:
+def add_warning(chat_id: int, user_id: int, reason: str, admin_id: int) -> Tuple[int, int]:
+    """Dodaje ostrzeżenie i zwraca (ID nowego warna, łączna liczba warnów)."""
     try:
         with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
             timestamp = datetime.now(timezone.utc).isoformat()
-            conn.execute(
+            cursor.execute(
                 "INSERT INTO warnings (chat_id, user_id, reason, warned_by_id, warned_at) VALUES (?, ?, ?, ?, ?)",
                 (chat_id, user_id, reason, admin_id, timestamp)
             )
-            count = conn.cursor().execute(
+            new_warn_id = cursor.lastrowid
+            
+            count = cursor.execute(
                 "SELECT COUNT(*) FROM warnings WHERE chat_id = ? AND user_id = ?",
                 (chat_id, user_id)
             ).fetchone()[0]
-            return count
+            
+            return new_warn_id, count
     except sqlite3.Error as e:
         logger.error(f"Error adding warning for user {user_id} in chat {chat_id}: {e}")
-        return -1
+        return -1, -1
+
+def remove_warning_by_id(warn_id: int) -> bool:
+    """Usuwa konkretne ostrzeżenie po jego ID."""
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM warnings WHERE id = ?", (warn_id,))
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"Error removing warning with ID {warn_id}: {e}")
+        return False
 
 def get_warnings(chat_id: int, user_id: int) -> List[Tuple[str, int]]:
     try:
@@ -2977,64 +2994,95 @@ async def handle_note_trigger(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     warner = update.effective_user
-
-    if chat.type == ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="Huh? You can't warn in private chat...")
-        return
+    message = update.message
     
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Only admins with ban permissions can issue warnings."):
         return
 
     target_user: User | None = None
-    reason_parts = []
+    reason_parts: list[str] = []
     
-    if update.message.reply_to_message:
-        target_user = update.message.reply_to_message.from_user
+    if message.reply_to_message:
+        if not message.reply_to_message.sender_chat:
+            target_user = message.reply_to_message.from_user
         reason_parts = context.args
     elif context.args:
         target_input = context.args[0]
-        resolved_entity = await resolve_user_with_telethon(context, target_input, update)
-        
-        if isinstance(resolved_entity, User):
-            target_user = resolved_entity
-        else:
-            try:
-                user_id = int(target_input)
-                target_user = User(id=user_id, first_name=f"User {user_id}", is_bot=False)
-            except ValueError:
-                pass
-        
+        target_user = await resolve_user_with_telethon(context, target_input, update)
         reason_parts = context.args[1:]
     
     if not target_user:
-        await update.message.reply_text("Usage: /warn <ID/@user/reply> [reason]")
+        await message.reply_text("Usage: /warn <ID/@username/reply> [reason]")
+        return
+    
+    if not isinstance(target_user, User):
+        await message.reply_text("This command can only be used on users.")
         return
         
     reason = " ".join(reason_parts) or "No reason provided."
 
-    warn_count = add_warning(chat.id, target_user.id, reason, warner.id)
+    if is_privileged_user(target_user.id):
+        await message.reply_text("This user has immunity and cannot be warned.")
+        return
+
+    new_warn_id, warn_count = add_warning(chat.id, target_user.id, reason, warner.id)
     user_display = create_user_html_link(target_user)
 
-    if warn_count == -1:
-        await update.message.reply_text("A database error occurred while adding the warning.")
+    if new_warn_id == -1:
+        await message.reply_text("A database error occurred while adding the warning.")
         return
 
     limit = get_warn_limit(chat.id)
 
-    await update.message.reply_html(
-        f"User {user_display} has been warned. ({warn_count}/{limit})\n"
-        f"<b>Reason:</b> {safe_escape(reason)}"
+
+    keyboard = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("Delete Warn", callback_data=f"undo_warn_{new_warn_id}")]]
+    )
+
+    await message.reply_html(
+        f"User {user_display} (<code>{target_user.id}</code>) has been warned. ({warn_count}/{limit})\n"
+        f"<b>Reason:</b> {safe_escape(reason)}",
+        reply_markup=keyboard
     )
 
     if warn_count >= limit:
         try:
+            context.bot_data.setdefault('recently_removed_users', set()).add(target_user.id)
+            
             await context.bot.ban_chat_member(chat.id, target_user.id)
-            await update.message.reply_html(
+            await message.reply_html(
                 f"🚨 User {user_display} has reached {warn_count}/{limit} warnings and has been banned."
             )
             reset_warnings(chat.id, target_user.id)
         except Exception as e:
-            await update.message.reply_text(f"Failed to ban user after reaching max warnings: {e}")
+            await message.reply_text(f"Failed to ban user after reaching max warnings: {e}")
+
+async def undo_warn_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+
+    user_who_clicked = query.from_user
+    
+    try:
+        member = await context.bot.get_chat_member(query.message.chat_id, user_who_clicked.id)
+        if member.status not in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
+            await query.answer("You must be an admin to undo this action.", show_alert=True)
+            return
+    except Exception:
+        await query.answer("Could not verify your permissions.", show_alert=True)
+        return
+
+    try:
+        warn_id_to_remove = int(query.data.split("_")[2])
+    except (IndexError, ValueError):
+        await query.edit_message_text("Error: Invalid callback data.")
+        return
+
+    if remove_warning_by_id(warn_id_to_remove):
+        new_text = query.message.text_html + "\n\n<i>(Warn undone by " + user_who_clicked.mention_html() + ")</i>"
+        await query.edit_message_text(new_text, parse_mode=ParseMode.HTML, reply_markup=None)
+    else:
+        await query.edit_message_text(query.message.text_html + "\n\n<i>(This warn was already undone or could not be found.)</i>", parse_mode=ParseMode.HTML, reply_markup=None)
 
 async def warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
