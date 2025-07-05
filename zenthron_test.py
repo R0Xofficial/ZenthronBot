@@ -860,7 +860,7 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
         return entity_from_db
 
     try:
-        logger.info(f"Trying to resolve '{target_input}' with PTB's get_chat.")
+        logger.info(f"Resolving '{target_input}' using PTB...")
         ptb_entity = await context.bot.get_chat(target_input)
         if ptb_entity:
             if isinstance(ptb_entity, User):
