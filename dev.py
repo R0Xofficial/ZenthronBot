@@ -1559,7 +1559,7 @@ def format_entity_info(entity: Chat | User,
             if status == "creator":
                 display_status = "<code>Creator</code>"
             elif status == "administrator":
-                display_status = "<code>Administrator</code>"
+                display_status = "<code>Admin</code>"
             elif status == "kicked":
                 display_status = "<code>Banned</code>"
             elif status == "left":
@@ -1568,7 +1568,7 @@ def format_entity_info(entity: Chat | User,
                 if getattr(chat_member_obj, 'can_send_messages', True) is False:
                     display_status = "<code>Muted</code>"
                 else:
-                    display_status = "<code>Member (Exception)</code>"
+                    display_status = "<code>Member (Excepted)</code>"
             elif status == "member":
                 if getattr(chat_member_obj, 'can_send_messages', True) is False:
                      display_status = "<code>Muted</code>"
