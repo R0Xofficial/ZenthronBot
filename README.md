@@ -12,6 +12,9 @@ Meet **ZenthronBot**, a powerful and feature-rich Telegram bot designed for adva
 - **Detailed Information Retrieval**: Commands to get in-depth information about users, chats, and the bot's own operational status.
 - **Fully Configurable**: Securely configured via environment variables, allowing for easy and safe deployment.
 
+## Known Bugs
+- **Groups with topics** Description: The bot works, but its functionality in the topics of a given group disappears. The bot cannot force a search using the user resolver. The target is always the user who created the topic. (It is recommended to use the bot on the General topic). 
+
 ## How to run
 
 1.  **Clone the repository:**
