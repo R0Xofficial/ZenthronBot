@@ -1305,18 +1305,18 @@ async def handle_bot_permission_changes(update: Update, context: ContextTypes.DE
     if new_status.user.id != context.bot.id:
         return
 
-    if new_status.can_send_messages is False:
+    if new_status.status == ChatMemberStatus.RESTRICTED and new_status.can_send_messages is False:
         chat = update.my_chat_member.chat
         logger.warning(f"Bot was muted in chat {chat.title} ({chat.id}). Leaving automatically.")
         try:
             if OWNER_ID:
                 log_text = (
-                    f"<b>#AUTOLEAVE</b> (Muted)\n\n"
+                    f"<b>#AUTOLEAVE</b>\n"
                     f"Bot automatically left the chat <b>{safe_escape(chat.title)}</b> (<code>{chat.id}</code>) "
                     f"because it lost the permission to send messages."
                 )
                 await context.bot.send_message(chat_id=OWNER_ID, text=log_text, parse_mode=ParseMode.HTML)
-
+            
             await context.bot.leave_chat(chat.id)
         except Exception as e:
             logger.error(f"Error during automatic leave from chat {chat.id}: {e}")
@@ -1556,7 +1556,7 @@ def format_entity_info(entity: Chat | User,
         status = chat_member_obj.status
         display_status = ""
 
-        if status == ChatMemberStatus.CREATOR:
+        if status == ChatMemberStatus.OWNER:
             display_status = "<code>Creator</code>"
         elif status == ChatMemberStatus.ADMINISTRATOR:
             display_status = "<code>Administrator</code>"
