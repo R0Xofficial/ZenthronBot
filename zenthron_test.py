@@ -2677,7 +2677,7 @@ async def welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await send_safe_reply(update, context, text="Huh? You can't manage welcome in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can manage welcome settings.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_change_info', "Why should I listen to a person with no privileges for this? You need 'can_change_info' permission.", allow_bot_privileged_override=False):
         return
 
     if context.args and context.args[0].lower() in ['on', 'off']:
@@ -2722,7 +2722,7 @@ async def set_welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await send_safe_reply(update, context, text="Huh? You can't set welcome message in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can set a custom welcome message.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_change_info', "Why should I listen to a person with no privileges for this? You need 'can_change_info' permission.", allow_bot_privileged_override=False):
         return
 
     if not context.args:
@@ -2742,7 +2742,7 @@ async def reset_welcome_command(update: Update, context: ContextTypes.DEFAULT_TY
         await send_safe_reply(update, context, text="Huh? You can't reset welcome message in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can reset the welcome message.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_change_info', "Why should I listen to a person with no privileges for this? You need 'can_change_info' permission.", allow_bot_privileged_override=False):
         return
 
     if set_welcome_setting(chat.id, enabled=True, text=None):
@@ -2757,7 +2757,7 @@ async def goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await send_safe_reply(update, context, text="Huh? You can't manage goodbye in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can manage goodbye settings.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_change_info', "Why should I listen to a person with no privileges for this? You need 'can_change_info' permission.", allow_bot_privileged_override=False):
         return
 
     if context.args and context.args[0].lower() in ['on', 'off']:
@@ -2797,7 +2797,7 @@ async def set_goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await send_safe_reply(update, context, text="Huh? You can't set goodbye message in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can set a custom goodbye message.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_change_info', "Why should I listen to a person with no privileges for this? You need 'can_change_info' permission.", allow_bot_privileged_override=False):
         return
 
     if not context.args:
@@ -2817,7 +2817,7 @@ async def reset_goodbye_command(update: Update, context: ContextTypes.DEFAULT_TY
         await send_safe_reply(update, context, text="Huh? You can't reset goodbye message in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can reset the goodbye message.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_change_info', "Why should I listen to a person with no privileges for this? You need 'can_change_info' permission.", allow_bot_privileged_override=False):
         return
         
     if set_goodbye_setting(chat.id, enabled=True, text=None):
@@ -2854,7 +2854,7 @@ async def set_clean_service_command(update: Update, context: ContextTypes.DEFAUL
         await send_safe_reply(update, context, text="Huh? You can't set clean service in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_delete_messages', "Only admins with 'delete messages' permission can manage this setting.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_delete_messages', "Why should I listen to a person with no privileges for this? You need 'can_delete_messages' permission.", allow_bot_privileged_override=False):
         return
 
     if not context.args:
@@ -2896,7 +2896,7 @@ async def save_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         await send_safe_reply(update, context, text="Huh? You can't save note in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can manage notes.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_change_info', "Why should I listen to a person with no privileges for this? You need 'can_change_info' permission.", allow_bot_privileged_override=False):
         return
         
     note_name = ""
@@ -2960,7 +2960,7 @@ async def remove_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await send_safe_reply(update, context, text="Huh? You can't remove notes in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_change_info', "Only admins can manage notes.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_change_info', "Why should I listen to a person with no privileges for this? You need 'can_change_info' permission.", allow_bot_privileged_override=False):
         return
 
     if not context.args:
@@ -2996,7 +2996,7 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     warner = update.effective_user
     message = update.message
     
-    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Only admins with ban permissions can issue warnings."):
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
     target_user: User | None = None
@@ -3142,7 +3142,7 @@ async def reset_warnings_command(update: Update, context: ContextTypes.DEFAULT_T
         await send_safe_reply(update, context, text="Huh? You can't reset warnings in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Only admins with ban permissions can reset warnings."):
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
     target_user: User | None = None
@@ -3169,7 +3169,7 @@ async def set_warn_limit_command(update: Update, context: ContextTypes.DEFAULT_T
         await send_safe_reply(update, context, text="Huh? You can't set warning limit in private chat...")
         return
     
-    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Only admins with ban permissions can set the warning limit.", allow_bot_privileged_override=False):
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission.", allow_bot_privileged_override=False):
         return
 
     if not context.args:
