@@ -5904,6 +5904,7 @@ async def main() -> None:
         application.bot_data['telethon_client'] = telethon_client
         logger.info("Telethon client has been injected into bot_data.")
 
+        application.add_handler(ChatMemberHandler(handle_bot_permission_changes, ChatMemberHandler.MY_CHAT_MEMBER))
         application.add_handler(MessageHandler(filters.COMMAND, check_blacklist_handler), group=-1)
         application.add_handler(MessageHandler(filters.ALL & (~filters.UpdateType.EDITED_MESSAGE), log_user_from_interaction), group=10)
         application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND) & filters.ChatType.GROUPS, check_gban_on_message), group=-2)
