@@ -1513,7 +1513,7 @@ def format_entity_info(entity: Chat | User,
                        is_target_dev: bool = False,
                        is_target_sudo: bool = False,
                        is_target_support: bool = False,
-                       is_target_whitelist: bool = False,
+                       is_target_whitelisted: bool = False,
                        blacklist_reason_str: str | None = None,
                        gban_reason_str: str | None = None,
                        current_chat_id_for_status: int | None = None,
@@ -1552,35 +1552,34 @@ def format_entity_info(entity: Chat | User,
             f"<b>• Language Code:</b> <code>{language_code_val if language_code_val else 'N/A'}</code>"
         ])
 
-    if chat_member_obj:
-        status = chat_member_obj.status
-        display_status = ""
+        if chat_member_obj:
+            status = chat_member_obj.status
+            display_status = ""
 
-        if status == ChatMemberStatus.OWNER:
-            display_status = "<code>Creator</code>"
-        elif status == ChatMemberStatus.ADMINISTRATOR:
-            display_status = "<code>Administrator</code>"
-        elif status == ChatMemberStatus.LEFT:
-            display_status = "<code>Not in chat</code>"
-        elif status == ChatMemberStatus.BANNED:
-            display_status = "<code>Banned</code>"
-        
-        elif status in [ChatMemberStatus.MEMBER, ChatMemberStatus.RESTRICTED]:
-            can_send = getattr(chat_member_obj, 'can_send_messages', True)
-
-            if can_send is False:
-                display_status = "<code>Muted</code>"
-            else:
-                if status == ChatMemberStatus.RESTRICTED:
+            if status == ChatMemberStatus.OWNER:
+                display_status = "<code>Creator</code>"
+            elif status == ChatMemberStatus.ADMINISTRATOR:
+                display_status = "<code>Administrator</code>"
+            elif status == ChatMemberStatus.LEFT:
+                display_status = "<code>Left</code>"
+            elif status == ChatMemberStatus.BANNED:
+                display_status = "<code>Banned</code>"
+            elif status == ChatMemberStatus.RESTRICTED:
+                if getattr(chat_member_obj, 'can_send_messages', True) is False:
+                    display_status = "<code>Muted</code>"
+                else:
                     display_status = "<code>Member (Special Permissions)</code>"
+            elif status == ChatMemberStatus.MEMBER:
+                chat = bot_context.bot_data.get(current_chat_id_for_status)
+                if chat and chat.permissions and chat.permissions.can_send_messages is True and chat_member_obj.can_send_messages is None:
+                    display_status = "<code>Muted</code>"
                 else:
                     display_status = "<code>Member</code>"
-        
-        else:
-            display_status = f"<code>{status.capitalize()}</code>"
+            else:
+                display_status = f"<code>{status.capitalize()}</code>"
 
-        if display_status:
-            info_lines.append(f"<b>• Status:</b> {display_status}")
+            if display_status:
+                info_lines.append(f"<b>• Status in this chat:</b> {display_status}")
 
         if is_target_owner:
             info_lines.append(f"\n<b>• User Level:</b> <code>God</code>")
