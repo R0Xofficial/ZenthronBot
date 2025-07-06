@@ -1352,7 +1352,7 @@ async def handle_bot_permission_changes(update: Update, context: ContextTypes.DE
         logger.warning(f"Bot was muted in chat {chat.title} ({chat.id}). Leaving automatically.")
         try:
             log_text = (
-                f"<b>#AUTOLEAVE</b>\n"
+                f"<b>#AUTOLEAVE</b>\n\n"
                 f"Bot automatically left the chat <b>{safe_escape(chat.title)}</b> (<code>{chat.id}</code>) "
                 f"because it lost the permission to send messages (Muted)."
             )
