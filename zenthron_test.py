@@ -60,6 +60,7 @@ BOT_START_TIME = datetime.now()
 TENOR_API_KEY = None
 DB_NAME = "zenthron_data.db"
 LOG_CHAT_ID = None
+ADMIN_LOG_CHAT_ID = None
 API_ID = None
 API_HASH = None
 SESSION_NAME = "zenthron_user_session"
@@ -102,6 +103,15 @@ if log_chat_id_str:
         LOG_CHAT_ID = None
 else:
     logger.info("LOG_CHAT_ID not set. Operational logs will be sent to OWNER_ID if available.")
+
+try:
+    admin_log_chat_id_str = os.getenv("ADMIN_LOG_CHAT_ID")
+    if admin_log_chat_id_str:
+        ADMIN_LOG_CHAT_ID = int(admin_log_chat_id_str)
+        logger.info(f"Admin Log Chat ID loaded: {ADMIN_LOG_CHAT_ID}")
+except (ValueError, TypeError):
+    logger.error(f"Invalid ADMIN_LOG_CHAT_ID: '{admin_log_chat_id_str}'. It must be a numeric chat ID. Falling back to OWNER_ID.")
+    ADMIN_LOG_CHAT_ID = None
 
 APPEAL_CHAT_USERNAME = os.getenv("APPEAL_CHAT_USERNAME")
 if not APPEAL_CHAT_USERNAME:
@@ -1341,13 +1351,12 @@ async def handle_bot_permission_changes(update: Update, context: ContextTypes.DE
         chat = update.my_chat_member.chat
         logger.warning(f"Bot was muted in chat {chat.title} ({chat.id}). Leaving automatically.")
         try:
-            if OWNER_ID:
-                log_text = (
-                    f"<b>#AUTOLEAVE</b>\n"
-                    f"Bot automatically left the chat <b>{safe_escape(chat.title)}</b> (<code>{chat.id}</code>) "
-                    f"because it lost the permission to send messages."
-                )
-                await context.bot.send_message(chat_id=OWNER_ID, text=log_text, parse_mode=ParseMode.HTML)
+            log_text = (
+                f"<b>#AUTO_LEAVE</b> (Muted)\n\n"
+                f"Bot automatically left the chat <b>{safe_escape(chat.title)}</b> (<code>{chat.id}</code>) "
+                f"because it lost the permission to send messages."
+            )
+            await send_critical_log(context, log_text)
             
             await context.bot.leave_chat(chat.id)
         except Exception as e:
@@ -1356,15 +1365,12 @@ async def handle_bot_permission_changes(update: Update, context: ContextTypes.DE
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error("Exception while handling an update:", exc_info=context.error)
 
-    if not OWNER_ID:
-        return
-
     tb_list = traceback.format_exception(None, context.error, context.error.__traceback__)
     tb_string = "".join(tb_list)
 
     update_str = update.to_dict() if isinstance(update, Update) else str(update)
     
-    if 'callback_query' in update_str and 'data' in update_str['callback_query']:
+    if isinstance(update_str, dict) and 'callback_query' in update_str and 'data' in update_str['callback_query']:
         if len(update_str['callback_query']['data']) > 64:
              update_str['callback_query']['data'] = update_str['callback_query']['data'][:64] + '...'
         
@@ -1379,22 +1385,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
         f"<pre>{safe_escape(pretty_update_str[:1500])}</pre>"
     )
 
-    try:
-        await context.bot.send_message(
-            chat_id=OWNER_ID,
-            text=message_text,
-            parse_mode=ParseMode.HTML
-        )
-    except Exception as e:
-        logger.error(f"CRITICAL: Could not send exception traceback to owner: {e}")
-        try:
-            fallback_message = (
-                f"An exception occurred: {safe_escape(str(context.error))}\n\n"
-                f"Full traceback in bot logs."
-            )
-            await context.bot.send_message(chat_id=OWNER_ID, text=fallback_message)
-        except Exception as final_e:
-            logger.critical(f"CRITICAL: Failed even to send a fallback error message to owner: {final_e}")
+    await send_critical_log(context, message_text)
 
 # --- Command Handlers ---
 HELP_TEXT = """
@@ -4200,13 +4191,10 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
         logger.info(f"Bot joined chat: {chat.title} ({chat.id})")
         add_chat_to_db(chat.id, chat.title or f"Untitled Chat {chat.id}")
         if OWNER_ID:
-            safe_chat_title = html.escape(chat.title or f"Chat ID {chat.id}")
+            safe_chat_title = safe_escape(chat.title or f"Chat ID {chat.id}")
             link_line = f"\n<b>Link:</b> @{chat.username}" if chat.username else ""
-            pm_text = (f"<b>#ADDEDTOGROUP</b>\n\n<b>Name:</b> {safe_chat_title}\n<b>ID:</b> <code>{chat.id}</code>{link_line}")
-            try:
-                await context.bot.send_message(chat_id=OWNER_ID, text=pm_text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
-            except Exception as e:
-                logger.error(f"Failed to send join notification to owner for group {chat.id}: {e}")
+            log_text = (f"<b>#ADDEDTOGROUP</b>\n\n<b>Name:</b> {safe_chat_title}\n<b>ID:</b> <code>{chat.id}</code>{link_line}")
+            await send_critical_log(context, log_text)
         try:
             bot_username = context.bot.username
             
@@ -4384,6 +4372,25 @@ async def send_operational_log(context: ContextTypes.DEFAULT_TYPE, message: str,
                     logger.error(f"Failed to send operational log to OWNER_ID as fallback: {e_owner}")
         except Exception as e:
             logger.error(f"Unexpected error sending operational log to {target_id_for_log}: {e}", exc_info=True)
+
+async def send_critical_log(context: ContextTypes.DEFAULT_TYPE, message: str, parse_mode: str = ParseMode.HTML) -> None:
+    target_id = ADMIN_LOG_CHAT_ID or OWNER_ID
+
+    if not target_id:
+        logger.error("Neither ADMIN_LOG_CHAT_ID nor OWNER_ID are set. Cannot send critical log.")
+        return
+
+    try:
+        await context.bot.send_message(chat_id=target_id, text=message, parse_mode=parse_mode)
+    except Exception as e:
+        logger.error(f"Failed to send critical log to target {target_id}: {e}")
+        if target_id == ADMIN_LOG_CHAT_ID and OWNER_ID:
+            logger.warning(f"Falling back to send critical log to OWNER_ID ({OWNER_ID}).")
+            try:
+                fallback_message = f"<b>[Fallback from Log Chat]</b>\n\n{message}"
+                await context.bot.send_message(chat_id=OWNER_ID, text=fallback_message, parse_mode=parse_mode)
+            except Exception as e_owner:
+                logger.critical(f"CRITICAL: Failed to send critical log even to OWNER_ID: {e_owner}")
 
 async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
