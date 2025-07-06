@@ -39,6 +39,7 @@ export TELEGRAM_API_HASH="PASTE_HERE"
 # If you don't set it, the bot will send logs to the owner's PM.
 #
 # export LOG_CHAT_ID="PASTE_HERE"
+# export ADMIN_LOG_CHAT_ID="PASTE_HERE"
 
 # Set your TENOR API here so that gifs appear with the 4FUN commands.
 # Go to https://developers.google.com/tenor/guides/quickstart to generate your key.
