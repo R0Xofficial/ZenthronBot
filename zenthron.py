@@ -6018,7 +6018,7 @@ async def main() -> None:
         application.add_handler(CommandHandler("delsudo", delsudo_command))
         application.add_handler(CommandHandler("adddev", adddev_command))
         application.add_handler(CommandHandler("deldev", deldev_command))
-        application.add_handler(CommandHandler("listdevs", listdevs_command))
+        application.add_handler(CommandHandler("listdev", listdevs_command))
         application.add_handler(CommandHandler("whitelist", whitelist_user_command))
         application.add_handler(CommandHandler("unwhitelist", unwhitelist_user_command))
         application.add_handler(CommandHandler("addsupport", addsupport_command))
