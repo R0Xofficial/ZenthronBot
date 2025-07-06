@@ -40,7 +40,7 @@ Meet **ZenthronBot**, a powerful and feature-rich Telegram bot designed for adva
 4.  **Run the bot:**
     Navigate to the bot's directory and run it using the script:
     ```bash
-    cd ~/zenthron && . ./env.sh && python zenthron.py
+    cd ~/zenthron && . ./env.sh && python3 zenthron.py
     ```
 # Official Support Chat:
 -   **https://t.me/ZenthronSupport/**
