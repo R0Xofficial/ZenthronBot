@@ -30,7 +30,7 @@ from telethon import TelegramClient
 from telethon.tl.types import User as TelethonUser, Channel as TelethonChannel
 from telegram import Update, User, Chat, constants, ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ChatType, ParseMode, ChatMemberStatus
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ApplicationHandlerStop, JobQueue, CallbackQueryHandler
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ApplicationHandlerStop, JobQueue, CallbackQueryHandler, ChatMemberHandler
 from telegram.error import TelegramError, BadRequest
 from telegram.request import HTTPXRequest
 from datetime import datetime, timezone, timedelta
@@ -108,6 +108,18 @@ if not APPEAL_CHAT_USERNAME:
     exit(1)
 else:
     logger.info(f"Appeal chat loaded: {APPEAL_CHAT_USERNAME}")
+
+try:
+    appeal_chat_id_str = os.getenv("APPEAL_CHAT_ID")
+    if appeal_chat_id_str:
+        APPEAL_CHAT_ID = int(appeal_chat_id_str)
+        logger.info(f"Appeal Chat ID loaded: {APPEAL_CHAT_ID}")
+    else:
+        raise ValueError("APPEAL_CHAT_ID environment variable not set or empty")
+except (ValueError, TypeError) as e:
+    logger.critical(f"CRITICAL: Invalid or missing APPEAL_CHAT_ID: {e}")
+    print(f"\n--- FATAL ERROR --- \nInvalid or missing APPEAL_CHAT_ID. It must be a numeric chat ID.")
+    exit(1)
 
 # --- Database Initialization ---
 def init_db():
@@ -316,21 +328,39 @@ def is_user_blacklisted(user_id: int) -> bool:
 
 # --- Blacklist Check Handler ---
 async def check_blacklist_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not update.message or not update.effective_user:
+    message = update.effective_message
+    if not message or not message.text or not update.effective_user:
         return
 
     user = update.effective_user
+    chat = update.effective_chat
 
     if user.id == OWNER_ID:
         return
+        
+    if not is_user_blacklisted(user.id):
+        return
 
-    if is_user_blacklisted(user.id):
-        user_mention_log = f"@{user.username}" if user.username else str(user.id)
-        message_text_preview = update.message.text[:50] if update.message.text else "[No text content]"
-        
-        logger.info(f"User {user.id} ({user_mention_log}) is blacklisted. Silently ignoring and blocking interaction: '{message_text_preview}'")
-        
-        raise ApplicationHandlerStop
+    always_allowed_commands = ['/start', '/help', '/info', '/id']
+    appeal_chat_allowed_commands = ['/notes', '/warns', '/warnings']
+
+    is_in_appeal_chat = (chat.id == APPEAL_CHAT_ID)
+
+    command = message.text.split()[0].lower()
+
+    if command in always_allowed_commands:
+        return
+    
+    if is_in_appeal_chat and command in appeal_chat_allowed_commands:
+        logger.info(f"Allowing command '{command}' for blacklisted user {user.id} in appeal chat.")
+        return
+
+    user_mention_log = f"@{user.username}" if user.username else str(user.id)
+    message_text_preview = message.text[:50]
+    
+    logger.info(f"User {user.id} ({user_mention_log}) is blacklisted. Blocking command: '{message_text_preview}'")
+    
+    raise ApplicationHandlerStop
 
 # --- Whitelist ---
 def add_to_whitelist(user_id: int, added_by_id: int) -> bool:
@@ -1296,6 +1326,31 @@ def get_warn_limit(chat_id: int) -> int:
         logger.error(f"Error getting warn limit for chat {chat_id}")
         return MAX_WARNS
 
+async def handle_bot_permission_changes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.my_chat_member:
+        return
+
+    new_status = update.my_chat_member.new_chat_member
+    
+    if new_status.user.id != context.bot.id:
+        return
+
+    if new_status.status == ChatMemberStatus.RESTRICTED and new_status.can_send_messages is False:
+        chat = update.my_chat_member.chat
+        logger.warning(f"Bot was muted in chat {chat.title} ({chat.id}). Leaving automatically.")
+        try:
+            if OWNER_ID:
+                log_text = (
+                    f"<b>#AUTOLEAVE</b>\n"
+                    f"Bot automatically left the chat <b>{safe_escape(chat.title)}</b> (<code>{chat.id}</code>) "
+                    f"because it lost the permission to send messages."
+                )
+                await context.bot.send_message(chat_id=OWNER_ID, text=log_text, parse_mode=ParseMode.HTML)
+            
+            await context.bot.leave_chat(chat.id)
+        except Exception as e:
+            logger.error(f"Error during automatic leave from chat {chat.id}: {e}")
+
 # --- Command Handlers ---
 HELP_TEXT = """
 <b>Here are the commands you can use:</b>
@@ -1483,7 +1538,7 @@ async def owner_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     else: await update.message.reply_text("Error: Owner information is not configured.")
 
 def format_entity_info(entity: Chat | User,
-                       chat_member_status_str: str | None = None,
+                       chat_member_obj: telegram.ChatMember | None = None,
                        is_target_owner: bool = False,
                        is_target_dev: bool = False,
                        is_target_sudo: bool = False,
@@ -1527,17 +1582,34 @@ def format_entity_info(entity: Chat | User,
             f"<b>• Language Code:</b> <code>{language_code_val if language_code_val else 'N/A'}</code>"
         ])
 
-        if chat_member_status_str and current_chat_id_for_status != user.id and current_chat_id_for_status is not None:
+        if chat_member_obj:
+            status = chat_member_obj.status
             display_status = ""
-            if chat_member_status_str == "creator": display_status = "<code>Creator</code>"
-            elif chat_member_status_str == "administrator": display_status = "<code>Admin</code>"
-            elif chat_member_status_str == "member": display_status = "<code>Member</code>"
-            elif chat_member_status_str == "left": display_status = "<code>Not in chat</code>"
-            elif chat_member_status_str == "kicked": display_status = "<code>Banned</code>"
-            elif chat_member_status_str == "restricted": display_status = "<code>Muted</code>"
-            elif chat_member_status_str == "not_a_member": display_status = "<code>Not in chat</code>"
-            else: display_status = f"<code>{safe_escape(chat_member_status_str.replace('_', ' ').capitalize())}</code>"
-            info_lines.append(f"<b>• Status:</b> {display_status}")
+    
+            if status == "creator":
+                display_status = "<code>Creator</code>"
+            elif status == "administrator":
+                display_status = "<code>Admin</code>"
+            elif status == "kicked":
+                display_status = "<code>Banned</code>"
+            elif status == "left":
+                display_status = "<code>Not in chat</code>"
+            elif status == "restricted":
+                if getattr(chat_member_obj, 'can_send_messages', True) is False:
+                    display_status = "<code>Muted</code>"
+                else:
+                    display_status = "<code>Member (Excepted)</code>"
+            elif status == "member":
+                if getattr(chat_member_obj, 'can_send_messages', True) is False:
+                     display_status = "<code>Muted</code>"
+                else:
+                     display_status = "<code>Member</code>"
+
+            elif status == "not_a_member":
+                display_status = "<code>Not in chat</code>"
+            
+            if display_status:
+                info_lines.append(f"<b>• Status:</b> {display_status}")
 
         if is_target_owner:
             info_lines.append(f"\n<b>• User Level:</b> <code>God</code>")
@@ -1627,18 +1699,17 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     is_target_whitelist_flag = is_whitelisted(target_entity.id)
     blacklist_reason_str = get_blacklist_reason(target_entity.id)
     gban_reason_str = get_gban_reason(target_entity.id)
-    member_status_in_current_chat_str: str | None = None
+    chat_member_obj: telegram.ChatMember | None = None
     
     if isinstance(target_entity, User) and update.effective_chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
         try:
-            chat_member = await context.bot.get_chat_member(update.effective_chat.id, target_entity.id)
-            member_status_in_current_chat_str = chat_member.status
+            chat_member_obj = await context.bot.get_chat_member(update.effective_chat.id, target_entity.id)
         except TelegramError:
-            member_status_in_current_chat_str = "not_a_member"
+            pass 
 
     info_message = format_entity_info(
         entity=target_entity,
-        chat_member_status_str=member_status_in_current_chat_str,
+        chat_member_obj=chat_member_obj,
         is_target_owner=is_target_owner_flag,
         is_target_dev=is_target_dev_flag,
         is_target_sudo=is_target_sudo_flag,
@@ -4227,6 +4298,18 @@ async def handle_left_group_member(update: Update, context: ContextTypes.DEFAULT
             except Exception as e:
                 logger.error(f"Failed to send goodbye message in chat {chat.id}: {e}")
 
+async def handle_bot_banned(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    update_data = update.my_chat_member
+    if not update_data:
+        return
+        
+    if (update_data.new_chat_member.user.id == context.bot.id and
+            update_data.new_chat_member.status == ChatMemberStatus.BANNED):
+        
+        chat = update_data.chat
+        logger.warning(f"Bot was banned from chat {chat.title} ({chat.id}). Removing from DB.")
+        remove_chat_from_db(chat.id)
+
 async def send_operational_log(context: ContextTypes.DEFAULT_TYPE, message: str, parse_mode: str = ParseMode.HTML) -> None:
     """
     Sends an operational log message to LOG_CHAT_ID if configured,
@@ -5864,6 +5947,7 @@ async def main() -> None:
         application.bot_data['telethon_client'] = telethon_client
         logger.info("Telethon client has been injected into bot_data.")
 
+        application.add_handler(ChatMemberHandler(handle_bot_permission_changes, ChatMemberHandler.MY_CHAT_MEMBER))
         application.add_handler(MessageHandler(filters.COMMAND, check_blacklist_handler), group=-1)
         application.add_handler(MessageHandler(filters.ALL & (~filters.UpdateType.EDITED_MESSAGE), log_user_from_interaction), group=10)
         application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND) & filters.ChatType.GROUPS, check_gban_on_message), group=-2)
@@ -5950,6 +6034,7 @@ async def main() -> None:
         application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, check_gban_on_entry), group=-1)
         application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_group_members))
         application.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, handle_left_group_member))
+        application.add_handler(ChatMemberHandler(handle_bot_banned, ChatMemberHandler.MY_CHAT_MEMBER))
 
         if application.job_queue:
             application.job_queue.run_once(send_startup_log, when=1)
