@@ -23,6 +23,8 @@ import telegram
 import time
 import google.generativeai as genai
 import platform
+import traceback
+import json
 from telegram import __version__ as ptb_version
 from telethon import __version__ as telethon_version
 from typing import List, Tuple
@@ -1350,6 +1352,49 @@ async def handle_bot_permission_changes(update: Update, context: ContextTypes.DE
             await context.bot.leave_chat(chat.id)
         except Exception as e:
             logger.error(f"Error during automatic leave from chat {chat.id}: {e}")
+
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.error("Exception while handling an update:", exc_info=context.error)
+
+    if not OWNER_ID:
+        return
+
+    tb_list = traceback.format_exception(None, context.error, context.error.__traceback__)
+    tb_string = "".join(tb_list)
+
+    update_str = update.to_dict() if isinstance(update, Update) else str(update)
+    
+    if 'callback_query' in update_str and 'data' in update_str['callback_query']:
+        if len(update_str['callback_query']['data']) > 64:
+             update_str['callback_query']['data'] = update_str['callback_query']['data'][:64] + '...'
+        
+    pretty_update_str = json.dumps(update_str, indent=2, ensure_ascii=False)
+
+    message_text = (
+        f"<b>🚨 An exception was raised while handling an update</b>\n\n"
+        f"<b>Error:</b>\n<pre>{safe_escape(str(context.error))}</pre>\n\n"
+        f"<b>Full Traceback (last 2000 chars):</b>\n"
+        f"<pre>{safe_escape(tb_string[-2000:])}</pre>\n\n"
+        f"<b>Causing update (first 1500 chars):</b>\n"
+        f"<pre>{safe_escape(pretty_update_str[:1500])}</pre>"
+    )
+
+    try:
+        await context.bot.send_message(
+            chat_id=OWNER_ID,
+            text=message_text,
+            parse_mode=ParseMode.HTML
+        )
+    except Exception as e:
+        logger.error(f"CRITICAL: Could not send exception traceback to owner: {e}")
+        try:
+            fallback_message = (
+                f"An exception occurred: {safe_escape(str(context.error))}\n\n"
+                f"Full traceback in bot logs."
+            )
+            await context.bot.send_message(chat_id=OWNER_ID, text=fallback_message)
+        except Exception as final_e:
+            logger.critical(f"CRITICAL: Failed even to send a fallback error message to owner: {final_e}")
 
 # --- Command Handlers ---
 HELP_TEXT = """
@@ -5947,6 +5992,7 @@ async def main() -> None:
         application.bot_data['telethon_client'] = telethon_client
         logger.info("Telethon client has been injected into bot_data.")
 
+        application.add_error_handler(error_handler)
         application.add_handler(ChatMemberHandler(handle_bot_permission_changes, ChatMemberHandler.MY_CHAT_MEMBER))
         application.add_handler(MessageHandler(filters.COMMAND, check_blacklist_handler), group=-1)
         application.add_handler(MessageHandler(filters.ALL & (~filters.UpdateType.EDITED_MESSAGE), log_user_from_interaction), group=10)
