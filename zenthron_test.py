@@ -4403,27 +4403,29 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         return
 
     target_entity: User | Chat | None = None
-    reason_text: str | None = None
+    reason: str | None = None
 
     if message.reply_to_message:
         target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
         if context.args:
-            reason_text = " ".join(context.args)
+            reason = " ".join(context.args)
     elif context.args:
         target_input = context.args[0]
-        target_entity = await resolve_user_with_telethon(context, target_input, update)
         if len(context.args) > 1:
-            reason_text = " ".join(context.args[1:])
-            
+            reason = " ".join(context.args[1:])
+        target_entity = await resolve_user_with_telethon(context, target_input, update)
+        if not target_entity and target_input.isdigit():
+            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+    else:
+        await message.reply_text("Usage: /blist <ID/@username/reply> [reason]"); return
+    
     if not target_entity:
-        await message.reply_text("<b>Usage:</b> /blist <ID/@username/reply> <reason>", parse_mode=ParseMode.HTML)
+        await message.reply_text("Skrrrt... I can't find the user.")
         return
 
-    if not reason_text:
+    if not reason:
         await message.reply_text("You must provide a reason for this action.")
         return
-
-    reason = reason_text
 
     if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
         await message.reply_text("🧐 This action can only be applied to users.")
@@ -4610,27 +4612,27 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     target_entity: User | Chat | None = None
-    reason_text: str | None = None
+    reason: str | None = None
 
     if message.reply_to_message:
         target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
         if context.args:
-            reason_text = " ".join(context.args)
+            reason = " ".join(context.args)
     elif context.args:
         target_input = context.args[0]
-        target_entity = await resolve_user_with_telethon(context, target_input, update)
         if len(context.args) > 1:
-            reason_text = " ".join(context.args[1:])
-    
-    if not target_entity:
-        await message.reply_text("<b>Usage:</b> /gban <ID/@username/reply> <reason>")
-        return
+            reason = " ".join(context.args[1:])
+        
+        target_entity = await resolve_user_with_telethon(context, target_input, update)
+        
+        if not target_entity and target_input.isdigit():
+            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+    else:
+        await message.reply_text("Usage: /gban <ID/@username/reply> [reason]"); return
 
-    if not reason_text:
+    if not reason:
         await message.reply_text("You must provide a reason for this action.")
         return
-        
-    reason = reason_text
 
     if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
         await message.reply_text("🧐 This action can only be applied to users.")
