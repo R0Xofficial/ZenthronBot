@@ -1650,7 +1650,7 @@ def format_entity_info(entity: Chat | User,
                 info_lines.append(f"<b>• Status:</b> {display_status}")
 
         if is_target_bot:
-            info_lines.append(f"\n<b>• That’s me! BOMBOCLAT!</b>")
+            info_lines.append(f"\n<b>• That’s me!</b> <code>BOMBOCLAT!</code>")
         elif is_target_owner:
             info_lines.append(f"\n<b>• User Level:</b> <code>God</code>")
         elif is_target_dev:
