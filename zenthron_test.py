@@ -4726,7 +4726,7 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await message.reply_html(f"User {user_display} (<code>{target_entity.id}</code>) is <b>not globally banned</b>.")
         return
 
-    if remove_from_gban(target_entity.id)
+    if remove_from_gban(target_entity.id):
        success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>globally unbanned</b>.\n<i>Propagating unban...</i>"
         if LOG_CHAT_USERNAME:
             success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
