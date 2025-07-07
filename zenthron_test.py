@@ -4414,13 +4414,9 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         if len(context.args) > 1:
             reason = " ".join(context.args[1:])
         target_entity = await resolve_user_with_telethon(context, target_input, update)
-        if not target_entity and target_input.isdigit():
-            target_entity = User(id=int(target_input), first_name="", is_bot=False)
-    else:
-        await message.reply_text("Usage: /blist <ID/@username/reply> [reason]"); return
-    
+
     if not target_entity:
-        await message.reply_text("Skrrrt... I can't find the user.")
+        await message.reply_html("<b>Usage:</b> /blist <ID/@username/reply> [reason]")
         return
 
     if not reason:
@@ -4449,10 +4445,8 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
 
     if add_to_blacklist(target_entity.id, user.id, reason):
         success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>added to the blacklist</b>.\n<b>Reason:</b> {safe_escape(reason)}"
-        
         if LOG_CHAT_USERNAME:
             success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
-            
         await message.reply_html(success_message, disable_web_page_preview=True)
         
         try:
@@ -4487,13 +4481,10 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
     elif context.args:
         target_input = context.args[0]
         target_entity = await resolve_user_with_telethon(context, target_input, update)
-        if not target_entity and target_input.isdigit():
-            target_entity = User(id=int(target_input), first_name="", is_bot=False)
-    else:
-        await message.reply_text("Specify a user ID/@username (or reply) to unblacklist."); return
-        
+
     if not target_entity:
-        await message.reply_text("Skrrrt... I can't find the user."); return
+        await message.reply_text("Usage: /unblist <ID/@username/reply>")
+        return
     
     if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
         await message.reply_text("🧐 This action can only be applied to users."); return
@@ -4507,7 +4498,7 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
         return
 
     if remove_from_blacklist(target_entity.id):
-        success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>removed from blacklist</b>."
+        success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>removed from the blacklist</b>."
         if LOG_CHAT_USERNAME:
             success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
         await message.reply_html(success_message, disable_web_page_preview=True)
@@ -4625,10 +4616,9 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         
         target_entity = await resolve_user_with_telethon(context, target_input, update)
         
-        if not target_entity and target_input.isdigit():
-            target_entity = User(id=int(target_input), first_name="", is_bot=False)
-    else:
-        await message.reply_text("Usage: /gban <ID/@username/reply> [reason]"); return
+    if not target_entity:
+        await message.reply_html("<b>Usage:</b> /gban <ID/@username/reply> [reason]")
+        return
 
     if not reason:
         await message.reply_text("You must provide a reason for this action.")
@@ -4653,45 +4643,43 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         )
         return
 
-    add_to_gban(target_entity.id, user_who_gbans.id, reason)
-    if chat.type != ChatType.PRIVATE and is_gban_enforced(chat.id):
-        try:
-            await context.bot.ban_chat_member(chat.id, target_entity.id)
-        except Exception as e:
-            logger.warning(f"Could not enforce local ban for gban in chat {chat.id}: {e}")
+    if add_to_gban(target_entity.id, user_who_gbans.id, reason):
+        if chat.type != ChatType.PRIVATE and is_gban_enforced(chat.id):
+            try:
+                await context.bot.ban_chat_member(chat.id, target_entity.id)
+            except Exception as e:
+                logger.warning(f"Could not enforce local ban for gban: {e}")
 
-    success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>globally banned</b>.\n<b>Reason:</b> {safe_escape(reason)}"
-        
-    if LOG_CHAT_USERNAME:
-        success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
-            
-    await message.reply_html(success_message, disable_web_page_preview=True)
+        success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>globally banned</b>.\n<b>Reason:</b> {safe_escape(reason)}"
+        if LOG_CHAT_USERNAME:
+            success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
+        await message.reply_html(success_message, disable_web_page_preview=True)
     
-    try:
-        current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-        
-        log_user_display = create_user_html_link(target_entity)
-        
-        chat_name_display = safe_escape(chat.title or f"PM with {user_who_gbans.first_name}")
-        if chat.type != ChatType.PRIVATE and chat.username:
-            message_link = f"https://t.me/{chat.username}/{message.message_id}"
-            chat_name_display = f"<a href='{message_link}'>{safe_escape(chat.title)}</a>"
-
-        reason_display = safe_escape(reason)
-        admin_link = create_user_html_link(user_who_gbans)
-
-        log_message = (
-            f"<b>#GBANNED</b>\n"
-            f"<b>Initiated From:</b> {chat_name_display} (<code>{chat.id}</code>)\n\n"
-            f"<b>User:</b> {log_user_display}\n"
-            f"<b>User ID:</b> <code>{target_entity.id}</code>\n"
-            f"<b>Reason:</b> {reason_display}\n"
-            f"<b>Admin:</b> {admin_link}\n"
-            f"<b>Date:</b> <code>{current_time}</code>"
-        )
-        await send_operational_log(context, log_message)
-    except Exception as e:
-        logger.error(f"Error preparing/sending #GBANNED operational log: {e}", exc_info=True)
+        try:
+            current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            
+            log_user_display = create_user_html_link(target_entity)
+            
+            chat_name_display = safe_escape(chat.title or f"PM with {user_who_gbans.first_name}")
+            if chat.type != ChatType.PRIVATE and chat.username:
+                message_link = f"https://t.me/{chat.username}/{message.message_id}"
+                chat_name_display = f"<a href='{message_link}'>{safe_escape(chat.title)}</a>"
+            reason_display = safe_escape(reason)
+            admin_link = create_user_html_link(user_who_gbans)
+            log_message = (
+                f"<b>#GBANNED</b>\n"
+                f"<b>Initiated From:</b> {chat_name_display} (<code>{chat.id}</code>)\n\n"
+                f"<b>User:</b> {log_user_display}\n"
+                f"<b>User ID:</b> <code>{target_entity.id}</code>\n"
+                f"<b>Reason:</b> {reason_display}\n"
+                f"<b>Admin:</b> {admin_link}\n"
+                f"<b>Date:</b> <code>{current_time}</code>"
+            )
+            await send_operational_log(context, log_message)
+        except Exception as e:
+            logger.error(f"Error preparing/sending #GBANNED operational log: {e}", exc_info=True)
+    else:
+        await message.reply_text("Failed to add user to global ban list.")
 
 async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_who_ungbans = update.effective_user
@@ -4709,10 +4697,10 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     elif context.args:
         target_input = context.args[0]
         target_entity = await resolve_user_with_telethon(context, target_input, update)
-        if not target_entity and target_input.isdigit():
-            target_entity = User(id=int(target_input), first_name="", is_bot=False)
-    else:
-        await message.reply_text("Usage: /ungban <ID/@username/reply>"); return
+
+    if not target_entity:
+        await message.reply_text("Usage: /ungban <ID/@username/reply>")
+        return
         
     if not target_entity:
         await message.reply_text("Skrrrt... I can't find the user."); return
@@ -4727,37 +4715,39 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     if remove_from_gban(target_entity.id):
-        success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>globally unbanned</b>.\n<i>Propagating unban...</i>"
+        success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been globally unbanned.\n<i>Propagating unban...</i>"
         if LOG_CHAT_USERNAME:
-            success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
+            success_message += f'\n\n<a href="https://t.me/{LOG_CHAT_USERNAME}">Full Log</a>'
         await message.reply_html(success_message, disable_web_page_preview=True)
     
-    if context.job_queue:
-        context.job_queue.run_once(propagate_unban, 1, data={'target_user_id': target_entity.id, 'command_chat_id': chat.id})
+        if context.job_queue:
+            context.job_queue.run_once(propagate_unban, 1, data={'target_user_id': target_entity.id, 'command_chat_id': chat.id})
 
-    try:
-        current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-        
-        log_user_display = create_user_html_link(target_entity)
-        
-        chat_name_display = safe_escape(chat.title or f"PM with {user_who_ungbans.first_name}")
-        if chat.type != ChatType.PRIVATE and chat.username:
-            message_link = f"https://t.me/{chat.username}/{message.message_id}"
-            chat_name_display = f"<a href='{message_link}'>{safe_escape(chat.title)}</a>"
+        try:
+            current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
             
-        admin_link = create_user_html_link(user_who_ungbans)
-
-        log_message = (
-            f"<b>#UNGBANNED</b>\n"
-            f"<b>Initiated From:</b> {chat_name_display} (<code>{chat.id}</code>)\n\n"
-            f"<b>User:</b> {log_user_display}\n"
-            f"<b>User ID:</b> <code>{target_entity.id}</code>\n"
-            f"<b>Admin:</b> {admin_link}\n"
-            f"<b>Date:</b> <code>{current_time}</code>"
-        )
-        await send_operational_log(context, log_message)
-    except Exception as e:
-        logger.error(f"Error preparing/sending #UNGBANNED operational log: {e}", exc_info=True)
+            log_user_display = create_user_html_link(target_entity)
+            
+            chat_name_display = safe_escape(chat.title or f"PM with {user_who_ungbans.first_name}")
+            if chat.type != ChatType.PRIVATE and chat.username:
+                message_link = f"https://t.me/{chat.username}/{message.message_id}"
+                chat_name_display = f"<a href='{message_link}'>{safe_escape(chat.title)}</a>"
+                
+            admin_link = create_user_html_link(user_who_ungbans)
+    
+            log_message = (
+                f"<b>#UNGBANNED</b>\n"
+                f"<b>Initiated From:</b> {chat_name_display} (<code>{chat.id}</code>)\n\n"
+                f"<b>User:</b> {log_user_display}\n"
+                f"<b>User ID:</b> <code>{target_entity.id}</code>\n"
+                f"<b>Admin:</b> {admin_link}\n"
+                f"<b>Date:</b> <code>{current_time}</code>"
+            )
+            await send_operational_log(context, log_message)
+        except Exception as e:
+            logger.error(f"Error preparing/sending #UNGBANNED operational log: {e}", exc_info=True)
+    else:
+        await message.reply_text("Failed to remove from global ban list.")
 
 async def propagate_unban(context: ContextTypes.DEFAULT_TYPE) -> None:
     job_data = context.job.data
