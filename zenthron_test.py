@@ -215,7 +215,8 @@ def init_db():
                 goodbye_enabled INTEGER DEFAULT 1 NOT NULL,
                 custom_goodbye TEXT,
                 clean_service_messages INTEGER DEFAULT 0 NOT NULL,
-                warn_limit INTEGER
+                warn_limit INTEGER,
+                rules_text TEXT
             )
         """)
 
@@ -240,9 +241,17 @@ def init_db():
                 warned_at TEXT
             )
         """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS afk_users (
+                user_id INTEGER PRIMARY KEY,
+                reason TEXT,
+                afk_since TEXT NOT NULL
+            )
+        """)
         
         conn.commit()
-        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, whitelist_users, support_users, sudo_users, dev_users, global_bans, bot_chats, notes, warnings ensured).")
+        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, whitelist_users, support_users, sudo_users, dev_users, global_bans, bot_chats, notes, warnings, afk_users ensured).")
     except sqlite3.Error as e:
         logger.error(f"SQLite error during DB initialization: {e}", exc_info=True)
     finally:
@@ -1339,6 +1348,39 @@ def get_warn_limit(chat_id: int) -> int:
         logger.error(f"Error getting warn limit for chat {chat_id}")
         return MAX_WARNS
 
+def set_afk(user_id: int, reason: str | None) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            timestamp = datetime.now(timezone.utc).isoformat()
+            conn.execute(
+                "INSERT OR REPLACE INTO afk_users (user_id, reason, afk_since) VALUES (?, ?, ?)",
+                (user_id, reason, timestamp)
+            )
+        return True
+    except sqlite3.Error as e:
+        logger.error(f"Error setting AFK status for user {user_id}: {e}")
+        return False
+
+def get_afk_status(user_id: int) -> Tuple[str, str] | None:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            res = conn.cursor().execute(
+                "SELECT reason, afk_since FROM afk_users WHERE user_id = ?", (user_id,)
+            ).fetchone()
+            return res if res else None
+    except sqlite3.Error:
+        return None
+
+def clear_afk(user_id: int) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM afk_users WHERE user_id = ?", (user_id,))
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"Error clearing AFK status for user {user_id}: {e}")
+        return False
+
 async def handle_bot_permission_changes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.my_chat_member:
         return
@@ -1388,6 +1430,28 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
 
     await send_critical_log(context, message_text)
 
+def set_rules(chat_id: int, rules: str) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            conn.execute("INSERT OR IGNORE INTO bot_chats (chat_id, added_at) VALUES (?, ?)",
+                         (chat_id, datetime.now(timezone.utc).isoformat()))
+            conn.execute("UPDATE bot_chats SET rules_text = ? WHERE chat_id = ?", (rules, chat_id))
+        return True
+    except sqlite3.Error as e:
+        logger.error(f"Error setting rules for chat {chat_id}: {e}")
+        return False
+
+def get_rules(chat_id: int) -> str | None:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            res = conn.cursor().execute("SELECT rules_text FROM bot_chats WHERE chat_id = ?", (chat_id,)).fetchone()
+            return res[0] if res else None
+    except sqlite3.Error:
+        return None
+
+def clear_rules(chat_id: int) -> bool:
+    return set_rules(chat_id, None)
+
 # --- Command Handlers ---
 HELP_TEXT = """
 <b>Here are the commands you can use:</b>
@@ -1405,6 +1469,7 @@ HELP_TEXT = """
 /chatinfo - Get basic info about the current chat.
 /id - Get user or chat id.
 /listadmins - Show the list of administrators in this chat. <i>(Alias: /admins)</i>
+/afk &lt;Reason&gt; - Set afk status.
 
 <b>🔹 Moderation Commands</b>
 /ban &lt;ID/@user/reply&gt; [Time] [Reason] - Ban a user.
@@ -1509,6 +1574,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if context.args:
         if context.args[0] == 'help':
             await update.message.reply_html(HELP_TEXT, disable_web_page_preview=True)
+            return
+
+        elif context.args[0].startswith('rules_'):
+            try:
+                chat_id = int(context.args[0].split('_')[1])
+                rules_text = get_rules(chat_id)
+                if rules_text:
+                    await update.message.reply_html(rules_text, disable_web_page_preview=True)
+                else:
+                    await update.message.reply_text("The rules for that group are not set or I couldn't find them.")
+            except (IndexError, ValueError):
+                await update.message.reply_text("Invalid link for rules.")
             return
         
         if context.args[0] == 'sudocmds':
@@ -1842,6 +1919,84 @@ async def list_admins_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             await update.message.reply_text("Error: The admin list is too long to display, and I couldn't send it as a file.")
     else:
         await update.message.reply_html(message_text, disable_web_page_preview=True)
+
+async def afk_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    message = update.effective_message
+    if not user or not message:
+        return
+
+    reason = " ".join(context.args) if context.args else "AFK"
+
+    if set_afk(user.id, reason):
+        await message.reply_html(f"You are now AFK.\n<b>Reason:</b> {safe_escape(reason)}")
+    else:
+        await message.reply_text("Could not set AFK status due to a database error.")
+
+async def check_afk_return(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    message = update.effective_message
+    if not user or not message:
+        return
+
+    afk_status = get_afk_status(user.id)
+    if afk_status:
+        clear_afk(user.id)
+        
+        afk_since_str = afk_status[1]
+        try:
+            afk_start_time = datetime.fromisoformat(afk_since_str)
+            duration = datetime.now(timezone.utc) - afk_start_time
+            duration_str = get_readable_time_delta(duration)
+            time_info = f" (AFK for {duration_str})"
+        except (ValueError, TypeError):
+            time_info = ""
+
+        await message.reply_html(f"Welcome back, {user.mention_html()}! You are no longer AFK{time_info}.")
+        
+        raise ApplicationHandlerStop
+
+async def afk_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    if not message:
+        return
+    
+    users_to_check = set()
+
+    if message.reply_to_message and message.reply_to_message.from_user:
+        users_to_check.add(message.reply_to_message.from_user.id)
+        
+    if message.entities:
+        for entity in message.entities:
+            if entity.type == constants.MessageEntityType.TEXT_MENTION and entity.user:
+                users_to_check.add(entity.user.id)
+            elif entity.type == constants.MessageEntityType.MENTION:
+                username = message.text[entity.offset:entity.offset + entity.length]
+                mentioned_user = get_user_from_db_by_username(username)
+                if mentioned_user:
+                    users_to_check.add(mentioned_user.id)
+
+    if not users_to_check:
+        return
+
+    for user_id in users_to_check:
+        afk_status = get_afk_status(user_id)
+        if afk_status:
+            try:
+                user = await context.bot.get_chat(user_id)
+                reason = afk_status[0]
+                afk_since_str = afk_status[1]
+                
+                afk_start_time = datetime.fromisoformat(afk_since_str)
+                duration = datetime.now(timezone.utc) - afk_start_time
+                duration_str = get_readable_time_delta(duration)
+
+                await message.reply_html(
+                    f"Hey! {user.mention_html()} is currently AFK (for {duration_str}).\n"
+                    f"<b>Reason:</b> {safe_escape(reason)}"
+                )
+            except Exception as e:
+                logger.warning(f"Could not send AFK notification for user {user_id}: {e}")
 
 async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
@@ -3340,6 +3495,74 @@ async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         await message.reply_html(f"<b>Your ID is:</b> <code>{user.id}</code>")
     else:
         await message.reply_html(f"<b>This chat's ID is:</b> <code>{chat.id}</code>")
+
+async def set_rules_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+    message = update.effective_message
+    if not message: return
+
+    if chat.type == ChatType.PRIVATE:
+        await message.reply_text("Huh? You can't set rules in private chat...")
+        return
+
+    if not await _can_user_perform_action(update, context, 'can_change_info', "Why should I listen to a person with no privileges for this? You need 'can_change_members' permission."):
+        return
+
+    if message.reply_to_message:
+        rules_text = message.reply_to_message.text_html
+    else:
+        if not context.args:
+            await message.reply_text("Usage: /setrules <text of the rules> or reply to a message with the rules.")
+            return
+        command_entity = message.entities[0]
+        rules_text = message.text_html[command_entity.offset + command_entity.length:].strip()
+
+    if not rules_text:
+        await message.reply_text("The rules text cannot be empty.")
+        return
+
+    if set_rules(chat.id, rules_text):
+        await message.reply_html("✅ The rules for this group have been set successfully.")
+    else:
+        await message.reply_text("A database error occurred while setting the rules.")
+
+async def clear_rules_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+    message = update.effective_message
+    if not message: return
+
+    if chat.type == ChatType.PRIVATE:
+        await message.reply_text("Huh? You can't clear rules in private chat...")
+        return
+
+    if not await _can_user_perform_action(update, context, 'can_change_info', "Why should I listen to a person with no privileges for this? You need 'can_change_members' permission."):
+        return
+
+    if clear_rules(chat.id):
+        await message.reply_html("✅ The rules for this group have been cleared.")
+    else:
+        await message.reply_text("A database error occurred while clearing the rules.")
+
+async def rules_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+    message = update.effective_message
+    if not message: return
+
+    if chat.type == ChatType.PRIVATE and not context.args:
+        await message.reply_text("Huh? You can't check rules in private chat... This command shows group rules. Please use it inside a group.")
+        return
+
+    if chat.type != ChatType.PRIVATE:
+        rules_text = get_rules(chat.id)
+        if rules_text:
+            bot_username = context.bot.username
+            deep_link_url = f"https://t.me/{bot_username}?start=rules_{chat.id}"
+            keyboard = InlineKeyboardMarkup(
+                [[InlineKeyboardButton(text="📜 Show Rules (PM)", url=deep_link_url)]]
+            )
+            await message.reply_text("Click the button below to see the group rules in a private message.", reply_markup=keyboard)
+        else:
+            await message.reply_text("The rules for this group have not been set yet. An admin can set them using /setrules.")
     
 async def _handle_action_command(update, context, texts, gifs, name, req_target=True, msg=""):
     target_mention = None
@@ -6031,6 +6254,7 @@ async def main() -> None:
         application.add_handler(CommandHandler("github", github))
         application.add_handler(CommandHandler("owner", owner_info))
         application.add_handler(CommandHandler("info", entity_info_command))
+        application.add_handler(CommandHandler(["afk", "brb"], afk_command))
         application.add_handler(CommandHandler("id", id_command))
         application.add_handler(CommandHandler("chatinfo", chat_sinfo_command))
         application.add_handler(CommandHandler("cinfo", chat_info_command))
@@ -6064,6 +6288,9 @@ async def main() -> None:
         application.add_handler(CommandHandler(["warnings", "warns"], warnings_command))
         application.add_handler(CommandHandler("resetwarns", reset_warnings_command))
         application.add_handler(CommandHandler("setwarnlimit", set_warn_limit_command))
+        application.add_handler(CommandHandler("rules", rules_command))
+        application.add_handler(CommandHandler("setrules", set_rules_command))
+        application.add_handler(CommandHandler("clearrules", clear_rules_command))
         application.add_handler(CommandHandler("kill", kill))
         application.add_handler(CommandHandler("punch", punch))
         application.add_handler(CommandHandler("slap", slap))
@@ -6093,8 +6320,8 @@ async def main() -> None:
         application.add_handler(CommandHandler("adddev", adddev_command))
         application.add_handler(CommandHandler("deldev", deldev_command))
         application.add_handler(CommandHandler("listdevs", listdevs_command))
-        application.add_handler(CommandHandler("whitelist", whitelist_user_command))
-        application.add_handler(CommandHandler("unwhitelist", unwhitelist_user_command))
+        application.add_handler(CommandHandler(["whitelist", "wlist"], whitelist_user_command))
+        application.add_handler(CommandHandler(["unwhitelist", "unwlist"], unwhitelist_user_command))
         application.add_handler(CommandHandler("addsupport", addsupport_command))
         application.add_handler(CommandHandler("delsupport", delsupport_command))
         application.add_handler(CommandHandler("setrank", setrank_command))
@@ -6103,12 +6330,15 @@ async def main() -> None:
         application.add_handler(CommandHandler("shell", shell_command))
         application.add_handler(CommandHandler("execute", execute_script_command))
 
+        application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), check_afk_return), group=-5)
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_note_trigger), group=0)
 
         application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, check_gban_on_entry), group=-1)
         application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_group_members))
         application.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, handle_left_group_member))
         application.add_handler(ChatMemberHandler(handle_bot_banned, ChatMemberHandler.MY_CHAT_MEMBER))
+
+        application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND) & (filters.REPLY | filters.Entity(constants.MessageEntityType.MENTION) | filters.Entity(constants.MessageEntityType.TEXT_MENTION)), afk_reply_handler), group=-4)
 
         if application.job_queue:
             application.job_queue.run_once(send_startup_log, when=1)
