@@ -4416,7 +4416,7 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         target_entity = await resolve_user_with_telethon(context, target_input, update)
 
     if not target_entity:
-        await message.reply_html("<b>Usage:</b> /blist <ID/@username/reply> [reason]")
+        await message.reply_html("<b>Usage:</b> /blist &lt;ID/@username/reply&gt; [reason]")
         return
 
     if not reason:
@@ -4483,7 +4483,7 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
         target_entity = await resolve_user_with_telethon(context, target_input, update)
 
     if not target_entity:
-        await message.reply_text("Usage: /unblist <ID/@username/reply>")
+        await message.reply_html("<b>Usage:</b> /unblist &lt;ID/@username/reply&gt;")
         return
     
     if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
@@ -4617,7 +4617,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         target_entity = await resolve_user_with_telethon(context, target_input, update)
         
     if not target_entity:
-        await message.reply_html("<b>Usage:</b> /gban <ID/@username/reply> [reason]")
+        await message.reply_html("<b>Usage:</b> /gban &lt;ID/@username/reply&gt; [reason]")
         return
 
     if not reason:
@@ -4699,7 +4699,7 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         target_entity = await resolve_user_with_telethon(context, target_input, update)
 
     if not target_entity:
-        await message.reply_text("Usage: /ungban <ID/@username/reply>")
+        await message.reply_html("<b>Usage:</b> /ungban &lt;ID/@username/reply&gt;")
         return
         
     if not target_entity:
