@@ -1507,6 +1507,9 @@ HELP_TEXT = """
 /resetgoodbye - Reset the goodbye message to default.
 /setwarnlimit &lt;number&gt; - Set the warning limit for this chat.
 /cleanservice &lt;on/off&gt; - Enable or disable cleaning of service messages.
+/rules - Check group rules.
+/setrules &lt;Text&gt; - Set rules on the group.
+/clearrules - Clear rules in a group.
 
 <b>🔹 Chat Security</b>
 /enforcegban &lt;yes/no&gt; - Enable/disable Global Ban enforcement. <i>(Chat Creator only)</i>
@@ -1929,9 +1932,24 @@ async def afk_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     reason = " ".join(context.args) if context.args else "AFK"
 
     if set_afk(user.id, reason):
-        await message.reply_html(f"{user.mention_html()} are now AFK.\n<b>Reason:</b> {safe_escape(reason)}")
+        await message.reply_html(f"{user.mention_html()} are now AFK!\n<b>Reason:</b> {safe_escape(reason)}")
     else:
         await message.reply_text("Could not set AFK status due to a database error.")
+
+async def afk_brb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    message = update.effective_message
+    if not user or not message or not message.text:
+        return
+
+    if message.text.lower().startswith('brb'):
+        parts = message.text.split(' ', 1)
+        reason = parts[1] if len(parts) > 1 else "brb"
+
+        if set_afk(user.id, reason):
+            await message.reply_html(f"{user.mention_html()} are now AFK!\n<b>Reason:</b> {safe_escape(reason)}")
+        else:
+            await message.reply_text("Could not set AFK status due to a database error.")
 
 async def check_afk_return(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
@@ -6254,7 +6272,8 @@ async def main() -> None:
         application.add_handler(CommandHandler("github", github))
         application.add_handler(CommandHandler("owner", owner_info))
         application.add_handler(CommandHandler("info", entity_info_command))
-        application.add_handler(CommandHandler(["afk", "brb"], afk_command))
+        application.add_handler(CommandHandler("afk", afk_command))
+        application.add_handler(MessageHandler(filters.Regex(r'^(brb|BRB|Brb)'), afk_brb_handler), group=-6)
         application.add_handler(CommandHandler("id", id_command))
         application.add_handler(CommandHandler("chatinfo", chat_sinfo_command))
         application.add_handler(CommandHandler("cinfo", chat_info_command))
