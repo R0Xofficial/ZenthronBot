@@ -23,6 +23,8 @@ import telegram
 import time
 import google.generativeai as genai
 import platform
+import traceback
+import json
 from telegram import __version__ as ptb_version
 from telethon import __version__ as telethon_version
 from typing import List, Tuple
@@ -58,6 +60,7 @@ BOT_START_TIME = datetime.now()
 TENOR_API_KEY = None
 DB_NAME = "zenthron_data.db"
 LOG_CHAT_ID = None
+ADMIN_LOG_CHAT_ID = None
 API_ID = None
 API_HASH = None
 SESSION_NAME = "zenthron_user_session"
@@ -100,6 +103,15 @@ if log_chat_id_str:
         LOG_CHAT_ID = None
 else:
     logger.info("LOG_CHAT_ID not set. Operational logs will be sent to OWNER_ID if available.")
+
+try:
+    admin_log_chat_id_str = os.getenv("ADMIN_LOG_CHAT_ID")
+    if admin_log_chat_id_str:
+        ADMIN_LOG_CHAT_ID = int(admin_log_chat_id_str)
+        logger.info(f"Admin Log Chat ID loaded: {ADMIN_LOG_CHAT_ID}")
+except (ValueError, TypeError):
+    logger.error(f"Invalid ADMIN_LOG_CHAT_ID: '{admin_log_chat_id_str}'. It must be a numeric chat ID. Falling back to OWNER_ID.")
+    ADMIN_LOG_CHAT_ID = None
 
 APPEAL_CHAT_USERNAME = os.getenv("APPEAL_CHAT_USERNAME")
 if not APPEAL_CHAT_USERNAME:
@@ -1339,17 +1351,41 @@ async def handle_bot_permission_changes(update: Update, context: ContextTypes.DE
         chat = update.my_chat_member.chat
         logger.warning(f"Bot was muted in chat {chat.title} ({chat.id}). Leaving automatically.")
         try:
-            if OWNER_ID:
-                log_text = (
-                    f"<b>#AUTOLEAVE</b>\n"
-                    f"Bot automatically left the chat <b>{safe_escape(chat.title)}</b> (<code>{chat.id}</code>) "
-                    f"because it lost the permission to send messages."
-                )
-                await context.bot.send_message(chat_id=OWNER_ID, text=log_text, parse_mode=ParseMode.HTML)
+            log_text = (
+                f"<b>#AUTOLEAVE</b>\n\n"
+                f"Bot automatically left the chat <b>{safe_escape(chat.title)}</b> (<code>{chat.id}</code>) "
+                f"because it lost the permission to send messages (Muted)."
+            )
+            await send_critical_log(context, log_text)
             
             await context.bot.leave_chat(chat.id)
         except Exception as e:
             logger.error(f"Error during automatic leave from chat {chat.id}: {e}")
+
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.error("Exception while handling an update:", exc_info=context.error)
+
+    tb_list = traceback.format_exception(None, context.error, context.error.__traceback__)
+    tb_string = "".join(tb_list)
+
+    update_str = update.to_dict() if isinstance(update, Update) else str(update)
+    
+    if isinstance(update_str, dict) and 'callback_query' in update_str and 'data' in update_str['callback_query']:
+        if len(update_str['callback_query']['data']) > 64:
+             update_str['callback_query']['data'] = update_str['callback_query']['data'][:64] + '...'
+        
+    pretty_update_str = json.dumps(update_str, indent=2, ensure_ascii=False)
+
+    message_text = (
+        f"<b>🚨 An exception was raised while handling an update</b>\n\n"
+        f"<b>Error:</b>\n<pre>{safe_escape(str(context.error))}</pre>\n\n"
+        f"<b>Full Traceback (last 2000 chars):</b>\n"
+        f"<pre>{safe_escape(tb_string[-2000:])}</pre>\n\n"
+        f"<b>Causing update (first 1500 chars):</b>\n"
+        f"<pre>{safe_escape(pretty_update_str[:1500])}</pre>"
+    )
+
+    await send_critical_log(context, message_text)
 
 # --- Command Handlers ---
 HELP_TEXT = """
@@ -1452,7 +1488,7 @@ DEVELOPER_COMMANDS_TEXT = """
 /listsudo - List all users with sudo privileges.
 /addsudo &lt;ID/@user/reply&gt; - Grant SUDO (bot admin) permissions to a user.
 /delsudo &lt;ID/@user/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
-/listdev - List all users with developer privileges.
+/listdevs - List all users with developer privileges.
 /setrank &lt;ID/@user/reply&gt; [support/sudo/dev] - Change the rank of a privileged user.
 """
 
@@ -2312,7 +2348,7 @@ async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         user_display = create_user_html_link(target_user)
         await message.reply_html(f"✅ User {user_display} has been promoted with the title '<i>{safe_escape(title_to_set)}</i>'.")
     except TelegramError as e:
-        await message.reply_text(f"Error: Failed to promote user: {safe_escape(str(e))}")
+        await message.reply_text(f"Error: Failed to promote user: {safe_escape(str(e))} (Possible user is promoted by another Admin)")
 
 async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
@@ -2380,7 +2416,7 @@ async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             await message.reply_text("Error: User not found in this chat.")
         else:
             logger.error(f"Error during demotion: {e}")
-            await message.reply_text(f"Error: Failed to demote user. Reason: {safe_escape(str(e))}")
+            await message.reply_text(f"Error: Failed to demote user. Reason: {safe_escape(str(e))} (Possible user is promoted by another Admin)")
             
 async def pin_message_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
@@ -4155,13 +4191,10 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
         logger.info(f"Bot joined chat: {chat.title} ({chat.id})")
         add_chat_to_db(chat.id, chat.title or f"Untitled Chat {chat.id}")
         if OWNER_ID:
-            safe_chat_title = html.escape(chat.title or f"Chat ID {chat.id}")
+            safe_chat_title = safe_escape(chat.title or f"Chat ID {chat.id}")
             link_line = f"\n<b>Link:</b> @{chat.username}" if chat.username else ""
-            pm_text = (f"<b>#ADDEDTOGROUP</b>\n\n<b>Name:</b> {safe_chat_title}\n<b>ID:</b> <code>{chat.id}</code>{link_line}")
-            try:
-                await context.bot.send_message(chat_id=OWNER_ID, text=pm_text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
-            except Exception as e:
-                logger.error(f"Failed to send join notification to owner for group {chat.id}: {e}")
+            log_text = (f"<b>#ADDEDTOGROUP</b>\n\n<b>Name:</b> {safe_chat_title}\n<b>ID:</b> <code>{chat.id}</code>{link_line}")
+            await send_critical_log(context, log_text)
         try:
             bot_username = context.bot.username
             
@@ -4340,6 +4373,25 @@ async def send_operational_log(context: ContextTypes.DEFAULT_TYPE, message: str,
         except Exception as e:
             logger.error(f"Unexpected error sending operational log to {target_id_for_log}: {e}", exc_info=True)
 
+async def send_critical_log(context: ContextTypes.DEFAULT_TYPE, message: str, parse_mode: str = ParseMode.HTML) -> None:
+    target_id = ADMIN_LOG_CHAT_ID or OWNER_ID
+
+    if not target_id:
+        logger.error("Neither ADMIN_LOG_CHAT_ID nor OWNER_ID are set. Cannot send critical log.")
+        return
+
+    try:
+        await context.bot.send_message(chat_id=target_id, text=message, parse_mode=parse_mode)
+    except Exception as e:
+        logger.error(f"Failed to send critical log to target {target_id}: {e}")
+        if target_id == ADMIN_LOG_CHAT_ID and OWNER_ID:
+            logger.warning(f"Falling back to send critical log to OWNER_ID ({OWNER_ID}).")
+            try:
+                fallback_message = f"<b>[Fallback from Log Chat]</b>\n\n{message}"
+                await context.bot.send_message(chat_id=OWNER_ID, text=fallback_message, parse_mode=parse_mode)
+            except Exception as e_owner:
+                logger.critical(f"CRITICAL: Failed to send critical log even to OWNER_ID: {e_owner}")
+
 async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.message
@@ -4350,25 +4402,27 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         return
 
     target_entity: User | Chat | None = None
-    reason: str = "No reason provided."
+    reason_text: str | None = None
 
     if message.reply_to_message:
         target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
         if context.args:
-            reason = " ".join(context.args)
+            reason_text = " ".join(context.args)
     elif context.args:
         target_input = context.args[0]
-        if len(context.args) > 1:
-            reason = " ".join(context.args[1:])
         target_entity = await resolve_user_with_telethon(context, target_input, update)
-        if not target_entity and target_input.isdigit():
-            target_entity = User(id=int(target_input), first_name="", is_bot=False)
-    else:
-        await message.reply_text("Usage: /blist <ID/@username/reply> [reason]"); return
-    
+        if len(context.args) > 1:
+            reason_text = " ".join(context.args[1:])
+            
     if not target_entity:
-        await message.reply_text("Skrrrt... I can't find the user.")
+        await message.reply_text("<b>Usage:</b> /blist <ID/@username/reply> <reason>", parse_mode=ParseMode.HTML)
         return
+
+    if not reason_text:
+        await message.reply_text("You must provide a reason for this action.")
+        return
+
+    reason = reason_text
 
     if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
         await message.reply_text("🧐 This action can only be applied to users.")
@@ -4548,27 +4602,27 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     target_entity: User | Chat | None = None
-    reason: str = "No reason provided."
+    reason_text: str | None = None
 
     if message.reply_to_message:
         target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
         if context.args:
-            reason = " ".join(context.args)
+            reason_text = " ".join(context.args)
     elif context.args:
         target_input = context.args[0]
-        if len(context.args) > 1:
-            reason = " ".join(context.args[1:])
-        
         target_entity = await resolve_user_with_telethon(context, target_input, update)
-        
-        if not target_entity and target_input.isdigit():
-            target_entity = User(id=int(target_input), first_name="", is_bot=False)
-    else:
-        await message.reply_text("Usage: /gban <ID/@username/reply> [reason]"); return
+        if len(context.args) > 1:
+            reason_text = " ".join(context.args[1:])
     
     if not target_entity:
-        await message.reply_text(f"Skrrrt... I can't find the user.");
+        await message.reply_text("<b>Usage:</b> /gban <ID/@username/reply> <reason>", parse_mode=ParseMode.HTML)
         return
+
+    if not reason_text:
+        await message.reply_text("You must provide a reason for this action.")
+        return
+        
+    reason = reason_text
 
     if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
         await message.reply_text("🧐 This action can only be applied to users.")
@@ -5947,6 +6001,7 @@ async def main() -> None:
         application.bot_data['telethon_client'] = telethon_client
         logger.info("Telethon client has been injected into bot_data.")
 
+        application.add_error_handler(error_handler)
         application.add_handler(ChatMemberHandler(handle_bot_permission_changes, ChatMemberHandler.MY_CHAT_MEMBER))
         application.add_handler(MessageHandler(filters.COMMAND, check_blacklist_handler), group=-1)
         application.add_handler(MessageHandler(filters.ALL & (~filters.UpdateType.EDITED_MESSAGE), log_user_from_interaction), group=10)
@@ -6018,7 +6073,7 @@ async def main() -> None:
         application.add_handler(CommandHandler("delsudo", delsudo_command))
         application.add_handler(CommandHandler("adddev", adddev_command))
         application.add_handler(CommandHandler("deldev", deldev_command))
-        application.add_handler(CommandHandler("listdev", listdevs_command))
+        application.add_handler(CommandHandler("listdevs", listdevs_command))
         application.add_handler(CommandHandler("whitelist", whitelist_user_command))
         application.add_handler(CommandHandler("unwhitelist", unwhitelist_user_command))
         application.add_handler(CommandHandler("addsupport", addsupport_command))
