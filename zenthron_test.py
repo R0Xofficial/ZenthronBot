@@ -4415,11 +4415,7 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
             reason = " ".join(context.args[1:])
         target_entity = await resolve_user_with_telethon(context, target_input, update)
         if not target_entity and target_input.isdigit():
-            if int(target_input) > 0:
-                logger.info(f"Resolver failed, but input is a user ID. Creating a temporary User object for ID: {target_input}")
-                target_entity = User(id=int(target_input), first_name="", is_bot=False)
-            else:
-                logger.warning(f"Resolver failed, and input looks like a chat ID ({target_input}). Ignoring.")
+            target_entity = User(id=int(target_input), first_name="", is_bot=False)
 
     if not target_entity:
         await message.reply_html("<b>Usage:</b> /blist &lt;ID/@username/reply&gt; [reason]")
@@ -4488,11 +4484,7 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
         target_input = context.args[0]
         target_entity = await resolve_user_with_telethon(context, target_input, update)
         if not target_entity and target_input.isdigit():
-            if int(target_input) > 0:
-                logger.info(f"Resolver failed, but input is a user ID. Creating a temporary User object for ID: {target_input}")
-                target_entity = User(id=int(target_input), first_name="", is_bot=False)
-            else:
-                logger.warning(f"Resolver failed, and input looks like a chat ID ({target_input}). Ignoring.")
+            target_entity = User(id=int(target_input), first_name="", is_bot=False)
 
     if not target_entity:
         await message.reply_html("<b>Usage:</b> /unblist &lt;ID/@username/reply&gt;")
@@ -4627,11 +4619,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             reason = " ".join(context.args[1:])
         target_entity = await resolve_user_with_telethon(context, target_input, update)
         if not target_entity and target_input.isdigit():
-            if int(target_input) > 0:
-                logger.info(f"Resolver failed, but input is a user ID. Creating a temporary User object for ID: {target_input}")
-                target_entity = User(id=int(target_input), first_name="", is_bot=False)
-            else:
-                logger.warning(f"Resolver failed, and input looks like a chat ID ({target_input}). Ignoring.")
+            target_entity = User(id=int(target_input), first_name="", is_bot=False)
         
     if not target_entity:
         await message.reply_html("<b>Usage:</b> /gban &lt;ID/@username/reply&gt; [reason]")
@@ -4715,11 +4703,7 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         target_input = context.args[0]
         target_entity = await resolve_user_with_telethon(context, target_input, update)
         if not target_entity and target_input.isdigit():
-            if int(target_input) > 0:
-                logger.info(f"Resolver failed, but input is a user ID. Creating a temporary User object for ID: {target_input}")
-                target_entity = User(id=int(target_input), first_name="", is_bot=False)
-            else:
-                logger.warning(f"Resolver failed, and input looks like a chat ID ({target_input}). Ignoring.")
+            target_entity = User(id=int(target_input), first_name="", is_bot=False)
 
     if not target_entity:
         await message.reply_html("<b>Usage:</b> /ungban &lt;ID/@username/reply&gt;")
