@@ -1948,6 +1948,8 @@ async def afk_brb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
         if set_afk(user.id, reason):
             await message.reply_html(f"{user.mention_html()} are now AFK!\n<b>Reason:</b> {safe_escape(reason)}")
+            
+            raise ApplicationHandlerStop
         else:
             await message.reply_text("Could not set AFK status due to a database error.")
 
@@ -1970,7 +1972,7 @@ async def check_afk_return(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         except (ValueError, TypeError):
             time_info = ""
 
-        await message.reply_html(f"Welcome back, {user.mention_html()}! You are no longer AFK\n{time_info}.")
+        await message.reply_html(f"Welcome back, {user.mention_html()}! You are no longer AFK.\n{time_info}.")
         
         raise ApplicationHandlerStop
 
