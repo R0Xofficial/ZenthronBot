@@ -4623,7 +4623,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             reason_text = " ".join(context.args[1:])
     
     if not target_entity:
-        await message.reply_text("<b>Usage:</b> /gban <ID/@username/reply> <reason>", parse_mode=ParseMode.HTML)
+        await message.reply_text("<b>Usage:</b> /gban <ID/@username/reply> <reason>")
         return
 
     if not reason_text:
