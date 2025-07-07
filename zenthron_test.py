@@ -4446,7 +4446,6 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         return
 
     if add_to_blacklist(target_entity.id, user.id, reason):
-        user_display = create_user_html_link(target_entity)
         success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>added to the blacklist</b>.\n<b>Reason:</b> {safe_escape(reason)}"
         
         if LOG_CHAT_USERNAME:
@@ -4506,7 +4505,7 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
         return
 
     if remove_from_blacklist(target_entity.id):
-        success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>removed from blacklist</b>.\n<b>Reason:</b> {safe_escape(reason)}"
+        success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>removed from blacklist</b>."
         
         if LOG_CHAT_USERNAME:
             success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
