@@ -4445,13 +4445,13 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         )
         return
 
-    if add_to_blacklist(target_entity.id, user.id, reason):
-        success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>added to the blacklist</b>.\n<b>Reason:</b> {safe_escape(reason)}"
+        if add_to_blacklist(target_entity.id, user.id, reason):
+            success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>added to the blacklist</b>.\n<b>Reason:</b> {safe_escape(reason)}"
         
-    if LOG_CHAT_USERNAME:
-            success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
+            if LOG_CHAT_USERNAME:
+                success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
             
-    await message.reply_html(success_message, disable_web_page_preview=True)
+        await message.reply_html(success_message, disable_web_page_preview=True)
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -4507,10 +4507,10 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
     if remove_from_blacklist(target_entity.id):
         success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>removed from blacklist</b>."
         
-    if LOG_CHAT_USERNAME:
+        if LOG_CHAT_USERNAME:
             success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
             
-    await message.reply_html(success_message, disable_web_page_preview=True)
+        await message.reply_html(success_message, disable_web_page_preview=True)
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -4660,12 +4660,12 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         except Exception as e:
             logger.warning(f"Could not enforce local ban for gban in chat {chat.id}: {e}")
 
-    success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>globally banned</b>.\n<b>Reason:</b> {safe_escape(reason)}"
+            success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>globally banned</b>.\n<b>Reason:</b> {safe_escape(reason)}"
         
-    if LOG_CHAT_USERNAME:
-            success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
+                if LOG_CHAT_USERNAME:
+                    success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
             
-    await message.reply_html(success_message, disable_web_page_preview=True)
+            await message.reply_html(success_message, disable_web_page_preview=True)
     
     try:
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -4730,10 +4730,10 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>globally unbanned</b>.\n<i>Propagating unban...</i>"
         
-    if LOG_CHAT_USERNAME:
-        success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
+        if LOG_CHAT_USERNAME:
+            success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
             
-    await message.reply_html(success_message, disable_web_page_preview=True)
+        await message.reply_html(success_message, disable_web_page_preview=True)
     
     if context.job_queue:
         context.job_queue.run_once(propagate_unban, 1, data={'target_user_id': target_entity.id, 'command_chat_id': chat.id})
