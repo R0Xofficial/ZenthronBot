@@ -1929,7 +1929,7 @@ async def afk_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     reason = " ".join(context.args) if context.args else "AFK"
 
     if set_afk(user.id, reason):
-        await message.reply_html(f"You are now AFK.\n<b>Reason:</b> {safe_escape(reason)}")
+        await message.reply_html(f"{user.mention_html()} are now AFK.\n<b>Reason:</b> {safe_escape(reason)}")
     else:
         await message.reply_text("Could not set AFK status due to a database error.")
 
@@ -1948,11 +1948,11 @@ async def check_afk_return(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             afk_start_time = datetime.fromisoformat(afk_since_str)
             duration = datetime.now(timezone.utc) - afk_start_time
             duration_str = get_readable_time_delta(duration)
-            time_info = f" (AFK for {duration_str})"
+            time_info = f"AFK for <code>{duration_str}</code>"
         except (ValueError, TypeError):
             time_info = ""
 
-        await message.reply_html(f"Welcome back, {user.mention_html()}! You are no longer AFK{time_info}.")
+        await message.reply_html(f"Welcome back, {user.mention_html()}! You are no longer AFK\n{time_info}.")
         
         raise ApplicationHandlerStop
 
@@ -1992,7 +1992,7 @@ async def afk_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 duration_str = get_readable_time_delta(duration)
 
                 await message.reply_html(
-                    f"Hey! {user.mention_html()} is currently AFK (for {duration_str}).\n"
+                    f"Hey! {user.mention_html()} is currently AFK\nFor <code>{duration_str})</code>.\n"
                     f"<b>Reason:</b> {safe_escape(reason)}"
                 )
             except Exception as e:
