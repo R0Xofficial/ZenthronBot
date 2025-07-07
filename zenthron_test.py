@@ -4690,8 +4690,6 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await send_operational_log(context, log_message)
     except Exception as e:
         logger.error(f"Error preparing/sending #GBANNED operational log: {e}", exc_info=True)
-    else:
-        await message.reply_text("Failed to add user to the global ban list.")
 
 async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_who_ungbans = update.effective_user
@@ -4758,8 +4756,6 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await send_operational_log(context, log_message)
     except Exception as e:
         logger.error(f"Error preparing/sending #UNGBANNED operational log: {e}", exc_info=True)
-    else:
-        await message.reply_text("Failed to remove from global ban list.")
 
 async def propagate_unban(context: ContextTypes.DEFAULT_TYPE) -> None:
     job_data = context.job.data
