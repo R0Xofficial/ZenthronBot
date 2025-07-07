@@ -4730,10 +4730,10 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>globally unbanned</b>.\n<i>Propagating unban...</i>"
         
-        if LOG_CHAT_USERNAME:
-            success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
+    if LOG_CHAT_USERNAME:
+        success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
             
-        await message.reply_html(success_message, disable_web_page_preview=True)
+    await message.reply_html(success_message, disable_web_page_preview=True)
     
     if context.job_queue:
         context.job_queue.run_once(propagate_unban, 1, data={'target_user_id': target_entity.id, 'command_chat_id': chat.id})
