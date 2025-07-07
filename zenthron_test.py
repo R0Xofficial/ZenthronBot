@@ -1576,6 +1576,7 @@ async def owner_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 def format_entity_info(entity: Chat | User,
                        chat_member_obj: telegram.ChatMember | None = None,
+                       is_target_bot: bool = False,
                        is_target_owner: bool = False,
                        is_target_dev: bool = False,
                        is_target_sudo: bool = False,
@@ -1648,7 +1649,9 @@ def format_entity_info(entity: Chat | User,
             if display_status:
                 info_lines.append(f"<b>• Status:</b> {display_status}")
 
-        if is_target_owner:
+        if is_target_bot:
+            info_lines.append(f"\n<b>• That’s me!</b> <code>BOMBOCLAT!</code>")
+        elif is_target_owner:
             info_lines.append(f"\n<b>• User Level:</b> <code>God</code>")
         elif is_target_dev:
             info_lines.append(f"\n<b>• User Level:</b> <code>Developer</code>")
@@ -1729,6 +1732,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     if isinstance(target_entity, User):
         update_user_in_db(target_entity)
 
+    is_target_bot_flag = (target_entity.id == context.bot.id)
     is_target_owner_flag = (target_entity.id == OWNER_ID)
     is_target_dev_flag = is_dev_user(target_entity.id)
     is_target_sudo_flag = is_sudo_user(target_entity.id)
@@ -1747,6 +1751,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     info_message = format_entity_info(
         entity=target_entity,
         chat_member_obj=chat_member_obj,
+        is_target_bot=is_target_bot_flag,
         is_target_owner=is_target_owner_flag,
         is_target_dev=is_target_dev_flag,
         is_target_sudo=is_target_sudo_flag,
@@ -1890,7 +1895,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     duration_td = parse_duration_to_timedelta(duration_str)
     until_date_for_api = datetime.now(timezone.utc) + duration_td if duration_td else None
 
-    if target_entity.id == context.bot.id or target_entity.id == user_who_bans.id or is_privileged_user(target_entity.id):
+    if target_entity.id == context.bot.id or target_entity.id == user_who_bans.id:
         await send_safe_reply(update, context, text="Nuh uh... This user cannot be banned."); return
 
     is_user = isinstance(target_entity, User) or (isinstance(target_entity, Chat) and target_entity.type == ChatType.PRIVATE)
