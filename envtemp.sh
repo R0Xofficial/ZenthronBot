@@ -41,6 +41,19 @@ export TELEGRAM_API_HASH="PASTE_HERE"
 # export LOG_CHAT_ID="PASTE_HERE"
 # export ADMIN_LOG_CHAT_ID="PASTE_HERE"
 
+# This variable stores the USERNAME of the public channel where
+# the bot will post administrative action logs (like bans, blacklists, etc.).
+# This is OPTIONAL. If you leave it empty, these logs will not be sent.
+#
+# IMPORTANT:
+# - Do NOT include the '@' symbol.
+# - The channel MUST be public for the link to work.
+#
+# EXAMPLE:
+# export LOG_CHAT_USERNAME="ZenthronLogs"
+
+# export LOG_CHAT_USERNAME="PASTE_HERE"
+
 # Set your TENOR API here so that gifs appear with the 4FUN commands.
 # Go to https://developers.google.com/tenor/guides/quickstart to generate your key.
 #
