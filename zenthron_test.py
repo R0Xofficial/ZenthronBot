@@ -1968,7 +1968,7 @@ async def check_afk_return(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             afk_start_time = datetime.fromisoformat(afk_since_str)
             duration = datetime.now(timezone.utc) - afk_start_time
             duration_str = get_readable_time_delta(duration)
-            time_info = f"AFK for <code>{duration_str}</code>"
+            time_info = f"AFK for: <code>{duration_str}</code>"
         except (ValueError, TypeError):
             time_info = ""
 
@@ -2012,7 +2012,7 @@ async def afk_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 duration_str = get_readable_time_delta(duration)
 
                 await message.reply_html(
-                    f"Hey! {user.mention_html()} is currently AFK!\nFor <code>{duration_str}</code>.\n"
+                    f"Hey! {user.mention_html()} is currently AFK!\nFor: <code>{duration_str}</code>.\n"
                     f"<b>Reason:</b> {safe_escape(reason)}"
                 )
             except Exception as e:
