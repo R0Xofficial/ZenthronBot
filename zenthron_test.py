@@ -1929,7 +1929,7 @@ async def afk_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if not user or not message:
         return
 
-    reason = " ".join(context.args) if context.args else "AFK"
+    reason = " ".join(context.args) if context.args else "No reason"
 
     if set_afk(user.id, reason):
         await message.reply_html(f"{user.mention_html()} are now AFK!\n<b>Reason:</b> {safe_escape(reason)}")
@@ -1944,7 +1944,7 @@ async def afk_brb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     if message.text.lower().startswith('brb'):
         parts = message.text.split(' ', 1)
-        reason = parts[1] if len(parts) > 1 else "brb"
+        reason = parts[1] if len(parts) > 1 else "No reason"
 
         if set_afk(user.id, reason):
             await message.reply_html(f"{user.mention_html()} are now AFK!\n<b>Reason:</b> {safe_escape(reason)}")
