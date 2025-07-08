@@ -5235,9 +5235,6 @@ async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         return
 
     gban_reason = get_gban_reason(target_user.id)
-    blist_reason = get_blacklist_reason(target_user.id)
-
-    gban_reason = get_gban_reason(target_user.id)
     if gban_reason:
         await message.reply_html(
             f"❌ <b>Promotion Failed!</b>\n\n"
@@ -5258,8 +5255,12 @@ async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         )
         return
 
+    if is_whitelisted(target_user.id):
+        await message.reply_html(f"ℹ️ User {user_display} (<code>{target_user.id}</code>) is <b>already on the whitelist</b>.")
+        return
+
     if add_to_whitelist(target_user.id, user.id):
-        await message.reply_html(f"✅ User {user_display} (<code>{target_user.id}</code>) has been added to the whitelist.")
+        await message.reply_html(f"✅ User {user_display} (<code>{target_user.id}</code>) has been <b>added to the whitelist</b>.")
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
