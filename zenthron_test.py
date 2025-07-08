@@ -1933,7 +1933,7 @@ async def afk_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     reason = " ".join(context.args) if context.args else "No reason"
 
     if set_afk(user.id, reason):
-        await message.reply_html(f"{user.mention_html()} are now AFK!\n<b>Reason:</b> {safe_escape(reason)}")
+        await message.reply_html(f"{user.mention_html()} is now AFK!\n<b>Reason:</b> {safe_escape(reason)}")
     else:
         await message.reply_text("Could not set AFK status due to a database error.")
 
@@ -1948,7 +1948,7 @@ async def afk_brb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         reason = parts[1] if len(parts) > 1 else "No reason"
 
         if set_afk(user.id, reason):
-            await message.reply_html(f"{user.mention_html()} are now AFK!\n<b>Reason:</b> {safe_escape(reason)}")
+            await message.reply_html(f"{user.mention_html()} is now AFK!\n<b>Reason:</b> {safe_escape(reason)}")
             
             raise ApplicationHandlerStop
         else:
