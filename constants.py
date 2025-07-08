@@ -1,4 +1,4 @@
-# ZenthronBot - Bot texts
+# ZenthronBot - Constants
 # Copyright (C) 2025 R0X
 # Licensed under the GNU General Public License v3.0
 # See the LICENSE file for details.
