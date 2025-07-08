@@ -3748,6 +3748,55 @@ async def ping_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         parse_mode=ParseMode.HTML
     )
 
+async def permissions_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    chat = update.effective_chat
+    message = update.effective_message
+    if not message: return
+    
+    if not (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
+        return
+
+    if chat.type == ChatType.PRIVATE:
+        await message.reply_text("Huh? You can't check permissions in private chat...")
+        return
+
+    try:
+        bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
+    except Exception as e:
+        await message.reply_text(f"Could not fetch my own permissions. Error: {safe_escape(str(e))}")
+        return
+        
+    if bot_member.status != ChatMemberStatus.ADMINISTRATOR:
+        await message.reply_html(
+            "<b>🔧 My Permissions in this Chat:</b>\n\n"
+            "I am not an administrator here, so I have only default member permissions."
+        )
+        return
+
+    permissions_to_check = {
+        "can_manage_chat": "Manage Chat",
+        "can_delete_messages": "Delete Messages",
+        "can_manage_video_chats": "Manage Video Chats",
+        "can_restrict_members": "Restrict Members",
+        "can_promote_members": "Promote Members",
+        "can_change_info": "Change Chat Info",
+        "can_invite_users": "Invite Users",
+        "can_pin_messages": "Pin Messages",
+        "can_manage_topics": "Manage Topics"
+    }
+
+    response_lines = ["<b>🔧 My Permissions in this Chat:</b>\n"]
+    
+    for perm_key, perm_name in permissions_to_check.items():
+        has_permission = getattr(bot_member, perm_key, False)
+        
+        status_text = "<code>Yes</code>" if has_permission else "<code>No</code>"
+        
+        response_lines.append(f"• {perm_name}: {status_text}")
+
+    await message.reply_html("\n".join(response_lines))
+
 async def say(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
@@ -6319,6 +6368,7 @@ async def main() -> None:
         application.add_handler(CommandHandler("status", status_command))
         application.add_handler(CommandHandler("stats", stats_command))
         application.add_handler(CommandHandler("ping", ping_command))
+        application.add_handler(CommandHandler(["permissions", "perms"], permissions_command))
         application.add_handler(CommandHandler("say", say))
         application.add_handler(CommandHandler("leave", leave_chat))
         application.add_handler(CommandHandler("speedtest", speedtest_command))
