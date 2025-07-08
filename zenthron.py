@@ -6259,7 +6259,7 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         return
 
     status_message = await message.reply_html(
-        f"📢 Starting broadcast to <b>{len(all_chats)}</b> chats..."
+        f"📢 Starting broadcast to <code>{len(all_chats)}</code> chats..."
     )
 
     sent_count = 0
@@ -6280,14 +6280,14 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         await asyncio.sleep(0.2)
 
     final_report = (
-        f" broadcasting complete!\n\n"
+        f" complete!\n\n"
         f"✅ <b>Sent to:</b> <code>{sent_count}</code> chats.\n"
         f"❌ <b>Failed for:</b> <code>{failed_count}</code> chats."
     )
     
     try:
         await status_message.edit_text(
-            text=f"📢 Broadcast to <b>{len(all_chats)}</b> chats" + final_report,
+            text=f"📢 Broadcast to <code>{len(all_chats)}</code> chats" + final_report,
             parse_mode=ParseMode.HTML
         )
     except Exception as e:
