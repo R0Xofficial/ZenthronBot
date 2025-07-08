@@ -1973,8 +1973,6 @@ async def check_afk_return(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             time_info = ""
 
         await message.reply_html(f"Welcome back, {user.mention_html()}! You are no longer AFK.\n{time_info}.")
-        
-        raise ApplicationHandlerStop
 
 async def afk_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.effective_message
