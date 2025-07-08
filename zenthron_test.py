@@ -6244,7 +6244,7 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     if not message: return
 
     if not is_owner_or_dev(user.id):
-        logger.warning(f"Unauthorized /broadcast attempt by user {user.id}."}
+        logger.warning(f"Unauthorized /broadcast attempt by user {user.id}.")
         return
 
     if not context.args:
