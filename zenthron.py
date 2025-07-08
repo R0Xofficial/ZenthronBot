@@ -36,6 +36,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from telegram.error import TelegramError, BadRequest
 from telegram.request import HTTPXRequest
 from datetime import datetime, timezone, timedelta
+from dotenv import load_dotenv
 from constants import (
     KILL_TEXTS, SLAP_TEXTS, PUNCH_TEXTS,
     PAT_TEXTS, BONK_TEXTS, OWNER_WELCOME_TEXTS, LEAVE_TEXTS,
@@ -45,6 +46,7 @@ from constants import (
 )
 
 # --- Logging Configuration ---
+load_dotenv()
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
