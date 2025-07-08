@@ -5365,6 +5365,10 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await message.reply_text("🧐 This role can only be granted to users.")
         return
 
+    if is_whitelisted(target_user.id):
+        await message.reply_text("This user is on the whitelist and cannot be promoted to Support.")
+        return
+
     if target_user.id == OWNER_ID or target_user.id == context.bot.id or target_user.is_bot:
         await message.reply_text("This user cannot be a Support.")
         return
@@ -5514,6 +5518,10 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     
     if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
         await message.reply_text("🧐 Sudo can only be granted to users.")
+        return
+
+    if is_whitelisted(target_user.id):
+        await message.reply_text("This user is on the whitelist and cannot be promoted to Sudo.")
         return
 
     if target_user.id == OWNER_ID or target_user.id == context.bot.id or target_user.is_bot:
@@ -5775,6 +5783,10 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     if isinstance(target_user, Chat) and target_user.type != ChatType.PRIVATE:
         await message.reply_text("🧐 This role can only be granted to users.")
+        return
+
+    if is_whitelisted(target_user.id):
+        await message.reply_text("This user is on the whitelist and cannot be promoted to Developer.")
         return
 
     if target_user.id == OWNER_ID or target_user.id == context.bot.id or target_user.is_bot:
