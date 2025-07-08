@@ -2,6 +2,7 @@
 
 python-telegram-bot
 python-telegram-bot[job-queue]
+python-dotenv
 telethon
 requests
 speedtest-cli
