@@ -2003,6 +2003,12 @@ async def afk_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         afk_status = get_afk_status(user_id)
         if afk_status:
             try:
+                member = await chat.get_member(user_id)
+                if member.status in [ChatMemberStatus.LEFT, ChatMemberStatus.BANNED]:
+                    continue
+            except TelegramError:
+                continue
+            try:
                 user = await context.bot.get_chat(user_id)
                 reason = afk_status[0]
                 afk_since_str = afk_status[1]
