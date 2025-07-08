@@ -1978,6 +1978,7 @@ async def check_afk_return(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 async def afk_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.effective_message
+    chat = update.effective_chat
     if not message:
         return
     
