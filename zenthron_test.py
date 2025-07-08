@@ -6273,7 +6273,7 @@ async def main() -> None:
         application.add_handler(CommandHandler("owner", owner_info))
         application.add_handler(CommandHandler("info", entity_info_command))
         application.add_handler(CommandHandler("afk", afk_command))
-        application.add_handler(MessageHandler(filters.Regex(r'^(brb|BRB|Brb)'), afk_brb_handler), group=-6)
+        application.add_handler(MessageHandler(filters.Regex(r'^(brb|BRB|Brb|bRB|brB|BRb|bRb)'), afk_brb_handler), group=-6)
         application.add_handler(CommandHandler("id", id_command))
         application.add_handler(CommandHandler("chatinfo", chat_sinfo_command))
         application.add_handler(CommandHandler("cinfo", chat_info_command))
