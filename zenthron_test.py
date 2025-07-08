@@ -2011,7 +2011,7 @@ async def afk_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
                 duration_str = get_readable_time_delta(duration)
 
                 await message.reply_html(
-                    f"Hey! {user.mention_html()} is currently AFK!\nAFK for: <code>{duration_str}</code>.\n"
+                    f"Hey! {user.mention_html()} is currently AFK!\nLast seen: <code>{duration_str}</code> ago.\n"
                     f"<b>Reason:</b> {safe_escape(reason)}"
                 )
             except Exception as e:
