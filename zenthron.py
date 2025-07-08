@@ -36,7 +36,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from telegram.error import TelegramError, BadRequest
 from telegram.request import HTTPXRequest
 from datetime import datetime, timezone, timedelta
-from texts import (
+from constants import (
     KILL_TEXTS, SLAP_TEXTS, PUNCH_TEXTS,
     PAT_TEXTS, BONK_TEXTS, OWNER_WELCOME_TEXTS, LEAVE_TEXTS,
     CANT_TARGET_OWNER_TEXTS, CANT_TARGET_SELF_TEXTS, DEV_WELCOME_TEXTS,
