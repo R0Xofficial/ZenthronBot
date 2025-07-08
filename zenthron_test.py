@@ -1969,11 +1969,11 @@ async def check_afk_return(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             afk_start_time = datetime.fromisoformat(afk_since_str)
             duration = datetime.now(timezone.utc) - afk_start_time
             duration_str = get_readable_time_delta(duration)
-            time_info = f"You've been AFK for: <code>{duration_str}</code>"
+            time_info = f"<b>You've been AFK for:</b> <code>{duration_str}</code>"
         except (ValueError, TypeError):
             time_info = ""
 
-        await message.reply_html(f"Welcome back, {user.mention_html()}!\n<b>You are no longer AFK</b>.\n{time_info}.")
+        await message.reply_html(f"Welcome back, {user.mention_html()}!\n{time_info}.")
 
 async def afk_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.effective_message
