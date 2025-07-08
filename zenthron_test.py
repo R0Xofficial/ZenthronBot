@@ -1560,6 +1560,7 @@ DEVELOPER_COMMANDS_TEXT = """
 /delsudo &lt;ID/@user/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
 /listdevs - List all users with developer privileges.
 /setrank &lt;ID/@user/reply&gt; [support/sudo/dev] - Change the rank of a privileged user.
+/broadcast &lt;message to send&gt; - Send message to all Bot groups.
 """
 
 OWNER_COMMANDS_TEXT = """
@@ -6237,6 +6238,61 @@ async def clean_groups_command(update: Update, context: ContextTypes.DEFAULT_TYP
     except Exception as e:
         logger.error(f"Could not edit final report message: {e}")
 
+async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    message = update.effective_message
+    if not message: return
+
+    if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /broadcast attempt by user {user.id}."}
+        return
+
+    if not context.args:
+        await message.reply_text("Usage: /broadcast <message to send>")
+        return
+
+    text_to_broadcast = " ".join(context.args)
+
+    all_chats = get_all_bot_chats_from_db()
+    if not all_chats:
+        await message.reply_text("I'm not in any chats to broadcast to.")
+        return
+
+    status_message = await message.reply_html(
+        f"📢 Starting broadcast to <b>{len(all_chats)}</b> chats..."
+    )
+
+    sent_count = 0
+    failed_count = 0
+    
+    for chat_id, chat_title, _ in all_chats:
+        try:
+            await context.bot.send_message(chat_id=chat_id, text=text_to_broadcast)
+            sent_count += 1
+            logger.info(f"Broadcast sent to: {chat_title} ({chat_id})")
+        except Exception as e:
+            failed_count += 1
+            logger.error(f"Failed to send broadcast to {chat_title} ({chat_id}): {e}")
+            if isinstance(e, (telegram.error.Forbidden, telegram.error.BadRequest)):
+                if "forbidden" in str(e).lower() or "bot is not a member" in str(e).lower() or "chat not found" in str(e).lower():
+                    remove_chat_from_db(chat_id)
+        
+        await asyncio.sleep(0.2)
+
+    final_report = (
+        f" broadcasting complete!\n\n"
+        f"✅ <b>Sent to:</b> <code>{sent_count}</code> chats.\n"
+        f"❌ <b>Failed for:</b> <code>{failed_count}</code> chats."
+    )
+    
+    try:
+        await status_message.edit_text(
+            text=f"📢 Broadcast to <b>{len(all_chats)}</b> chats" + final_report,
+            parse_mode=ParseMode.HTML
+        )
+    except Exception as e:
+        logger.error(f"Failed to edit final broadcast report: {e}")
+
 async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if user.id != OWNER_ID:
@@ -6398,6 +6454,7 @@ async def main() -> None:
         application.add_handler(CommandHandler("setrank", setrank_command))
         application.add_handler(CommandHandler("listsupport", listsupport_command))
         application.add_handler(CommandHandler("listwhitelist", listwhitelist_command))
+        application.add_handler(CommandHandler("broadcast", broadcast_command))
         application.add_handler(CommandHandler("shell", shell_command))
         application.add_handler(CommandHandler("execute", execute_script_command))
 
