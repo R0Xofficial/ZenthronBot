@@ -28,20 +28,17 @@ Meet **ZenthronBot**, a powerful and feature-rich Telegram bot designed for adva
     ```
 
 3.  **Set up your environment variables:**
-    Copy the template file:
     ```bash
-    cp ~/zenthron/envtemp.sh ~/zenthron/env.sh
-    ```
-    Then, edit the file to add your tokens and IDs:
-    ```bash
-    nano ~/zenthron/env.sh
+    nano ~/zenthron/.env
     ```
 
 4.  **Run the bot:**
     Navigate to the bot's directory and run it using the script:
     ```bash
-    cd ~/zenthron && . ./env.sh && python3 zenthron.py
+    cd ~/zenthron && python3 zenthron.py
     ```
+
+
 # Official Links:
 -   **Support Chat:** https://t.me/ZenthronSupport
 -   **BOT Link:** https://t.me/ZenthronRoBot
