@@ -1543,6 +1543,7 @@ SUDO_COMMANDS_TEXT = """
 /say &lt;Optional chat ID&gt; [Your text] - Send a message as the bot.
 /blist &lt;ID/@user/reply&gt; [Reason] - Add a user to the blacklist.
 /unblist &lt;ID/@user/reply&gt; - Remove a user from the blacklist.
+/permissions - Check Bot permissions in chat.
 """
 
 DEVELOPER_COMMANDS_TEXT = """
@@ -3791,9 +3792,9 @@ async def permissions_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     for perm_key, perm_name in permissions_to_check.items():
         has_permission = getattr(bot_member, perm_key, False)
         
-        status_text = "<code>Yes</code>" if has_permission else "<code>No</code>"
+        status_text = "Yes" if has_permission else "No"
         
-        response_lines.append(f"• {perm_name}: {status_text}")
+        response_lines.append(f"• <b>{perm_name}:</b> <code>{status_text}</code>")
 
     await message.reply_html("\n".join(response_lines))
 
