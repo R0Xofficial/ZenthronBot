@@ -309,7 +309,7 @@ async def say(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    if user.id != OWNER_ID:
+    if user.id != config.OWNER_ID:
         logger.warning(f"Unauthorized /leave attempt by user {user.id}.")
         return
 
@@ -341,9 +341,9 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         await update.message.reply_text("Could not determine which chat to leave.")
         return
 
-    owner_mention_for_farewell = f"<code>{OWNER_ID}</code>"
+    owner_mention_for_farewell = f"<code>{config.OWNER_ID}</code>"
     try:
-        owner_chat_info = await context.bot.get_chat(OWNER_ID)
+        owner_chat_info = await context.bot.get_chat(config.OWNER_ID)
         owner_mention_for_farewell = owner_chat_info.mention_html()
     except Exception as e:
         logger.warning(f"Could not fetch owner mention for /leave farewell message: {e}")
@@ -358,7 +358,7 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     except TelegramError as e:
         logger.error(f"Could not get chat info for {target_chat_id_to_leave} before leaving: {e}")
         reply_to_chat_id_for_error = chat_where_command_was_called_id
-        if is_leaving_current_chat and OWNER_ID: reply_to_chat_id_for_error = OWNER_ID
+        if is_leaving_current_chat and config.OWNER_ID: reply_to_chat_id_for_error = config.OWNER_ID
         
         error_message_text = f"❌ Cannot interact with chat <b>{safe_chat_title_to_leave}</b> (<code>{target_chat_id_to_leave}</code>): {safe_escape(str(e))}. I might not be a member there."
         if "bot is not a member" in str(e).lower() or "chat not found" in str(e).lower():
@@ -374,7 +374,7 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     except Exception as e:
          logger.error(f"Unexpected error getting chat info for {target_chat_id_to_leave}: {e}", exc_info=True)
          reply_to_chat_id_for_error = chat_where_command_was_called_id
-         if is_leaving_current_chat and OWNER_ID: reply_to_chat_id_for_error = OWNER_ID
+         if is_leaving_current_chat and config.OWNER_ID: reply_to_chat_id_for_error = config.OWNER_ID
          if reply_to_chat_id_for_error:
              try: await context.bot.send_message(chat_id=reply_to_chat_id_for_error, text=f"⚠️ Unexpected error getting chat info for <code>{target_chat_id_to_leave}</code>. Will attempt to leave anyway.", parse_mode=ParseMode.HTML)
              except Exception as send_err: logger.error(f"Failed to send error about get_chat to {reply_to_chat_id_for_error}: {send_err}")
@@ -389,7 +389,7 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             if "forbidden: bot is not a member" in str(e).lower() or "chat not found" in str(e).lower():
                 logger.warning(f"Bot is not a member of {target_chat_id_to_leave} or chat not found. Cannot send farewell.")
                 reply_to_chat_id_for_error = chat_where_command_was_called_id
-                if is_leaving_current_chat and OWNER_ID: reply_to_chat_id_for_error = OWNER_ID
+                if is_leaving_current_chat and config.OWNER_ID: reply_to_chat_id_for_error = config.OWNER_ID
                 if reply_to_chat_id_for_error:
                     try: await context.bot.send_message(chat_id=reply_to_chat_id_for_error, text=f"❌ Failed to send farewell to <b>{safe_chat_title_to_leave}</b> (<code>{target_chat_id_to_leave}</code>): {safe_escape(str(e))}. Bot is not a member.", parse_mode=ParseMode.HTML)
                     except Exception as send_err: logger.error(f"Failed to send error about farewell to {reply_to_chat_id_for_error}: {send_err}")
@@ -404,8 +404,8 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         
         confirmation_target_chat_id = chat_where_command_was_called_id
         if is_leaving_current_chat:
-            if OWNER_ID:
-                confirmation_target_chat_id = OWNER_ID
+            if config.OWNER_ID:
+                confirmation_target_chat_id = config.OWNER_ID
             else:
                 confirmation_target_chat_id = None 
 
@@ -425,7 +425,7 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         logger.error(f"Failed to leave chat {target_chat_id_to_leave}: {e}")
         confirmation_target_chat_id = chat_where_command_was_called_id
         if is_leaving_current_chat:
-            if OWNER_ID: confirmation_target_chat_id = OWNER_ID
+            if config.OWNER_ID: confirmation_target_chat_id = config.OWNER_ID
             else: confirmation_target_chat_id = None
         if confirmation_target_chat_id:
             await context.bot.send_message(chat_id=confirmation_target_chat_id,
@@ -435,7 +435,7 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
          logger.error(f"Unexpected error during leave process for {target_chat_id_to_leave}: {e}", exc_info=True)
          confirmation_target_chat_id = chat_where_command_was_called_id
          if is_leaving_current_chat:
-            if OWNER_ID: confirmation_target_chat_id = OWNER_ID
+            if config.OWNER_ID: confirmation_target_chat_id = config.OWNER_ID
             else: confirmation_target_chat_id = None
          if confirmation_target_chat_id:
             await context.bot.send_message(chat_id=confirmation_target_chat_id,
@@ -858,7 +858,7 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    if user.id != OWNER_ID:
+    if user.id != config.OWNER_ID:
         logger.warning(f"Unauthorized /shell attempt by user {user.id}.")
         return
 
@@ -902,7 +902,7 @@ async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def execute_script_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    if user.id != OWNER_ID:
+    if user.id != config.OWNER_ID:
         logger.warning(f"Unauthorized /execute attempt by user {user.id}.")
         return
         
@@ -957,7 +957,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await message.reply_text("This user is on the whitelist and cannot be promoted to Sudo.")
         return
 
-    if target_user.id == OWNER_ID or target_user.id == context.bot.id or target_user.is_bot:
+    if target_user.id == config.OWNER_ID or target_user.id == context.bot.id or target_user.is_bot:
         await message.reply_text("This user cannot be a sudo.")
         return
     
@@ -1047,7 +1047,7 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await message.reply_text("🧐 Sudo can only be revoked from users.")
         return
 
-    if target_user.id == OWNER_ID:
+    if target_user.id == config.OWNER_ID:
         await message.reply_text("The Owner's powers cannot be revoked.")
         return
     
@@ -1122,7 +1122,7 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     new_role_full_name = role_map[new_role_shortcut]
 
-    if target_user.id == OWNER_ID:
+    if target_user.id == config.OWNER_ID:
         await message.reply_text("Owner cannot have his rank changed because he has the ultimate authority.")
         return
 
@@ -1189,7 +1189,7 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     message = update.message
     if not message: return
     
-    if user.id != OWNER_ID:
+    if user.id != config.OWNER_ID:
         logger.warning(f"Unauthorized /adddev attempt by user {user.id}.")
         return
 
@@ -1222,7 +1222,7 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await message.reply_text("This user is on the whitelist and cannot be promoted to Developer.")
         return
 
-    if target_user.id == OWNER_ID or target_user.id == context.bot.id or target_user.is_bot:
+    if target_user.id == config.OWNER_ID or target_user.id == context.bot.id or target_user.is_bot:
         await message.reply_text("This user cannot be a Developer.")
         return
     
@@ -1274,7 +1274,7 @@ async def deldev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     message = update.message
     if not message: return
     
-    if user.id != OWNER_ID:
+    if user.id != config.OWNER_ID:
         logger.warning(f"Unauthorized /deldev attempt by user {user.id}.")
         return
 
