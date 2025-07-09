@@ -25,19 +25,19 @@ async def sudo_commands_command(update: Update, context: ContextTypes.DEFAULT_TY
 
     help_parts = []
 
-    if is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
+    if is_sudo_user(user.id) or is_dev_user(user.id) or user.id == config.OWNER_ID:
         help_parts.append(ADMIN_NOTE_TEXT)
 
-    if is_support_user(user.id) or is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
+    if is_support_user(user.id) or is_sudo_user(user.id) or is_dev_user(user.id) or user.id == config.OWNER_ID:
         help_parts.append(SUPPORT_COMMANDS_TEXT)
 
-    if is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
+    if is_sudo_user(user.id) or is_dev_user(user.id) or user.id == config.OWNER_ID:
         help_parts.append(SUDO_COMMANDS_TEXT)
 
-    if is_dev_user(user.id) or user.id == OWNER_ID:
+    if is_dev_user(user.id) or user.id == config.OWNER_ID:
         help_parts.append(DEVELOPER_COMMANDS_TEXT)
     
-    if user.id == OWNER_ID:
+    if user.id == config.OWNER_ID:
         help_parts.append(OWNER_COMMANDS_TEXT)
     
     final_help_text = "".join(help_parts)
