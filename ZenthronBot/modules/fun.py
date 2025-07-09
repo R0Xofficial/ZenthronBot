@@ -23,7 +23,7 @@ async def _handle_action_command(update, context, texts, gifs, name, req_target=
         if update.message.reply_to_message:
             target = update.message.reply_to_message.from_user
             if await check_target_protection(target.id, context):
-                await update.message.reply_html(random.choice(CANT_TARGET_OWNER_TEXTS if target.id == OWNER_ID else CANT_TARGET_SELF_TEXTS)); return
+                await update.message.reply_html(random.choice(CANT_TARGET_OWNER_TEXTS if target.id == config.OWNER_ID else CANT_TARGET_SELF_TEXTS)); return
             target_mention = target.mention_html()
         elif context.args and context.args[0].startswith('@'):
             target_mention = context.args[0]
