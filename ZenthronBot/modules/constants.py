@@ -3,6 +3,125 @@
 # Licensed under the GNU General Public License v3.0
 # See the LICENSE file for details.
 
+# --- COMMAND HANDLERS ---
+HELP_TEXT = """
+<b>Here are the commands you can use:</b>
+
+<b>🔹 General Commands</b>
+/start - Shows the welcome message.
+/help - Shows this help message.
+/ping - Checks the bot's latency.
+/github - Get the link to the bot's source code.
+/owner - Info about the bot owner.
+/sudocmds - List privileged commands (for authorized users).
+
+<b>🔹 User & Chat Info</b>
+/info &lt;ID/@user/reply&gt; - Get information about a user.
+/chatinfo - Get basic info about the current chat.
+/id - Get user or chat id.
+/listadmins - Show the list of administrators in this chat. <i>(Alias: /admins)</i>
+/afk &lt;Reason&gt; - Set afk status.
+
+<b>🔹 Moderation Commands</b>
+/ban &lt;ID/@user/reply&gt; [Time] [Reason] - Ban a user.
+/unban &lt;ID/@user/reply&gt; - Unban a user.
+/mute &lt;ID/@user/reply&gt; [Time] [Reason] - Mute a user.
+/unmute &lt;ID/@user/reply&gt; - Unmute a user.
+/kick &lt;ID/@user/reply&gt; [Reason] - Kick a user.
+/kickme - Kick yourself from the chat.
+/warn &lt;ID/@user/reply&gt; [Reason] - Warn a user.
+/warnings &lt;ID/@user/reply&gt; - Check a user's warnings.
+/resetwarns &lt;ID/@user/reply&gt; - Reset user's warnings.
+
+<b>🔹 Admin Tools</b>
+/promote &lt;ID/@user/reply&gt; [Title] - Promote a user to admin.
+/demote &lt;ID/@user/reply&gt; - Demote an admin.
+/pin &lt;loud/notify&gt; - Pin the replied-to message.
+/unpin - Unpin the currently pinned message.
+/purge &lt;silent&gt; - Delete messages up to the replied-to message.
+/report &lt;reason&gt; - Report a user to the chat admins (reply to a message).
+/zombies &lt;clean&gt; - Find and optionally remove deleted accounts.
+
+<b>🔹 Notes</b>
+/notes - See all notes in this chat.
+/addnote &lt;name&gt; [content] - Create a new note.
+/delnote &lt;name&gt; - Delete a note.
+<i>To get a note, simply use #notename in the chat.</i>
+
+<b>🔹 Chat Settings</b>
+/welcomehelp - Get help with text formatting and placeholders.
+/welcome &lt;on/off&gt; - Enable or disable welcome messages.
+/setwelcome &lt;text&gt; - Set a custom welcome message.
+/resetwelcome - Reset the welcome message to default.
+/goodbye &lt;on/off&gt; - Enable or disable goodbye messages.
+/setgoodbye &lt;text&gt; - Set a custom goodbye message.
+/resetgoodbye - Reset the goodbye message to default.
+/setwarnlimit &lt;number&gt; - Set the warning limit for this chat.
+/cleanservice &lt;on/off&gt; - Enable or disable cleaning of service messages.
+/rules - Check group rules.
+/setrules &lt;Text&gt; - Set rules on the group.
+/clearrules - Clear rules in a group.
+
+<b>🔹 Chat Security</b>
+/enforcegban &lt;yes/no&gt; - Enable/disable Global Ban enforcement. <i>(Chat Creator only)</i>
+
+<b>🔹 AI Commands</b>
+/askai &lt;prompt&gt; - Ask the AI a question.
+
+<b>🔹 Fun Commands</b>
+/kill &lt;@user/reply&gt; - Metaphorically eliminate someone.
+/punch &lt;@user/reply&gt; - Deliver a textual punch.
+/slap &lt;@user/reply&gt; - Administer a swift slap.
+/pat &lt;@user/reply&gt; - Gently pat someone.
+/bonk &lt;@user/reply&gt; - Playfully bonk someone.
+"""
+
+ADMIN_NOTE_TEXT = """
+<i>Note: Commands /ban, /unban, /mute, /unmute, /kick, /pin, /unpin, /purge, /promote, /demote, /zombies can be used by sudo, developer users and owner even if they are not chat administrators. (Use it wisely and don't overuse your power. Otherwise you may lose your privileges)</i>
+"""
+
+SUPPORT_COMMANDS_TEXT = """
+<b>🔹 Your Privileged Commands:</b>
+/gban &lt;ID/@user/reply&gt; [Reason] - Ban a user globally.
+/ungban &lt;ID/@user/reply&gt; - Unban a user globally.
+/ping - Check bot ping.
+"""
+
+SUDO_COMMANDS_TEXT = """
+/status - Show bot status.
+/stats - Show bot database stats.
+/cinfo &lt;Optional chat ID&gt; - Get detailed info about the current or specified chat.
+/say &lt;Optional chat ID&gt; [Your text] - Send a message as the bot.
+/blist &lt;ID/@user/reply&gt; [Reason] - Add a user to the blacklist.
+/unblist &lt;ID/@user/reply&gt; - Remove a user from the blacklist.
+/permissions - Check Bot permissions in chat.
+"""
+
+DEVELOPER_COMMANDS_TEXT = """
+/speedtest - Perform an internet speed test.
+/setai &lt;enable/disable&gt; - Turn on or off ai access for all users. <i>(Does not apply to privileged users)</i>
+/listgroups - List all known by bot groups.
+/delgroup &lt;ID 1&gt; [ID 2] - Remove groups from database
+/cleangroups - Remove cached groups from database automatically.
+/listsupport - List all users with support privileges.
+/addsupport &lt;ID/@user/reply&gt; - Grant Support permissions to a user.
+/delsupport &lt;ID/@user/reply&gt; - Revoke Support permissions from a user.
+/listsudo - List all users with sudo privileges.
+/addsudo &lt;ID/@user/reply&gt; - Grant SUDO (bot admin) permissions to a user.
+/delsudo &lt;ID/@user/reply&gt; - Revoke SUDO (bot admin) permissions from a user.
+/listdevs - List all users with developer privileges.
+/setrank &lt;ID/@user/reply&gt; [support/sudo/dev] - Change the rank of a privileged user.
+/broadcast &lt;message to send&gt; - Send message to all Bot groups.
+"""
+
+OWNER_COMMANDS_TEXT = """
+/leave &lt;Optional chat ID&gt; - Make the bot leave a chat.
+/adddev &lt;ID/@user/reply&gt; - Grant Developer (All) permissions to a user.
+/deldev &lt;ID/@user/reply&gt; - Revoke Developer (All) permissions from a user.
+/shell &lt;command&gt; - Execute the command in the terminal.
+/execute &lt;file patch&gt; [args...] - Run script.
+"""
+
 # --- ACTION COMMANDS TEXTS ---
 KILL_TEXTS = [
     "Unleashed a script of fury upon {target}. They have been *deleted*. ☠️ R.I.P.",
