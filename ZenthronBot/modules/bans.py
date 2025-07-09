@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from telegram import Update, User, Chat
 from telegram.constants import ChatType, ChatMemberStatus, ParseMode
 from telegram.error import TelegramError
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, ContextTypes, ChatMemberHandler
 
 from modules.database import remove_chat_from_db
 
