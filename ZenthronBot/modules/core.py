@@ -17,6 +17,7 @@ from telegram.constants import ChatType, ChatMemberStatus
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 import config
+from modules.utils import is_privileged_user
 from modules.database import (
     get_all_bot_chats_from_db, remove_chat_from_db_by_id,
     get_all_dev_users_from_db, add_dev_user, remove_dev_user,
@@ -28,11 +29,10 @@ from modules.database import (
     get_user_from_db_by_username
 )
 from modules.utils import (
-    is_owner_or_dev, get_readable_time_delta, safe_escape,
-    is_privileged_user, resolve_user_with_telethon,
+    is_owner_or_dev, get_readable_time_delta, safe_escape, resolve_user_with_telethon,
     create_user_html_link, send_operational_log, run_speed_test_blocking
 )
-from constants import LEAVE_TEXTS
+from .constants import LEAVE_TEXTS
 
 logger = logging.getLogger(__name__)
 
