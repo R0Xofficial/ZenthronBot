@@ -124,7 +124,7 @@ def init_db():
         """)
         
         conn.commit()
-        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, whitelist_users, support_users, sudo_users, dev_users, global_bans, bot_chats, notes, warnings, afk_users ensured).")
+        logger.info(f"Database '{config.DB_NAME}' initialized successfully (tables users, blacklist, whitelist_users, support_users, sudo_users, dev_users, global_bans, bot_chats, notes, warnings, afk_users ensured).")
     except sqlite3.Error as e:
         logger.error(f"SQLite error during DB initialization: {e}", exc_info=True)
     finally:
