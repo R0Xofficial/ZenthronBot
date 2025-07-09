@@ -16,7 +16,7 @@ from modules.database import (
 from modules.utils import (
     safe_escape, resolve_user_with_telethon, create_user_html_link, send_safe_reply
 )
-from constants import (
+from .constants import (
     HELP_TEXT, ADMIN_NOTE_TEXT, SUPPORT_COMMANDS_TEXT, SUDO_COMMANDS_TEXT,
     DEVELOPER_COMMANDS_TEXT, OWNER_COMMANDS_TEXT
 )
