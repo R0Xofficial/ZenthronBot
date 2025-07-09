@@ -1,7 +1,8 @@
 import logging
 import asyncio
 
-from telegram import Update, ParseMode
+from telegram import Update
+from telegram.constants import ParseMode
 from telegram.constants import ChatType, ChatMemberStatus
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
