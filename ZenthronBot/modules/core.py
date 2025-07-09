@@ -1457,6 +1457,31 @@ async def unwhitelist_user_command(update: Update, context: ContextTypes.DEFAULT
     else:
         await update.message.reply_text("Failed to remove user from the whitelist.")
 
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.error("Exception while handling an update:", exc_info=context.error)
+
+    tb_list = traceback.format_exception(None, context.error, context.error.__traceback__)
+    tb_string = "".join(tb_list)
+
+    update_str = update.to_dict() if isinstance(update, Update) else str(update)
+    
+    if isinstance(update_str, dict) and 'callback_query' in update_str and 'data' in update_str['callback_query']:
+        if len(update_str['callback_query']['data']) > 64:
+             update_str['callback_query']['data'] = update_str['callback_query']['data'][:64] + '...'
+        
+    pretty_update_str = json.dumps(update_str, indent=2, ensure_ascii=False)
+
+    message_text = (
+        f"<b>🚨 An exception was raised while handling an update</b>\n\n"
+        f"<b>Error:</b>\n<pre>{safe_escape(str(context.error))}</pre>\n\n"
+        f"<b>Full Traceback (last 2000 chars):</b>\n"
+        f"<pre>{safe_escape(tb_string[-2000:])}</pre>\n\n"
+        f"<b>Causing update (first 1500 chars):</b>\n"
+        f"<pre>{safe_escape(pretty_update_str[:1500])}</pre>"
+    )
+
+    await send_critical_log(context, message_text)
+
 
 
 # --- HANDLER LOADER ---
