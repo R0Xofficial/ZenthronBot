@@ -667,6 +667,53 @@ async def listwhitelist_command(update: Update, context: ContextTypes.DEFAULT_TY
     message_text = "\n".join(response_lines)
     await update.message.reply_html(message_text, disable_web_page_preview=True)
 
+async def listdevs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    if not is_owner_or_dev(user.id):
+        return
+
+    dev_user_tuples = get_all_dev_users_from_db()
+
+    if not dev_user_tuples:
+        await update.message.reply_text("There are currently no users with Developer role.")
+        return
+
+    response_lines = [f"<b>🛃 Developer Users List:</b>\n"]
+    
+    for user_id, timestamp_str in dev_user_tuples:
+        user_display_name = f"<code>{user_id}</code>"
+
+        try:
+            chat_info = await context.bot.get_chat(user_id)
+            name_parts = []
+            if chat_info.first_name: name_parts.append(safe_escape(chat_info.first_name))
+            if chat_info.last_name: name_parts.append(safe_escape(chat_info.last_name))
+            if chat_info.username: name_parts.append(f"(@{safe_escape(chat_info.username)})")
+            
+            if name_parts:
+                user_display_name = " ".join(name_parts) + f" (<code>{user_id}</code>)"
+        except Exception:
+            user_obj_from_db = get_user_from_db_by_username(str(user_id))
+            if user_obj_from_db:
+                display_name_parts = []
+                if user_obj_from_db.first_name: display_name_parts.append(safe_escape(user_obj_from_db.first_name))
+                if user_obj_from_db.last_name: display_name_parts.append(safe_escape(user_obj_from_db.last_name))
+                if user_obj_from_db.username: display_name_parts.append(f"(@{safe_escape(user_obj_from_db.username)})")
+                if display_name_parts:
+                    user_display_name = " ".join(display_name_parts) + f" (<code>{user_id}</code>)"
+
+        formatted_added_time = timestamp_str
+        try:
+            dt_obj = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+            formatted_added_time = dt_obj.strftime('%Y-%m-%d %H:%M')
+        except (ValueError, TypeError):
+            logger.warning(f"Could not parse timestamp '{timestamp_str}' for dev user {user_id}")
+
+        response_lines.append(f"• {user_display_name}\n<b>Added:</b> <code>{formatted_added_time}</code>\n")
+
+    message_text = "\n".join(response_lines)
+    await update.message.reply_html(message_text, disable_web_page_preview=True)
+
 async def list_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not is_owner_or_dev(user.id):
