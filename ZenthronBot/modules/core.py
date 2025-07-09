@@ -1231,6 +1231,154 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     else:
         await message.reply_text("An error occurred while changing the rank. Check logs.")
 
+async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    message = update.message
+    if not message: return
+    
+    if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /addsupport attempt by user {user.id}.")
+        return
+
+    target_user: User | None = None
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
+    else:
+        await message.reply_text("Usage: /addsupport <ID/@username/reply>")
+        return
+
+    if not target_user:
+        await message.reply_text("Skrrrt... I can't find the user.")
+        return
+
+    user_display = create_user_html_link(target_user)
+    if is_privileged_user(target_user.id):
+        await message.reply_html(f"ℹ️ User {user_display} (<code>{target_user.id}</code>) already has a privileged role. Use /setrank if want change it.")
+        return
+    
+    if not isinstance(target_user, User):
+        await message.reply_text("🧐 This role can only be granted to users.")
+        return
+
+    if is_whitelisted(target_user.id):
+        await message.reply_text("This user is on the whitelist and cannot be promoted to Support.")
+        return
+
+    if target_user.id == config.OWNER_ID or target_user.id == context.bot.id or target_user.is_bot:
+        await message.reply_text("This user cannot be a Support.")
+        return
+    
+    gban_reason = get_gban_reason(target_user.id)
+    if gban_reason:
+        await message.reply_html(
+            f"❌ <b>Promotion Failed!</b>\n\n"
+            f"User {user_display} (<code>{target_user.id}</code>) cannot be promoted to <code>Support</code> because they are <b>Globally Bannned</b>.\n\n"
+            f"<b>Reason:</b> {safe_escape(gban_reason)}\n\n"
+            f"<i>For security reasons, this action has been blocked. "
+            f"Please remove global ban first using /ungban if you wish to proceed.</i>"
+        )
+        return
+    blist_reason = get_blacklist_reason(target_user.id)
+    if blist_reason:
+        await message.reply_html(
+            f"❌ <b>Promotion Failed!</b>\n\n"
+            f"User {user_display} (<code>{target_user.id}</code>) cannot be promoted to <code>Sudo</code> because they are on the <b>Blacklist</b>.\n\n"
+            f"<b>Reason:</b> {safe_escape(blist_reason)}\n\n"
+            f"<i>For security reasons, this action has been blocked. "
+            f"Please remove the user from the blacklist first using /unblist if you wish to proceed.</i>"
+        )
+        return
+
+    if add_support_user(target_user.id, user.id):
+        await message.reply_html(f"✅ User {user_display} (<code>{target_user.id}</code>) has been granted <b>Support</b> powers.")
+        
+        try:
+            await context.bot.send_message(target_user.id, "You have been added to the Support team.")
+        except Exception as e:
+            logger.warning(f"Failed to send PM to new Support user {target_user.id}: {e}")
+
+        admin_link = create_user_html_link(user)
+        
+        try:
+            current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            log_message = (
+                f"<b>#SUPPORT</b>\n\n"
+                f"<b>User:</b> {user_display}\n"
+                f"<b>User ID:</b> <code>{target_user.id}</code>\n"
+                f"<b>Admin:</b> {admin_link}\n"
+                f"<b>Date:</b> <code>{current_time}</code>"
+            )
+            await send_operational_log(context, log_message)
+        except Exception as e:
+            logger.error(f"Error sending #SUPPORT log: {e}", exc_info=True)
+    else:
+        await message.reply_text("Failed to add user to Support list. Check logs.")
+
+async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    message = update.message
+    if not message: return
+    
+    if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /delsupport attempt by user {user.id}.")
+        return
+
+    target_user: User | None = None
+    if message.reply_to_message:
+        target_user = message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        target_user = await resolve_user_with_telethon(context, target_input, update)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
+    else:
+        await message.reply_text("Usage: /delsupport <ID/@username/reply>")
+        return
+        
+    if not target_user:
+        await message.reply_text("Skrrrt... I can't find the user.")
+        return
+
+    if not isinstance(target_user, User):
+        await message.reply_text("🧐 This role can only be revoked from users.")
+        return
+    
+    user_display = create_user_html_link(target_user)
+
+    if not is_support_user(target_user.id):
+        await message.reply_html(f"ℹ️ User {user_display} (<code>{target_user.id}</code>) is not in Support.")
+        return
+
+    if remove_support_user(target_user.id):
+        await message.reply_html(f"✅ <b>Support</b> role for user {user_display} (<code>{target_user.id}</code>) has been revoked.")
+        
+        try:
+            await context.bot.send_message(target_user.id, "You have been removed from the Support team.")
+        except Exception as e:
+            logger.warning(f"Failed to send PM to revoked Support user {target_user.id}: {e}")
+
+        admin_link = create_user_html_link(user)
+
+        try:
+            current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            log_message = (
+                f"<b>#UNSUPPORT</b>\n\n"
+                f"<b>User:</b> {user_display}\n"
+                f"<b>User ID:</b> <code>{target_user.id}</code>\n"
+                f"<b>Admin:</b> {admin_link}\n"
+                f"<b>Date:</b> <code>{current_time}</code>"
+            )
+            await send_operational_log(context, log_message)
+        except Exception as e:
+            logger.error(f"Error sending #UNSUPPORT log: {e}", exc_info=True)
+    else:
+        await message.reply_text("Failed to remove user from Support list. Check logs.")
+
 async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.message
@@ -1468,7 +1616,7 @@ async def unwhitelist_user_command(update: Update, context: ContextTypes.DEFAULT
         if not target_user and target_input.isdigit():
             target_user = User(id=int(target_input), first_name="", is_bot=False)
     else:
-        await message.reply_text("Usage: /delsupport <ID/@username/reply>")
+        await message.reply_text("Usage: /unwhitelist <ID/@username/reply>")
         return
         
     if not target_user:
