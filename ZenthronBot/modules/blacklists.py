@@ -1,0 +1,195 @@
+import logging
+
+from telegram import Update, ParseMode
+from telegram.ext import (
+    Application, CommandHandler, MessageHandler,
+    filters, ContextTypes, ApplicationHandlerStop
+)
+
+import config
+from modules.database import (
+    add_to_blacklist, remove_from_blacklist, get_blacklist_reason,
+    is_user_blacklisted, is_whitelisted, is_privileged_user
+)
+from modules.utils import (
+    is_owner_or_dev, is_sudo_user, resolve_user_with_telethon,
+    create_user_html_link, safe_escape, send_operational_log
+)
+
+logger = logging.getLogger(__name__)
+
+
+# --- BLACKLIST COMMAND AND HANDLER FUNCTIONS ---
+async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    message = update.message
+    if not message: return
+    
+    if not (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
+        logger.warning(f"Unauthorized /blist attempt by user {user.id}.")
+        return
+
+    target_entity: User | Chat | None = None
+    reason: str | None = None
+
+    if message.reply_to_message:
+        target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
+        if context.args:
+            reason = " ".join(context.args)
+    elif context.args:
+        target_input = context.args[0]
+        if len(context.args) > 1:
+            reason = " ".join(context.args[1:])
+        target_entity = await resolve_user_with_telethon(context, target_input, update)
+        if not target_entity and target_input.isdigit():
+            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+
+    if not target_entity:
+        await message.reply_html("<b>Usage:</b> /blist &lt;ID/@username/reply&gt; [reason]")
+        return
+
+    if not reason:
+        await message.reply_text("You must provide a reason for this action.")
+        return
+
+    if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
+        await message.reply_text("🧐 This action can only be applied to users.")
+        return
+    if is_privileged_user(target_entity.id) or target_entity.id == context.bot.id:
+        await message.reply_text("LoL, looks like... Someone tried blacklist privileged user. Nice Try.")
+        return
+    if is_whitelisted(target_entity.id):
+        await message.reply_text("This user is on the whitelist and cannot be blacklisted.")
+        return
+
+    user_display = create_user_html_link(target_entity)
+
+    existing_blist_reason = get_blacklist_reason(target_entity.id)
+    if existing_blist_reason:
+        await message.reply_html(
+            f"ℹ️ User {user_display} (<code>{target_entity.id}</code>) is <b>already on the blacklist</b>.\n"
+            f"<b>Reason:</b> {safe_escape(existing_blist_reason)}"
+        )
+        return
+
+    if add_to_blacklist(target_entity.id, user.id, reason):
+        success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>added to the blacklist</b>.\n<b>Reason:</b> {safe_escape(reason)}"
+        if LOG_CHAT_USERNAME:
+            success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
+        await message.reply_html(success_message, disable_web_page_preview=True)
+        
+        try:
+            current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            log_user_display = create_user_html_link(target_entity)
+            admin_link = create_user_html_link(user)
+
+            pm_message = (
+                f"<b>#BLACKLISTED</b>\n\n"
+                f"<b>User:</b> {log_user_display}\n"
+                f"<b>User ID:</b> <code>{target_entity.id}</code>\n"
+                f"<b>Reason:</b> {safe_escape(reason)}\n"
+                f"<b>Admin:</b> {admin_link}\n"
+                f"<b>Date:</b> <code>{current_time}</code>"
+            )
+            await send_operational_log(context, pm_message)
+        except Exception as e:
+            logger.error(f"Error preparing/sending #BLACKLISTED operational log: {e}", exc_info=True)
+    else:
+        await message.reply_text("Failed to add user to the blacklist. Check logs.")
+
+async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    message = update.message
+    if not (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
+        logger.warning(f"Unauthorized /unblist attempt by user {user.id}.")
+        return
+
+    target_entity: User | Chat | None = None
+    if message.reply_to_message:
+        target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
+    elif context.args:
+        target_input = context.args[0]
+        target_entity = await resolve_user_with_telethon(context, target_input, update)
+        if not target_entity and target_input.isdigit():
+            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+
+    if not target_entity:
+        await message.reply_html("<b>Usage:</b> /unblist &lt;ID/@username/reply&gt;")
+        return
+    
+    if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
+        await message.reply_text("🧐 This action can only be applied to users."); return
+    if target_entity.id == OWNER_ID:
+        await message.reply_text("WHAT? The Owner is never on the blacklist."); return
+
+    user_display = create_user_html_link(target_entity)
+
+    if not is_user_blacklisted(target_entity.id):
+        await message.reply_html(f"ℹ️ User {user_display} (<code>{target_entity.id}</code>) is <b>not on the blacklist</b>.")
+        return
+
+    if remove_from_blacklist(target_entity.id):
+        success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>removed from the blacklist</b>."
+        if LOG_CHAT_USERNAME:
+            success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
+        await message.reply_html(success_message, disable_web_page_preview=True)
+        
+        try:
+            current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            log_user_display = create_user_html_link(target_entity)
+            admin_link = create_user_html_link(user)
+
+            log_message_to_send = (
+                f"<b>#UNBLACKLISTED</b>\n\n"
+                f"<b>User:</b> {log_user_display}\n"
+                f"<b>User ID:</b> <code>{target_entity.id}</code>\n"
+                f"<b>Admin:</b> {admin_link}\n"
+                f"<b>Date:</b> <code>{current_time}</code>"
+            )
+            await send_operational_log(context, log_message_to_send)
+        except Exception as e:
+            logger.error(f"Error preparing/sending #UNBLACKLISTED operational log: {e}", exc_info=True)
+    else:
+        await message.reply_text("Failed to remove user from the blacklist. Check logs.")
+
+async def check_blacklist_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    if not message or not message.text or not update.effective_user:
+        return
+
+    user = update.effective_user
+    chat = update.effective_chat
+
+    if user.id == OWNER_ID:
+        return
+        
+    if not is_user_blacklisted(user.id):
+        return
+
+    always_allowed_commands = ['/start', '/help', '/info', '/id']
+    appeal_chat_allowed_commands = ['/notes', '/warns', '/warnings']
+
+    is_in_appeal_chat = (chat.id == APPEAL_CHAT_ID)
+
+    command = message.text.split()[0].lower()
+
+    if command in always_allowed_commands:
+        return
+    
+    if is_in_appeal_chat and command in appeal_chat_allowed_commands:
+        logger.info(f"Allowing command '{command}' for blacklisted user {user.id} in appeal chat.")
+        return
+
+    user_mention_log = f"@{user.username}" if user.username else str(user.id)
+    message_text_preview = message.text[:50]
+    
+    logger.info(f"User {user.id} ({user_mention_log}) is blacklisted. Blocking command: '{message_text_preview}'")
+    
+    raise ApplicationHandlerStop
+
+
+# --- HANDLER LOADER ---
+def load_handlers(application: Application):
+    application.add_handler(CommandHandler(["blacklist", "blist"],  blacklist_user_command))
+    application.add_handler(CommandHandler(["unblacklist", "unblist"], unblacklist_user_command))
+    application.add_handler(MessageHandler(filters.COMMAND, check_blacklist_handler), group=-1)
