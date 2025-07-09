@@ -16,7 +16,7 @@ from modules.utils import (
     _can_user_perform_action, send_safe_reply, safe_escape,
     format_message_text, send_critical_log
 )
-from constants import (
+from .constants import (
     OWNER_WELCOME_TEXTS, DEV_WELCOME_TEXTS, SUDO_WELCOME_TEXTS,
     SUPPORT_WELCOME_TEXTS, GENERIC_WELCOME_TEXTS, GENERIC_GOODBYE_TEXTS
 )
