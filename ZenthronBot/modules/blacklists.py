@@ -121,7 +121,7 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
     
     if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
         await message.reply_text("🧐 This action can only be applied to users."); return
-    if target_entity.id == OWNER_ID:
+    if target_entity.id == config.OWNER_ID:
         await message.reply_text("WHAT? The Owner is never on the blacklist."); return
 
     user_display = create_user_html_link(target_entity)
@@ -162,7 +162,7 @@ async def check_blacklist_handler(update: Update, context: ContextTypes.DEFAULT_
     user = update.effective_user
     chat = update.effective_chat
 
-    if user.id == OWNER_ID:
+    if user.id == config.OWNER_ID:
         return
         
     if not is_user_blacklisted(user.id):
