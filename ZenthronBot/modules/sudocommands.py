@@ -4,7 +4,8 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ChatType
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-from modules.database import is_privileged_user, is_dev_user, is_sudo_user, is_support_user
+from modules.utils import is_privileged_user
+from modules.database import is_dev_user, is_sudo_user, is_support_user
 from modules.utils import is_owner_or_dev, send_safe_reply
 from constants import (
     ADMIN_NOTE_TEXT, SUPPORT_COMMANDS_TEXT, SUDO_COMMANDS_TEXT,
