@@ -1,5 +1,6 @@
 import logging
 import random
+import telegram
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Chat, User
 from telegram.constants import ChatType, ChatMemberStatus, ParseMode
