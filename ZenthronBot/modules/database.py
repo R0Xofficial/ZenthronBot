@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 def init_db():
     conn = None
     try:
-        conn = sqlite3.connect(DB_NAME)
+        conn = sqlite3.connect(config.DB_NAME)
         cursor = conn.cursor()
 
         cursor.execute("""
