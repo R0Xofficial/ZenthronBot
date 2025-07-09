@@ -7,8 +7,9 @@ from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 import config
+from modules.utils import is_privileged_user
 from modules.database import (
-    get_rules, is_privileged_user, is_dev_user, is_sudo_user, is_support_user,
+    get_rules, is_dev_user, is_sudo_user, is_support_user,
     is_whitelisted, get_blacklist_reason, get_gban_reason, is_gban_enforced,
     update_user_in_db, get_user_from_db_by_username
 )
