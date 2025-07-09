@@ -54,19 +54,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
             help_parts = []
 
-            if is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
+            if is_sudo_user(user.id) or is_dev_user(user.id) or user.id == config.OWNER_ID:
                 help_parts.append(ADMIN_NOTE_TEXT)
             
-            if is_support_user(user.id) or is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
+            if is_support_user(user.id) or is_sudo_user(user.id) or is_dev_user(user.id) or user.id == config.OWNER_ID:
                 help_parts.append(SUPPORT_COMMANDS_TEXT)
 
-            if is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
+            if is_sudo_user(user.id) or is_dev_user(user.id) or user.id == config.OWNER_ID:
                 help_parts.append(SUDO_COMMANDS_TEXT)
 
-            if is_dev_user(user.id) or user.id == OWNER_ID:
+            if is_dev_user(user.id) or user.id == config.OWNER_ID:
                 help_parts.append(DEVELOPER_COMMANDS_TEXT)
 
-            if user.id == OWNER_ID:
+            if user.id == config.OWNER_ID:
                 help_parts.append(OWNER_COMMANDS_TEXT)
             
             final_sudo_help = "".join(help_parts)
@@ -102,10 +102,10 @@ async def github(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(f"This bot is open source. You can find the code here: {github_link}", disable_web_page_preview=True)
 
 async def owner_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if OWNER_ID:
-        owner_mention = f"<code>{OWNER_ID}</code>"; owner_name = "Bot Owner"
-        try: owner_chat = await context.bot.get_chat(OWNER_ID); owner_mention = owner_chat.mention_html(); owner_name = owner_chat.full_name or owner_chat.username or owner_name
-        except TelegramError as e: logger.warning(f"Could not fetch owner info ({OWNER_ID}): {e}")
+    if config.OWNER_ID:
+        owner_mention = f"<code>{config.OWNER_ID}</code>"; owner_name = "Bot Owner"
+        try: owner_chat = await context.bot.get_chat(config.OWNER_ID); owner_mention = owner_chat.mention_html(); owner_name = owner_chat.full_name or owner_chat.username or owner_name
+        except TelegramError as e: logger.warning(f"Could not fetch owner info ({config.OWNER_ID}): {e}")
         except Exception as e: logger.warning(f"Unexpected error fetching owner info: {e}")
         message = (f"My God is: 👤 <b>{safe_escape(owner_name)}</b> ({owner_mention})")
         await update.message.reply_html(message)
@@ -270,7 +270,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         update_user_in_db(target_entity)
 
     is_target_bot_flag = (target_entity.id == context.bot.id)
-    is_target_owner_flag = (target_entity.id == OWNER_ID)
+    is_target_owner_flag = (target_entity.id == config.OWNER_ID)
     is_target_dev_flag = is_dev_user(target_entity.id)
     is_target_sudo_flag = is_sudo_user(target_entity.id)
     is_target_support_flag = is_support_user(target_entity.id)
