@@ -249,7 +249,7 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
     if any(member.id == context.bot.id for member in update.message.new_chat_members):
         logger.info(f"Bot joined chat: {chat.title} ({chat.id})")
         add_chat_to_db(chat.id, chat.title or f"Untitled Chat {chat.id}")
-        if OWNER_ID:
+        if config.OWNER_ID:
             safe_chat_title = safe_escape(chat.title or f"Chat ID {chat.id}")
             link_line = f"\n<b>Link:</b> @{chat.username}" if chat.username else ""
             log_text = (f"<b>#ADDEDTOGROUP</b>\n\n<b>Name:</b> {safe_chat_title}\n<b>ID:</b> <code>{chat.id}</code>{link_line}")
@@ -286,7 +286,7 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
         base_text = ""
         is_privileged_join = True
 
-        if member.id == OWNER_ID and OWNER_WELCOME_TEXTS:
+        if member.id == config.OWNER_ID and OWNER_WELCOME_TEXTS:
             base_text = random.choice(OWNER_WELCOME_TEXTS)
         elif is_dev_user(member.id) and DEV_WELCOME_TEXTS:
             base_text = random.choice(DEV_WELCOME_TEXTS)
@@ -310,10 +310,10 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
             continue
 
         user_mention = member.mention_html()
-        owner_mention = f"<code>{OWNER_ID}</code>"
-        if OWNER_ID:
+        owner_mention = f"<code>{config.OWNER_ID}</code>"
+        if config.OWNER_ID:
             try:
-                owner_chat = await context.bot.get_chat(OWNER_ID)
+                owner_chat = await context.bot.get_chat(config.OWNER_ID)
                 owner_mention = owner_chat.mention_html()
             except Exception:
                 pass
