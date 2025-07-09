@@ -254,57 +254,6 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     else:
         await message.reply_text("Failed to remove from global ban list.")
 
-async def propagate_unban(context: ContextTypes.DEFAULT_TYPE) -> None:
-    job_data = context.job.data
-    target_user_id = job_data['target_user_id']
-    command_chat_id = job_data['command_chat_id']
-
-    chats_to_scan = []
-    try:
-        with sqlite3.connect(DB_NAME) as conn:
-            cursor = conn.cursor()
-            chats_to_scan = [row[0] for row in cursor.execute("SELECT chat_id FROM bot_chats")]
-    except sqlite3.Error as e:
-        logger.error(f"Failed to get chat list for unban propagation: {e}")
-        await context.bot.send_message(chat_id=command_chat_id, text="Error fetching chat list from database.")
-        return
-
-    if not chats_to_scan:
-        await context.bot.send_message(chat_id=command_chat_id, text="I don't seem to be in any chats to propagate the unban.")
-        return
-
-    successful_unbans = 0
-    
-    logger.info(f"Starting unban propagation for {target_user_id} across {len(chats_to_scan)} chats.")
-    
-    for chat_id in chats_to_scan:
-        try:
-            chat_member = await context.bot.get_chat_member(chat_id=chat_id, user_id=target_user_id)
-            
-            if chat_member.status == 'kicked':
-                success = await context.bot.unban_chat_member(chat_id=chat_id, user_id=target_user_id)
-                if success:
-                    successful_unbans += 1
-                    logger.info(f"Successfully unbanned {target_user_id} from chat {chat_id}.")
-            
-        except telegram.error.BadRequest as e:
-            if "user not found" not in str(e).lower():
-                logger.warning(f"Could not process unban for {target_user_id} in {chat_id}: {e}")
-        except Exception as e:
-            logger.error(f"Unexpected error during unban propagation in {chat_id}: {e}")
-            
-        await asyncio.sleep(0.2)
-
-    logger.info(f"Unban propagation finished for {target_user_id}. Succeeded in {successful_unbans} chats.")
-    
-    final_message = f"✅ Correctly unbanned <code>{target_user_id}</code> on {successful_unbans} chats."
-    
-    await context.bot.send_message(
-        chat_id=command_chat_id,
-        text=final_message,
-        parse_mode=ParseMode.HTML
-    )
-
 async def enforce_gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     user = update.effective_user
