@@ -49,16 +49,16 @@ def safe_escape(text: str) -> str:
 
 # --- TARGET CHECKING AND PROTECT ---
 async def check_target_protection(target_user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    if target_user_id == OWNER_ID: return True
+    if target_user_id == config.OWNER_ID: return True
     if target_user_id == context.bot.id: return True
     return False
 
 async def check_username_protection(target_mention: str, context: ContextTypes.DEFAULT_TYPE) -> tuple[bool, bool]:
     is_protected = False; is_owner_match = False; bot_username = context.bot.username
     if bot_username and target_mention.lower() == f"@{bot_username.lower()}": is_protected = True
-    elif OWNER_ID:
+    elif config.OWNER_ID:
         owner_username = None
-        try: owner_chat = await context.bot.get_chat(OWNER_ID); owner_username = owner_chat.username
+        try: owner_chat = await context.bot.get_chat(config.OWNER_ID); owner_username = owner_chat.username
         except Exception as e: logger.warning(f"Could not fetch owner username for protection check: {e}")
         if owner_username and target_mention.lower() == f"@{owner_username.lower()}": is_protected = True; is_owner_match = True
     return is_protected, is_owner_match
@@ -349,15 +349,15 @@ async def _can_user_perform_action(
 async def send_operational_log(context: ContextTypes.DEFAULT_TYPE, message: str, parse_mode: str = ParseMode.HTML) -> None:
     """
     Sends an operational log message to LOG_CHAT_ID if configured,
-    otherwise falls back to OWNER_ID.
+    otherwise falls back to config.OWNER_ID.
     """
     target_id_for_log = LOG_CHAT_ID
 
-    if not target_id_for_log and OWNER_ID:
-        target_id_for_log = OWNER_ID
-        logger.info("LOG_CHAT_ID not set, sending operational log to OWNER_ID.")
-    elif not target_id_for_log and not OWNER_ID:
-        logger.error("Neither LOG_CHAT_ID nor OWNER_ID are set. Cannot send operational log.")
+    if not target_id_for_log and config.OWNER_ID:
+        target_id_for_log = config.OWNER_ID
+        logger.info("LOG_CHAT_ID not set, sending operational log to config.OWNER_ID.")
+    elif not target_id_for_log and not config.OWNER_ID:
+        logger.error("Neither LOG_CHAT_ID nor config.OWNER_ID are set. Cannot send operational log.")
         return
 
     if target_id_for_log:
@@ -366,43 +366,43 @@ async def send_operational_log(context: ContextTypes.DEFAULT_TYPE, message: str,
             logger.info(f"Sent operational log to chat_id: {target_id_for_log}")
         except TelegramError as e:
             logger.error(f"Failed to send operational log to {target_id_for_log}: {e}")
-            if LOG_CHAT_ID and target_id_for_log == LOG_CHAT_ID and OWNER_ID and LOG_CHAT_ID != OWNER_ID:
-                logger.info(f"Falling back to send operational log to OWNER_ID ({OWNER_ID}) after failure with LOG_CHAT_ID.")
+            if LOG_CHAT_ID and target_id_for_log == LOG_CHAT_ID and config.OWNER_ID and LOG_CHAT_ID != config.OWNER_ID:
+                logger.info(f"Falling back to send operational log to config.OWNER_ID ({config.OWNER_ID}) after failure with LOG_CHAT_ID.")
                 try:
-                    await context.bot.send_message(chat_id=OWNER_ID, text=f"[Fallback from LogChat]\n{message}", parse_mode=parse_mode)
-                    logger.info(f"Sent operational log to OWNER_ID as fallback.")
+                    await context.bot.send_message(chat_id=config.OWNER_ID, text=f"[Fallback from LogChat]\n{message}", parse_mode=parse_mode)
+                    logger.info(f"Sent operational log to config.OWNER_ID as fallback.")
                 except Exception as e_owner:
-                    logger.error(f"Failed to send operational log to OWNER_ID as fallback: {e_owner}")
+                    logger.error(f"Failed to send operational log to config.OWNER_ID as fallback: {e_owner}")
         except Exception as e:
             logger.error(f"Unexpected error sending operational log to {target_id_for_log}: {e}", exc_info=True)
 
 async def send_critical_log(context: ContextTypes.DEFAULT_TYPE, message: str, parse_mode: str = ParseMode.HTML) -> None:
-    target_id = ADMIN_LOG_CHAT_ID or OWNER_ID
+    target_id = ADMIN_LOG_CHAT_ID or config.OWNER_ID
 
     if not target_id:
-        logger.error("Neither ADMIN_LOG_CHAT_ID nor OWNER_ID are set. Cannot send critical log.")
+        logger.error("Neither ADMIN_LOG_CHAT_ID nor config.OWNER_ID are set. Cannot send critical log.")
         return
 
     try:
         await context.bot.send_message(chat_id=target_id, text=message, parse_mode=parse_mode)
     except Exception as e:
         logger.error(f"Failed to send critical log to target {target_id}: {e}")
-        if target_id == ADMIN_LOG_CHAT_ID and OWNER_ID:
-            logger.warning(f"Falling back to send critical log to OWNER_ID ({OWNER_ID}).")
+        if target_id == ADMIN_LOG_CHAT_ID and config.OWNER_ID:
+            logger.warning(f"Falling back to send critical log to config.OWNER_ID ({config.OWNER_ID}).")
             try:
                 fallback_message = f"<b>[Fallback from Log Chat]</b>\n\n{message}"
-                await context.bot.send_message(chat_id=OWNER_ID, text=fallback_message, parse_mode=parse_mode)
+                await context.bot.send_message(chat_id=config.OWNER_ID, text=fallback_message, parse_mode=parse_mode)
             except Exception as e_owner:
-                logger.critical(f"CRITICAL: Failed to send critical log even to OWNER_ID: {e_owner}")
+                logger.critical(f"CRITICAL: Failed to send critical log even to config.OWNER_ID: {e_owner}")
 
 # --- PERMISSIONS ---
 def is_owner_or_dev(user_id: int) -> bool:
-    if user_id == OWNER_ID:
+    if user_id == config.OWNER_ID:
         return True
     return is_dev_user(user_id)
 
 def is_privileged_user(user_id: int) -> bool:
-    if user_id == OWNER_ID:
+    if user_id == config.OWNER_ID:
         return True
     if is_dev_user(user_id):
         return True
