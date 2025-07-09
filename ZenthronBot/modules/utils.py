@@ -14,6 +14,7 @@ import requests
 import speedtest
 import telegram
 from telegram import Update, User, Chat, constants
+from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 from telethon import TelegramClient
 from telethon.tl.types import User as TelethonUser
