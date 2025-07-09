@@ -24,7 +24,7 @@ from modules.database import (
     get_all_sudo_users_from_db, add_sudo_user, remove_sudo_user,
     get_all_support_users_from_db, add_support_user, remove_support_user,
     get_all_whitelist_users_from_db, add_to_whitelist, remove_from_whitelist,
-    is_privileged_user, is_dev_user, is_sudo_user, is_support_user,
+    is_dev_user, is_sudo_user, is_support_user,
     is_whitelisted, get_gban_reason, get_blacklist_reason,
     get_user_from_db_by_username
 )
