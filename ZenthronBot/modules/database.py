@@ -348,6 +348,23 @@ def is_sudo_user(user_id: int) -> bool:
         if conn:
             conn.close()
 
+def get_all_sudo_users_from_db() -> List[Tuple[int, str]]:
+    conn = None
+    sudo_list = []
+    try:
+        conn = sqlite3.connect(config.DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("SELECT user_id, timestamp FROM sudo_users ORDER BY timestamp DESC")
+        rows = cursor.fetchall()
+        for row in rows:
+            sudo_list.append((row[0], row[1]))
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error fetching all sudo users: {e}", exc_info=True)
+    finally:
+        if conn:
+            conn.close()
+    return sudo_list
+
 # --- DEVELOPER ---
 def add_dev_user(user_id: int, added_by_id: int) -> bool:
     """Adds a user to the Developer list."""
