@@ -241,6 +241,155 @@ async def set_clean_service_command(update: Update, context: ContextTypes.DEFAUL
     else:
         await update.message.reply_text("An error occurred while saving the setting.")
 
+async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.message or not update.message.new_chat_members:
+        return
+    chat = update.effective_chat
+    
+    if any(member.id == context.bot.id for member in update.message.new_chat_members):
+        logger.info(f"Bot joined chat: {chat.title} ({chat.id})")
+        add_chat_to_db(chat.id, chat.title or f"Untitled Chat {chat.id}")
+        if OWNER_ID:
+            safe_chat_title = safe_escape(chat.title or f"Chat ID {chat.id}")
+            link_line = f"\n<b>Link:</b> @{chat.username}" if chat.username else ""
+            log_text = (f"<b>#ADDEDTOGROUP</b>\n\n<b>Name:</b> {safe_chat_title}\n<b>ID:</b> <code>{chat.id}</code>{link_line}")
+            await send_critical_log(context, log_text)
+        try:
+            bot_username = context.bot.username
+            
+            welcome_message_to_group = (
+                f"👋 Hello! I'm <b>Zenthron</b>, your new group assistant.\n\n"
+                f"I'm here to help you manage the chat and have some fun. "
+                f"To see what I can do, click button 'Get Help in PM'.\n\n"
+                f"<b>I was added by {update.message.from_user.mention_html()}</b>.\n"
+                f"<i>I'm Still a Work In Progress [WIP]. Various bugs and security holes may appear for which Bot creators are not responsible [You add at your own risk]. For any questions or issues, please contact our support team at {APPEAL_CHAT_USERNAME}.</i>"
+            )
+            
+            keyboard = InlineKeyboardMarkup(
+                [[InlineKeyboardButton(text="📬 Get Help in PM", url=f"https://t.me/{bot_username}?start=help")]]
+            )
+
+            await context.bot.send_message(
+                chat_id=chat.id,
+                text=welcome_message_to_group,
+                parse_mode=ParseMode.HTML,
+                reply_markup=keyboard,
+                disable_web_page_preview=True
+            )
+        except Exception as e:
+            logger.error(f"Failed to send introduction message to new group {chat.id}: {e}")
+        return
+
+    welcome_enabled, custom_text = get_welcome_settings(chat.id)
+
+    for member in update.message.new_chat_members:
+        base_text = ""
+        is_privileged_join = True
+
+        if member.id == OWNER_ID and OWNER_WELCOME_TEXTS:
+            base_text = random.choice(OWNER_WELCOME_TEXTS)
+        elif is_dev_user(member.id) and DEV_WELCOME_TEXTS:
+            base_text = random.choice(DEV_WELCOME_TEXTS)
+        elif is_sudo_user(member.id) and SUDO_WELCOME_TEXTS:
+            base_text = random.choice(SUDO_WELCOME_TEXTS)
+        elif is_support_user(member.id) and SUPPORT_WELCOME_TEXTS:
+            base_text = random.choice(SUPPORT_WELCOME_TEXTS)
+        else:
+            is_privileged_join = False
+
+        if not is_privileged_join:
+            if not welcome_enabled:
+                continue
+            
+            if custom_text:
+                base_text = custom_text
+            elif GENERIC_WELCOME_TEXTS:
+                base_text = random.choice(GENERIC_WELCOME_TEXTS)
+        
+        if not base_text:
+            continue
+
+        user_mention = member.mention_html()
+        owner_mention = f"<code>{OWNER_ID}</code>"
+        if OWNER_ID:
+            try:
+                owner_chat = await context.bot.get_chat(OWNER_ID)
+                owner_mention = owner_chat.mention_html()
+            except Exception:
+                pass
+        
+        try:
+            count = await context.bot.get_chat_member_count(chat.id)
+        except Exception:
+            count = "N/A"
+
+        final_message = base_text.format(
+            first=safe_escape(member.first_name),
+            last=safe_escape(member.last_name or member.first_name),
+            fullname=safe_escape(member.full_name),
+            username=f"@{member.username}" if member.username else user_mention,
+            mention=user_mention,
+            user_mention=user_mention,
+            owner_mention=owner_mention,
+            id=member.id,
+            count=count,
+            chatname=safe_escape(chat.title or "this chat")
+        )
+
+        if final_message:
+            try:
+                await context.bot.send_message(
+                    chat_id=chat.id,
+                    text=final_message,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True
+                )
+            except Exception as e:
+                logger.error(f"Failed to send welcome message for user {member.id} in chat {chat.id}: {e}")
+
+    if should_clean_service(chat.id):
+        try:
+            await update.message.delete()
+        except Exception:
+            pass
+            
+async def handle_left_group_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.message or not update.message.left_chat_member:
+        return
+    
+    chat = update.effective_chat
+    left_member = update.message.left_chat_member
+
+    if left_member.id == context.bot.id:
+        logger.info(f"Bot removed from group cache {chat.id}.")
+        remove_chat_from_db(chat.id)
+        return
+
+    if should_clean_service(chat.id):
+        try:
+            await update.message.delete()
+        except Exception:
+            pass
+
+    is_enabled, custom_text = get_goodbye_settings(chat.id)
+    if not is_enabled:
+        return
+
+    base_text = ""
+    if custom_text:
+        base_text = custom_text
+    elif GENERIC_GOODBYE_TEXTS:
+        user_mention = left_member.mention_html()
+        base_text = random.choice(GENERIC_GOODBYE_TEXTS).format(user_mention=user_mention)
+    
+    if base_text:
+        final_message = await format_message_text(base_text, left_member, chat, context)
+        if final_message:
+            try:
+                await context.bot.send_message(chat.id, final_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+            except Exception as e:
+                logger.error(f"Failed to send goodbye message in chat {chat.id}: {e}")
+
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
