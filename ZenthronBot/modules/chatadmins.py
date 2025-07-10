@@ -7,7 +7,7 @@ from telegram.constants import ChatType, ParseMode
 from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-from modules.utils import safe_escape
+from ..core.utils import safe_escape
 
 logger = logging.getLogger(__name__)
 
