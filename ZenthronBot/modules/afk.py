@@ -1,13 +1,9 @@
 import logging
 from datetime import datetime, timezone
-
 from telegram import Update, constants
 from telegram.constants import ChatMemberStatus
 from telegram.error import TelegramError
-from telegram.ext import (
-    Application, CommandHandler, MessageHandler,
-    filters, ContextTypes, ApplicationHandlerStop
-)
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ApplicationHandlerStop
 
 from ..core.database import set_afk, get_afk_status, clear_afk, get_user_from_db_by_username
 from ..core.utils import send_safe_reply, get_readable_time_delta, create_user_html_link, safe_escape
