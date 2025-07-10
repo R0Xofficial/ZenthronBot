@@ -20,6 +20,23 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 logging.getLogger('telethon').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
+async def send_startup_log(context: ContextTypes.DEFAULT_TYPE) -> None:
+    startup_message_text = "<i>Bot Started...</i>"
+    target_id_for_log = LOG_CHAT_ID or OWNER_ID
+    
+    if target_id_for_log:
+        try:
+            await context.bot.send_message(
+                chat_id=target_id_for_log,
+                text=startup_message_text,
+                parse_mode=ParseMode.HTML
+            )
+            logger.info(f"Sent startup notification to {target_id_for_log}.")
+        except Exception as e:
+            logger.error(f"Failed to send startup message to {target_id_for_log}: {e}")
+    else:
+        logger.warning("No target (LOG_CHAT_ID or OWNER_ID) to send startup message.")
+
 def load_modules(application: Application) -> None:
     modules_dir = "modules"
     for filename in os.listdir(modules_dir):
@@ -53,6 +70,12 @@ async def main() -> None:
         logger.info("Telethon client has been injected into bot_data.")
 
         load_modules(application)
+
+        if application.job_queue:
+            application.job_queue.run_once(send_startup_log, when=1)
+            logger.info("Startup message job scheduled to run in 1 second.")
+        else:
+            logger.warning("JobQueue not available, cannot schedule startup message.")
 
         logger.info(f"Bot starting polling... Owner ID: {config.OWNER_ID}")
         
