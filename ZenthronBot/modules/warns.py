@@ -6,11 +6,11 @@ from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler
 
 import config
-from modules.database import (
+from ..core.database import (
     add_warning, remove_warning_by_id, get_warnings, reset_warnings,
     set_warn_limit, get_warn_limit
 )
-from modules.utils import (
+from ..core.utils import (
     _can_user_perform_action, resolve_user_with_telethon,
     create_user_html_link, send_safe_reply, safe_escape
 )
