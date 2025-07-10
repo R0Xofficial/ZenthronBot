@@ -71,7 +71,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     is_channel = isinstance(target_entity, Chat) and target_entity.type == ChatType.CHANNEL
 
     if not (is_user or is_channel):
-        await send_safe_reply(update, context, text="🧐 This action can only be applied to users or by reply message for channel.")
+        await send_safe_reply(update, context, text="🧐 This action can only be applied to users or by reply channel message.")
         return
 
     if is_user:
@@ -146,7 +146,7 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     is_channel = isinstance(target_entity, Chat) and target_entity.type == ChatType.CHANNEL
 
     if not (is_user or is_channel):
-        await send_safe_reply(update, context, text="🧐 This action can only be applied to users or by reply message for channel.")
+        await send_safe_reply(update, context, text="🧐 This action can only be applied to users or by reply channel message.")
         return
 
     try:
