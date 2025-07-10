@@ -5,7 +5,6 @@ HELP_TEXT = """
 <b>🔹 General Commands</b>
 /start - Shows the welcome message.
 /help - Shows this help message.
-/ping - Checks the bot's latency.
 /github - Get the link to the bot's source code.
 /owner - Info about the bot owner.
 /sudocmds - List privileged commands (for authorized users).
@@ -79,7 +78,7 @@ SUPPORT_COMMANDS_TEXT = """
 <b>🔹 Your Privileged Commands:</b>
 /gban &lt;ID/@user/reply&gt; [Reason] - Ban a user globally.
 /ungban &lt;ID/@user/reply&gt; - Unban a user globally.
-/ping - Check bot ping.
+/ping - Checks the bot's latency.
 """
 
 SUDO_COMMANDS_TEXT = """
