@@ -1,22 +1,12 @@
 import logging
+from datetime import datetime, timezone
+from telegram import Update, User, Chat
+from telegram.constants import ParseMode, ChatType
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ApplicationHandlerStop
 
-from telegram import Update
-from telegram.constants import ParseMode
-from telegram.ext import (
-    Application, CommandHandler, MessageHandler,
-    filters, ContextTypes, ApplicationHandlerStop
-)
-
-import config
-from ..core.utils import is_privileged_user
-from ..core.database import (
-    add_to_blacklist, remove_from_blacklist, get_blacklist_reason,
-    is_user_blacklisted, is_whitelisted
-)
-from ..core.utils import (
-    is_owner_or_dev, is_sudo_user, resolve_user_with_telethon,
-    create_user_html_link, safe_escape, send_operational_log
-)
+from ..config import OWNER_ID, APPEAL_CHAT_ID, LOG_CHAT_USERNAME
+from ..core.database import add_to_blacklist, remove_from_blacklist, get_blacklist_reason, is_user_blacklisted, is_whitelisted
+from ..core.utils import is_privileged_user, is_owner_or_dev, is_sudo_user, resolve_user_with_telethon, create_user_html_link, safe_escape, send_operational_log
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +111,7 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
     
     if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
         await message.reply_text("🧐 This action can only be applied to users."); return
-    if target_entity.id == config.OWNER_ID:
+    if target_entity.id == OWNER_ID:
         await message.reply_text("WHAT? The Owner is never on the blacklist."); return
 
     user_display = create_user_html_link(target_entity)
@@ -162,7 +152,7 @@ async def check_blacklist_handler(update: Update, context: ContextTypes.DEFAULT_
     user = update.effective_user
     chat = update.effective_chat
 
-    if user.id == config.OWNER_ID:
+    if user.id == OWNER_ID:
         return
         
     if not is_user_blacklisted(user.id):
