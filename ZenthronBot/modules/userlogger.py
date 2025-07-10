@@ -23,7 +23,7 @@ async def log_user_from_interaction(update: Update, context: ContextTypes.DEFAUL
         if 'known_chats' not in context.bot_data:
             context.bot_data['known_chats'] = set()
             try:
-                with sqlite3.connect("DB_NAME") as conn:
+                with sqlite3.connect(DB_NAME) as conn:
                     cursor = conn.cursor()
                     known_ids = {row[0] for row in cursor.execute("SELECT chat_id FROM bot_chats")}
                     context.bot_data['known_chats'] = known_ids
