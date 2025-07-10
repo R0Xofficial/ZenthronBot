@@ -22,7 +22,10 @@ from telethon import TelegramClient
 from telethon.tl.types import User as TelethonUser
 
 from ..config import OWNER_ID, TENOR_API_KEY, GEMINI_API_KEY, LOG_CHAT_ID, ADMIN_LOG_CHAT_ID, DB_NAME
-from . import database
+from .database import (
+    is_dev_user, is_sudo_user, is_support_user,
+    get_user_from_db_by_id, get_user_from_db_by_username,
+    update_user_in_db
 
 logger = logging.getLogger(__name__)
 
