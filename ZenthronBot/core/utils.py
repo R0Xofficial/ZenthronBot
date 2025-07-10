@@ -5,6 +5,7 @@ import json
 import logging
 import random
 import re
+import sqlite3
 import subprocess
 from datetime import timedelta, datetime, timezone
 from typing import List, Tuple
@@ -13,19 +14,14 @@ import google.generativeai as genai
 import requests
 import speedtest
 import telegram
-from telegram import Update, User, Chat, constants
-from telegram.constants import ParseMode
-from telegram.ext import ContextTypes
+from telegram import Update, User, Chat, constants, ChatPermissions
+from telegram.constants import ParseMode, ChatMemberStatus
+from telegram.error import TelegramError, BadRequest
 from telethon import TelegramClient
 from telethon.tl.types import User as TelethonUser
 
-from .constants
-from ..config import OWNER_ID, DB_NAME
-from .database import (
-    is_dev_user, is_sudo_user, is_support_user,
-    get_user_from_db_by_id, get_user_from_db_by_username,
-    update_user_in_db
-)
+from ..config import OWNER_ID, TENOR_API_KEY, GEMINI_API_KEY, LOG_CHAT_ID, ADMIN_LOG_CHAT_ID, DB_NAME
+from . import database
 
 logger = logging.getLogger(__name__)
 
