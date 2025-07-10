@@ -1,9 +1,8 @@
 import logging
 import io
 import re
-
 from telegram import Update
-from telegram.constants import ChatType, ParseMode
+from telegram.constants import ChatType
 from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes
 
