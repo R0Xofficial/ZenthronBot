@@ -5,7 +5,7 @@ from telegram import Update
 from telegram.constants import ChatType
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
 
-from modules.database import update_user_in_db, add_chat_to_db
+from ..core.database import update_user_in_db, add_chat_to_db
 
 logger = logging.getLogger(__name__)
 
