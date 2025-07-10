@@ -37,6 +37,10 @@ async def send_startup_log(context: ContextTypes.DEFAULT_TYPE) -> None:
     else:
         logger.warning("No target (LOG_CHAT_ID or OWNER_ID) to send startup message.")
 
+async def ignore_edited_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.info(f"Ignoring edited command: {update.edited_message.text}")
+    raise ApplicationHandlerStop
+
 def load_modules(application: Application) -> None:
     base_path = os.path.dirname(os.path.abspath(__file__)) 
     modules_dir = os.path.join(base_path, "modules")
@@ -67,6 +71,8 @@ async def main() -> None:
             .job_queue(JobQueue())
             .build()
         )
+
+        application.add_handler(MessageHandler(filters.UpdateType.EDITED_MESSAGE & filters.COMMAND, ignore_edited_commands), group=-10)
 
         application.bot_data["telethon_client"] = telethon_client
         logger.info("Telethon client has been injected into bot_data.")
