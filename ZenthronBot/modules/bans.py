@@ -6,7 +6,13 @@ from telegram.constants import ChatType, ChatMemberStatus, ParseMode
 from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes, ChatMemberHandler
 
-from ..core import utils, database
+from modules.database import remove_chat_from_db
+
+from modules.utils import (
+    _can_user_perform_action, resolve_user_with_telethon,
+    parse_duration_to_timedelta, create_user_html_link,
+    send_safe_reply, safe_escape
+)
 
 logger = logging.getLogger(__name__)
 
