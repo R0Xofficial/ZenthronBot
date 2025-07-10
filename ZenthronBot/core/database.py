@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import List, Tuple
 from telegram import User
 
-import config
+from .. import config
 
 logger = logging.getLogger(__name__)
 
