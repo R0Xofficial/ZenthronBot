@@ -8,8 +8,8 @@ from telegram.constants import ParseMode
 from telegram.ext import Application, ApplicationBuilder, JobQueue, ContextTypes
 from telethon import TelegramClient
 
-from . import config
-from .core import database
+from .config import SESSION_NAME, API_ID, API_HASH, LOG_CHAT_ID, OWNER_ID
+from .core.database import init_db
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -56,7 +56,7 @@ def load_modules(application: Application) -> None:
 async def main() -> None:
     init_db()
 
-    async with TelegramClient(config.SESSION_NAME, config.API_ID, config.API_HASH) as telethon_client:
+    async with TelegramClient(SESSION_NAME, API_ID, API_HASH) as telethon_client:
         logger.info("Telethon client started.")
 
         application = (
@@ -77,7 +77,7 @@ async def main() -> None:
         else:
             logger.warning("JobQueue not available, cannot schedule startup message.")
 
-        logger.info(f"Bot starting polling... Owner ID: {config.OWNER_ID}")
+        logger.info(f"Bot starting polling... Owner ID: {OWNER_ID}")
         
         await application.initialize()
         await application.start()
