@@ -5,7 +5,7 @@ from telegram.constants import ChatType, ChatMemberStatus
 from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-from modules.utils import (
+from ..core.utils import (
     _can_user_perform_action, resolve_user_with_telethon,
     create_user_html_link, safe_escape
 )
