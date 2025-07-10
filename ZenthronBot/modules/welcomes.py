@@ -7,16 +7,16 @@ from telegram.constants import ChatType, ParseMode
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 import config
-from modules.database import (
+from ..core.database import (
     set_welcome_setting, get_welcome_settings, set_goodbye_setting, get_goodbye_settings,
     set_clean_service, should_clean_service, add_chat_to_db, remove_chat_from_db,
     is_dev_user, is_sudo_user, is_support_user
 )
-from modules.utils import (
+from ..core.utils import (
     _can_user_perform_action, send_safe_reply, safe_escape,
     format_message_text, send_critical_log
 )
-from .constants import (
+from ..core.constants import (
     OWNER_WELCOME_TEXTS, DEV_WELCOME_TEXTS, SUDO_WELCOME_TEXTS,
     SUPPORT_WELCOME_TEXTS, GENERIC_WELCOME_TEXTS, GENERIC_GOODBYE_TEXTS
 )
