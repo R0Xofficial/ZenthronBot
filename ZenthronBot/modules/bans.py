@@ -6,9 +6,7 @@ from telegram.constants import ChatType, ChatMemberStatus, ParseMode
 from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes, ChatMemberHandler
 
-from ..core import database
-
-from ..core import utils
+from ..core import utils, database
 
 logger = logging.getLogger(__name__)
 
