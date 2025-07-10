@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import List, Tuple
 from telegram import User
 
-from ..config import DB_NAME
+from ..config import DB_NAME, MAX_WARNS
 
 logger = logging.getLogger(__name__)
 
