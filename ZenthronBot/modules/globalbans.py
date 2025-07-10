@@ -1,23 +1,13 @@
 import logging
 import asyncio
+from datetime import datetime, timezone
+from telegram import Update, User, Chat
+from telegram.constants import ParseMode, ChatType, ChatMemberStatus
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ApplicationHandlerStop
 
-from telegram import Update
-from telegram.constants import ParseMode
-from telegram.constants import ChatType, ChatMemberStatus
-from telegram.ext import (
-    Application, CommandHandler, MessageHandler,
-    filters, ContextTypes, ApplicationHandlerStop
-)
-
-import config
-from ..core.utils import is_privileged_user
-from ..core.database import (
-    is_gban_enforced, get_gban_reason, add_to_gban, remove_from_gban, is_whitelisted
-)
-from ..core.utils import (
-    resolve_user_with_telethon, create_user_html_link, safe_escape,
-    send_operational_log, propagate_unban
-)
+from ..config import APPEAL_CHAT_USERNAME, LOG_CHAT_USERNAME, DB_NAME
+from ..core.database import is_gban_enforced, get_gban_reason, add_to_gban, remove_from_gban, is_whitelisted, add_chat_to_db
+from ..core.utils import is_privileged_user, resolve_user_with_telethon, create_user_html_link, safe_escape, send_operational_log, propagate_unban
 
 logger = logging.getLogger(__name__)
 
