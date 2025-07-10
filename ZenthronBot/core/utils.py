@@ -26,6 +26,7 @@ from .database import (
     is_dev_user, is_sudo_user, is_support_user,
     get_user_from_db_by_id, get_user_from_db_by_username,
     update_user_in_db
+)
 
 logger = logging.getLogger(__name__)
 
