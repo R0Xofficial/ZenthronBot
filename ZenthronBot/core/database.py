@@ -4,14 +4,14 @@ from datetime import datetime, timezone
 from typing import List, Tuple
 from telegram import User
 
-from .. import config
+from ..config import DB_NAME
 
 logger = logging.getLogger(__name__)
 
 def init_db():
     conn = None
     try:
-        conn = sqlite3.connect(config.DB_NAME)
+        conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -124,7 +124,7 @@ def init_db():
         """)
         
         conn.commit()
-        logger.info(f"Database '{config.DB_NAME}' initialized successfully (tables users, blacklist, whitelist_users, support_users, sudo_users, dev_users, global_bans, bot_chats, notes, warnings, afk_users ensured).")
+        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, whitelist_users, support_users, sudo_users, dev_users, global_bans, bot_chats, notes, warnings, afk_users ensured).")
     except sqlite3.Error as e:
         logger.error(f"SQLite error during DB initialization: {e}", exc_info=True)
     finally:
@@ -136,7 +136,7 @@ def init_db():
 def add_to_blacklist(user_id: int, banned_by_id: int, reason: str | None = "No reason provided.") -> bool:
     conn = None
     try:
-        conn = sqlite3.connect(config.DB_NAME)
+        conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         current_timestamp_iso = datetime.now(timezone.utc).isoformat()
         cursor.execute(
@@ -155,7 +155,7 @@ def add_to_blacklist(user_id: int, banned_by_id: int, reason: str | None = "No r
 def remove_from_blacklist(user_id: int) -> bool:
     conn = None
     try:
-        conn = sqlite3.connect(config.DB_NAME)
+        conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM blacklist WHERE user_id = ?", (user_id,))
         conn.commit()
@@ -170,7 +170,7 @@ def remove_from_blacklist(user_id: int) -> bool:
 def get_blacklist_reason(user_id: int) -> str | None:
     conn = None
     try:
-        conn = sqlite3.connect(config.DB_NAME)
+        conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute("SELECT reason FROM blacklist WHERE user_id = ?", (user_id,))
         row = cursor.fetchone()
@@ -190,7 +190,7 @@ def is_user_blacklisted(user_id: int) -> bool:
 # --- WHITELIST ---
 def add_to_whitelist(user_id: int, added_by_id: int) -> bool:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             timestamp = datetime.now(timezone.utc).isoformat()
             conn.execute(
                 "INSERT OR IGNORE INTO whitelist_users (user_id, added_by_id, timestamp) VALUES (?, ?, ?)",
@@ -203,7 +203,7 @@ def add_to_whitelist(user_id: int, added_by_id: int) -> bool:
 
 def remove_from_whitelist(user_id: int) -> bool:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM whitelist_users WHERE user_id = ?", (user_id,))
             return cursor.rowcount > 0
@@ -213,7 +213,7 @@ def remove_from_whitelist(user_id: int) -> bool:
 
 def is_whitelisted(user_id: int) -> bool:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             res = conn.cursor().execute("SELECT 1 FROM whitelist_users WHERE user_id = ?", (user_id,)).fetchone()
             return res is not None
     except sqlite3.Error:
@@ -223,7 +223,7 @@ def get_all_whitelist_users_from_db() -> List[Tuple[int, str]]:
     conn = None
     whitelist_list = []
     try:
-        conn = sqlite3.connect(config.DB_NAME)
+        conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute("SELECT user_id, timestamp FROM whitelist_users ORDER BY timestamp DESC")
         rows = cursor.fetchall()
@@ -241,7 +241,7 @@ def add_support_user(user_id: int, added_by_id: int) -> bool:
     """Adds a user to the Support list."""
     conn = None
     try:
-        conn = sqlite3.connect(config.DB_NAME)
+        conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         current_timestamp_iso = datetime.now(timezone.utc).isoformat()
         cursor.execute(
@@ -260,7 +260,7 @@ def remove_support_user(user_id: int) -> bool:
     """Removes a user from the Support list."""
     conn = None
     try:
-        conn = sqlite3.connect(config.DB_NAME)
+        conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM support_users WHERE user_id = ?", (user_id,))
         conn.commit()
@@ -275,7 +275,7 @@ def is_support_user(user_id: int) -> bool:
     """Checks if a user is on the Support list."""
     conn = None
     try:
-        conn = sqlite3.connect(config.DB_NAME)
+        conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute("SELECT 1 FROM support_users WHERE user_id = ?", (user_id,))
         return cursor.fetchone() is not None
@@ -288,7 +288,7 @@ def is_support_user(user_id: int) -> bool:
 def get_all_support_users_from_db() -> List[Tuple[int, str]]:
     """Fetches all Support users from the database."""
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT user_id, timestamp FROM support_users ORDER BY timestamp DESC")
             return cursor.fetchall()
@@ -301,7 +301,7 @@ def add_sudo_user(user_id: int, added_by_id: int) -> bool:
     """Adds a user to the sudo list."""
     conn = None
     try:
-        conn = sqlite3.connect(config.DB_NAME)
+        conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         current_timestamp_iso = datetime.now(timezone.utc).isoformat()
         cursor.execute(
@@ -321,7 +321,7 @@ def remove_sudo_user(user_id: int) -> bool:
     """Removes a user from the sudo list."""
     conn = None
     try:
-        conn = sqlite3.connect(config.DB_NAME)
+        conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM sudo_users WHERE user_id = ?", (user_id,))
         conn.commit()
@@ -337,7 +337,7 @@ def is_sudo_user(user_id: int) -> bool:
     """Checks if a user is on the sudo list (database check only)."""
     conn = None
     try:
-        conn = sqlite3.connect(config.DB_NAME)
+        conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute("SELECT 1 FROM sudo_users WHERE user_id = ?", (user_id,))
         return cursor.fetchone() is not None
@@ -352,7 +352,7 @@ def get_all_sudo_users_from_db() -> List[Tuple[int, str]]:
     conn = None
     sudo_list = []
     try:
-        conn = sqlite3.connect(config.DB_NAME)
+        conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute("SELECT user_id, timestamp FROM sudo_users ORDER BY timestamp DESC")
         rows = cursor.fetchall()
@@ -370,7 +370,7 @@ def add_dev_user(user_id: int, added_by_id: int) -> bool:
     """Adds a user to the Developer list."""
     conn = None
     try:
-        conn = sqlite3.connect(config.DB_NAME)
+        conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         current_timestamp_iso = datetime.now(timezone.utc).isoformat()
         cursor.execute(
@@ -389,7 +389,7 @@ def remove_dev_user(user_id: int) -> bool:
     """Removes a user from the Developer list."""
     conn = None
     try:
-        conn = sqlite3.connect(config.DB_NAME)
+        conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM dev_users WHERE user_id = ?", (user_id,))
         conn.commit()
@@ -404,7 +404,7 @@ def is_dev_user(user_id: int) -> bool:
     """Checks if a user is on the Developer list."""
     conn = None
     try:
-        conn = sqlite3.connect(config.DB_NAME)
+        conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         cursor.execute("SELECT 1 FROM dev_users WHERE user_id = ?", (user_id,))
         return cursor.fetchone() is not None
@@ -417,7 +417,7 @@ def is_dev_user(user_id: int) -> bool:
 def get_all_dev_users_from_db() -> List[Tuple[int, str]]:
     """Fetches all developers from the database."""
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT user_id, timestamp FROM dev_users ORDER BY timestamp DESC")
             return cursor.fetchall()
@@ -429,7 +429,7 @@ def get_all_dev_users_from_db() -> List[Tuple[int, str]]:
 def add_to_gban(user_id: int, banned_by_id: int, reason: str | None) -> bool:
     reason = reason or "No reason provided."
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             timestamp = datetime.now(timezone.utc).isoformat()
             cursor.execute(
@@ -443,7 +443,7 @@ def add_to_gban(user_id: int, banned_by_id: int, reason: str | None) -> bool:
 
 def remove_from_gban(user_id: int) -> bool:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM global_bans WHERE user_id = ?", (user_id,))
             return cursor.rowcount > 0
@@ -453,7 +453,7 @@ def remove_from_gban(user_id: int) -> bool:
 
 def get_gban_reason(user_id: int) -> str | None:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT reason FROM global_bans WHERE user_id = ?", (user_id,))
             row = cursor.fetchone()
@@ -465,7 +465,7 @@ def get_gban_reason(user_id: int) -> str | None:
 def is_gban_enforced(chat_id: int) -> bool:
     """Checks if gban enforcement is enabled for a specific chat."""
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             res = cursor.execute(
                 "SELECT enforce_gban FROM bot_chats WHERE chat_id = ?", (chat_id,)
@@ -483,7 +483,7 @@ def update_user_in_db(user: User | None):
         return
     conn = None
     try:
-        conn = sqlite3.connect(config.DB_NAME)
+        conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         current_timestamp_iso = datetime.now(timezone.utc).isoformat()
         cursor.execute("""
@@ -513,7 +513,7 @@ def get_user_from_db_by_username(username_query: str) -> User | None:
     conn = None
     user_obj: User | None = None
     try:
-        conn = sqlite3.connect(config.DB_NAME)
+        conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         normalized_username = username_query.lstrip('@').lower()
         cursor.execute(
@@ -538,7 +538,7 @@ def get_user_from_db_by_id(user_id: int) -> User | None:
     if not user_id:
         return None
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT user_id, username, first_name, last_name, language_code, is_bot FROM users WHERE user_id = ?",
@@ -559,7 +559,7 @@ def get_user_from_db_by_id(user_id: int) -> User | None:
 # --- CHATS ---
 def add_chat_to_db(chat_id: int, chat_title: str):
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             timestamp = datetime.now(timezone.utc).isoformat()
             cursor.execute(
@@ -571,7 +571,7 @@ def add_chat_to_db(chat_id: int, chat_title: str):
 
 def remove_chat_from_db(chat_id: int):
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM bot_chats WHERE chat_id = ?", (chat_id,))
     except sqlite3.Error as e:
@@ -579,7 +579,7 @@ def remove_chat_from_db(chat_id: int):
 
 def get_all_bot_chats_from_db() -> List[Tuple[int, str, str]]:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT chat_id, chat_title, added_at FROM bot_chats ORDER BY added_at DESC")
             return cursor.fetchall()
@@ -589,7 +589,7 @@ def get_all_bot_chats_from_db() -> List[Tuple[int, str, str]]:
 
 def remove_chat_from_db_by_id(chat_id: int) -> bool:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM bot_chats WHERE chat_id = ?", (chat_id,))
             conn.commit()
@@ -601,7 +601,7 @@ def remove_chat_from_db_by_id(chat_id: int) -> bool:
 # --- CHAT SETTINGS ---
 def set_welcome_setting(chat_id: int, enabled: bool, text: str | None = None) -> bool:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute("INSERT OR IGNORE INTO bot_chats (chat_id, added_at) VALUES (?, ?)", 
                            (chat_id, datetime.now(timezone.utc).isoformat()))
@@ -617,7 +617,7 @@ def set_welcome_setting(chat_id: int, enabled: bool, text: str | None = None) ->
 
 def set_goodbye_setting(chat_id: int, enabled: bool, text: str | None = None) -> bool:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute("INSERT OR IGNORE INTO bot_chats (chat_id, added_at) VALUES (?, ?)", 
                            (chat_id, datetime.now(timezone.utc).isoformat()))
@@ -633,7 +633,7 @@ def set_goodbye_setting(chat_id: int, enabled: bool, text: str | None = None) ->
 
 def get_welcome_settings(chat_id: int) -> Tuple[bool, str | None]:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             res = conn.cursor().execute(
                 "SELECT welcome_enabled, custom_welcome FROM bot_chats WHERE chat_id = ?", (chat_id,)
             ).fetchone()
@@ -647,7 +647,7 @@ def get_welcome_settings(chat_id: int) -> Tuple[bool, str | None]:
 def get_goodbye_settings(chat_id: int) -> Tuple[bool, str | None]:
     """Pobiera ustawienia pożegnań (czy włączone, jaki tekst)."""
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             res = conn.cursor().execute(
                 "SELECT goodbye_enabled, custom_goodbye FROM bot_chats WHERE chat_id = ?", (chat_id,)
             ).fetchone()
@@ -660,7 +660,7 @@ def get_goodbye_settings(chat_id: int) -> Tuple[bool, str | None]:
 
 def set_clean_service(chat_id: int, enabled: bool) -> bool:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute("INSERT OR IGNORE INTO bot_chats (chat_id, added_at) VALUES (?, ?)", 
                            (chat_id, datetime.now(timezone.utc).isoformat()))
@@ -676,7 +676,7 @@ def set_clean_service(chat_id: int, enabled: bool) -> bool:
 
 def should_clean_service(chat_id: int) -> bool:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             res = conn.cursor().execute(
                 "SELECT clean_service_messages FROM bot_chats WHERE chat_id = ?", (chat_id,)
             ).fetchone()
@@ -687,7 +687,7 @@ def should_clean_service(chat_id: int) -> bool:
 
 def set_warn_limit(chat_id: int, limit: int) -> bool:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute("INSERT OR IGNORE INTO bot_chats (chat_id, added_at) VALUES (?, ?)", 
                            (chat_id, datetime.now(timezone.utc).isoformat()))
@@ -699,7 +699,7 @@ def set_warn_limit(chat_id: int, limit: int) -> bool:
 
 def get_warn_limit(chat_id: int) -> int:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             res = conn.cursor().execute("SELECT warn_limit FROM bot_chats WHERE chat_id = ?", (chat_id,)).fetchone()
             if res and res[0] is not None and res[0] > 0:
                 return res[0]
@@ -710,7 +710,7 @@ def get_warn_limit(chat_id: int) -> int:
 
 def set_rules(chat_id: int, rules: str) -> bool:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             conn.execute("INSERT OR IGNORE INTO bot_chats (chat_id, added_at) VALUES (?, ?)",
                          (chat_id, datetime.now(timezone.utc).isoformat()))
             conn.execute("UPDATE bot_chats SET rules_text = ? WHERE chat_id = ?", (rules, chat_id))
@@ -721,7 +721,7 @@ def set_rules(chat_id: int, rules: str) -> bool:
 
 def get_rules(chat_id: int) -> str | None:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             res = conn.cursor().execute("SELECT rules_text FROM bot_chats WHERE chat_id = ?", (chat_id,)).fetchone()
             return res[0] if res else None
     except sqlite3.Error:
@@ -733,7 +733,7 @@ def clear_rules(chat_id: int) -> bool:
 # --- NOTES ---
 def add_note(chat_id: int, note_name: str, content: str, user_id: int) -> bool:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             timestamp = datetime.now(timezone.utc).isoformat()
             conn.execute(
                 "INSERT OR REPLACE INTO notes (chat_id, note_name, content, created_by_id, created_at) VALUES (?, ?, ?, ?, ?)",
@@ -746,7 +746,7 @@ def add_note(chat_id: int, note_name: str, content: str, user_id: int) -> bool:
 
 def remove_note(chat_id: int, note_name: str) -> bool:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM notes WHERE chat_id = ? AND note_name = ?", (chat_id, note_name.lower()))
             return cursor.rowcount > 0
@@ -756,7 +756,7 @@ def remove_note(chat_id: int, note_name: str) -> bool:
 
 def get_note(chat_id: int, note_name: str) -> str | None:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             res = conn.cursor().execute("SELECT content FROM notes WHERE chat_id = ? AND note_name = ?", (chat_id, note_name.lower())).fetchone()
             return res[0] if res else None
     except sqlite3.Error:
@@ -764,7 +764,7 @@ def get_note(chat_id: int, note_name: str) -> str | None:
 
 def get_all_notes(chat_id: int) -> List[str]:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             notes = conn.cursor().execute("SELECT note_name FROM notes WHERE chat_id = ? ORDER BY note_name", (chat_id,)).fetchall()
             return [row[0] for row in notes]
     except sqlite3.Error:
@@ -773,7 +773,7 @@ def get_all_notes(chat_id: int) -> List[str]:
 # --- WARNINGS ---
 def add_warning(chat_id: int, user_id: int, reason: str, admin_id: int) -> Tuple[int, int]:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             timestamp = datetime.now(timezone.utc).isoformat()
             cursor.execute(
@@ -794,7 +794,7 @@ def add_warning(chat_id: int, user_id: int, reason: str, admin_id: int) -> Tuple
 
 def remove_warning_by_id(warn_id: int) -> bool:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM warnings WHERE id = ?", (warn_id,))
             return cursor.rowcount > 0
@@ -804,7 +804,7 @@ def remove_warning_by_id(warn_id: int) -> bool:
 
 def get_warnings(chat_id: int, user_id: int) -> List[Tuple[str, int]]:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             warnings = conn.cursor().execute(
                 "SELECT reason, warned_by_id FROM warnings WHERE chat_id = ? AND user_id = ?",
                 (chat_id, user_id)
@@ -816,7 +816,7 @@ def get_warnings(chat_id: int, user_id: int) -> List[Tuple[str, int]]:
 
 def reset_warnings(chat_id: int, user_id: int) -> bool:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM warnings WHERE chat_id = ? AND user_id = ?", (chat_id, user_id))
             return cursor.rowcount > 0
@@ -827,7 +827,7 @@ def reset_warnings(chat_id: int, user_id: int) -> bool:
 # --- AFK ---
 def set_afk(user_id: int, reason: str | None) -> bool:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             timestamp = datetime.now(timezone.utc).isoformat()
             conn.execute(
                 "INSERT OR REPLACE INTO afk_users (user_id, reason, afk_since) VALUES (?, ?, ?)",
@@ -840,7 +840,7 @@ def set_afk(user_id: int, reason: str | None) -> bool:
 
 def get_afk_status(user_id: int) -> Tuple[str, str] | None:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             res = conn.cursor().execute(
                 "SELECT reason, afk_since FROM afk_users WHERE user_id = ?", (user_id,)
             ).fetchone()
@@ -850,7 +850,7 @@ def get_afk_status(user_id: int) -> Tuple[str, str] | None:
 
 def clear_afk(user_id: int) -> bool:
     try:
-        with sqlite3.connect(config.DB_NAME) as conn:
+        with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM afk_users WHERE user_id = ?", (user_id,))
             return cursor.rowcount > 0
