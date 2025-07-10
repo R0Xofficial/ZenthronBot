@@ -86,7 +86,7 @@ SUDO_COMMANDS_TEXT = """
 /status - Show bot status.
 /stats - Show bot database stats.
 /cinfo &lt;Optional chat ID&gt; - Get detailed info about the current or specified chat.
-/say &lt;Optional chat ID&gt; [Your text] - Send a message as the bot.
+/echo &lt;Optional chat ID&gt; [Your text] - Send a message as the bot.
 /blist &lt;ID/@user/reply&gt; [Reason] - Add a user to the blacklist.
 /unblist &lt;ID/@user/reply&gt; - Remove a user from the blacklist.
 /permissions - Check Bot permissions in chat.
