@@ -1,25 +1,18 @@
 import logging
 import random
 import sqlite3
-
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ChatType, ParseMode
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
-import config
+from ..config import OWNER_ID, DB_NAME, APPEAL_CHAT_USERNAME
 from ..core.database import (
     set_welcome_setting, get_welcome_settings, set_goodbye_setting, get_goodbye_settings,
     set_clean_service, should_clean_service, add_chat_to_db, remove_chat_from_db,
     is_dev_user, is_sudo_user, is_support_user
 )
-from ..core.utils import (
-    _can_user_perform_action, send_safe_reply, safe_escape,
-    format_message_text, send_critical_log
-)
-from ..core.constants import (
-    OWNER_WELCOME_TEXTS, DEV_WELCOME_TEXTS, SUDO_WELCOME_TEXTS,
-    SUPPORT_WELCOME_TEXTS, GENERIC_WELCOME_TEXTS, GENERIC_GOODBYE_TEXTS
-)
+from ..core.utils import _can_user_perform_action, send_safe_reply, safe_escape, format_message_text, send_critical_log
+from ..core.constants import OWNER_WELCOME_TEXTS, DEV_WELCOME_TEXTS, SUDO_WELCOME_TEXTS, SUPPORT_WELCOME_TEXTS, GENERIC_WELCOME_TEXTS, GENERIC_GOODBYE_TEXTS
 
 logger = logging.getLogger(__name__)
 
@@ -249,7 +242,7 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
     if any(member.id == context.bot.id for member in update.message.new_chat_members):
         logger.info(f"Bot joined chat: {chat.title} ({chat.id})")
         add_chat_to_db(chat.id, chat.title or f"Untitled Chat {chat.id}")
-        if config.OWNER_ID:
+        if OWNER_ID:
             safe_chat_title = safe_escape(chat.title or f"Chat ID {chat.id}")
             link_line = f"\n<b>Link:</b> @{chat.username}" if chat.username else ""
             log_text = (f"<b>#ADDEDTOGROUP</b>\n\n<b>Name:</b> {safe_chat_title}\n<b>ID:</b> <code>{chat.id}</code>{link_line}")
@@ -286,7 +279,7 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
         base_text = ""
         is_privileged_join = True
 
-        if member.id == config.OWNER_ID and OWNER_WELCOME_TEXTS:
+        if member.id == OWNER_ID and OWNER_WELCOME_TEXTS:
             base_text = random.choice(OWNER_WELCOME_TEXTS)
         elif is_dev_user(member.id) and DEV_WELCOME_TEXTS:
             base_text = random.choice(DEV_WELCOME_TEXTS)
@@ -310,10 +303,10 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
             continue
 
         user_mention = member.mention_html()
-        owner_mention = f"<code>{config.OWNER_ID}</code>"
-        if config.OWNER_ID:
+        owner_mention = f"<code>{OWNER_ID}</code>"
+        if OWNER_ID:
             try:
-                owner_chat = await context.bot.get_chat(config.OWNER_ID)
+                owner_chat = await context.bot.get_chat(OWNER_ID)
                 owner_mention = owner_chat.mention_html()
             except Exception:
                 pass
