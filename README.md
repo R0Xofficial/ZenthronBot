@@ -19,7 +19,7 @@ Meet **ZenthronBot**, a powerful and feature-rich Telegram bot designed for adva
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/R0Xofficial/ZenthronBot zenthron
+    git clone --branch ZenthronBot-Modular https://github.com/R0Xofficial/ZenthronBot.git tgbot
     ```
 
 2.  **Install requirements:**
@@ -29,13 +29,13 @@ Meet **ZenthronBot**, a powerful and feature-rich Telegram bot designed for adva
 
 3.  **Set up your environment variables:**
     ```bash
-    nano ~/zenthron/.env
+    nano ~/tgbot/ZenthronBot/.env
     ```
 
 4.  **Run the bot:**
     Navigate to the bot's directory and run it using the script:
     ```bash
-    cd ~/zenthron && python3 zenthron.py
+    cd ~/tgbot && python3 -m ZenthronBot.main
     ```
 
 
