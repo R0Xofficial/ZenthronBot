@@ -80,7 +80,8 @@ else:
     
 LOG_CHAT_USERNAME = os.getenv("LOG_CHAT_USERNAME")
 
-DB_NAME = "zenthron_data.db"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_NAME = os.path.join(BASE_DIR, "zenthron_data.db")
 SESSION_NAME = "zenthron_user_session"
 
 BOT_START_TIME = datetime.now()
