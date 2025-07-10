@@ -236,7 +236,7 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     args = context.args
     if not args:
-        await update.message.reply_text("Usage: /say <optional_chat_id> [your message]")
+        await update.message.reply_text("Usage: /echo <optional_chat_id> [your message]")
         return
 
     target_chat_id_str = args[0]
