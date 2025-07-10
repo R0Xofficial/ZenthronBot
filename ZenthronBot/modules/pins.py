@@ -1,5 +1,4 @@
 import logging
-
 from telegram import Update
 from telegram.constants import ChatType, ChatMemberStatus
 from telegram.error import TelegramError
