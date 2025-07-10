@@ -5,7 +5,7 @@ from telegram.constants import ChatType, ChatMemberStatus
 from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-from modules.utils import _can_user_perform_action, send_safe_reply, safe_escape
+from ..core.utils import _can_user_perform_action, send_safe_reply, safe_escape
 
 logger = logging.getLogger(__name__)
 
