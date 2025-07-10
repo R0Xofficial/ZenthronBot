@@ -3,8 +3,8 @@ import logging
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
-from modules.database import add_note, get_all_notes, remove_note, get_note
-from modules.utils import _can_user_perform_action, send_safe_reply, safe_escape
+from ..core.database import add_note, get_all_notes, remove_note, get_note
+from ..core.utils import _can_user_perform_action, send_safe_reply, safe_escape
 
 logger = logging.getLogger(__name__)
 
