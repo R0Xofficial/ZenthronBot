@@ -19,8 +19,9 @@ from telegram.ext import ContextTypes
 from telethon import TelegramClient
 from telethon.tl.types import User as TelethonUser
 
-import config
-from modules.database import (
+from .constants
+from .. import config
+from .database import (
     is_dev_user, is_sudo_user, is_support_user,
     get_user_from_db_by_id, get_user_from_db_by_username,
     update_user_in_db
