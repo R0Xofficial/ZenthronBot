@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import sqlite3
 from datetime import datetime, timezone, timedelta
 from telegram import Update, User, Chat
 from telegram.constants import ParseMode, ChatType, ChatMemberStatus
