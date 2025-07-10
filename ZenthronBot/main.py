@@ -38,12 +38,14 @@ async def send_startup_log(context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.warning("No target (LOG_CHAT_ID or OWNER_ID) to send startup message.")
 
 def load_modules(application: Application) -> None:
-    modules_dir = "modules"
+    base_path = os.path.dirname(os.path.abspath(__file__)) 
+    modules_dir = os.path.join(base_path, "modules")
+
     for filename in os.listdir(modules_dir):
         if filename.endswith(".py") and not filename.startswith("_"):
             module_name = filename[:-3]
             try:
-                module = importlib.import_module(f"{modules_dir}.{module_name}")
+                module = importlib.import_module(f"ZenthronBot.modules.{module_name}")
                 if hasattr(module, "load_handlers"):
                     module.load_handlers(application)
                     logger.info(f"Successfully loaded module: {module_name}")
