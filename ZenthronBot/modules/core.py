@@ -228,7 +228,7 @@ async def permissions_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     await message.reply_html("\n".join(response_lines))
 
-async def say(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
         logger.warning(f"Unauthorized /say attempt by user {user.id}.")
@@ -1688,7 +1688,7 @@ def load_handlers(application: Application):
     application.add_handler(CommandHandler("stats", stats_command))
     application.add_handler(CommandHandler("ping", ping_command))
     application.add_handler(CommandHandler(["permissions", "perms"], permissions_command))
-    application.add_handler(CommandHandler("say", say))
+    application.add_handler(CommandHandler("echo", echo))
     application.add_handler(CommandHandler("leave", leave_chat))
     application.add_handler(CommandHandler("speedtest", speedtest_command))
     application.add_handler(CommandHandler("listsudo", list_sudo_users_command))
