@@ -9,10 +9,10 @@ from telegram.ext import (
     filters, ContextTypes, ApplicationHandlerStop
 )
 
-from modules.database import (
+from ..core.database import (
     set_afk, get_afk_status, clear_afk, get_user_from_db_by_username
 )
-from modules.utils import (
+from ..core.utils import (
     send_safe_reply, get_readable_time_delta,
     create_user_html_link, safe_escape
 )
