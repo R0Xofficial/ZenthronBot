@@ -8,16 +8,16 @@ from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 import config
-from modules.utils import is_privileged_user
-from modules.database import (
+from ..core.utils import is_privileged_user
+from ..core.database import (
     get_rules, is_dev_user, is_sudo_user, is_support_user,
     is_whitelisted, get_blacklist_reason, get_gban_reason, is_gban_enforced,
     update_user_in_db, get_user_from_db_by_username
 )
-from modules.utils import (
+from ..core.utils import (
     safe_escape, resolve_user_with_telethon, create_user_html_link, send_safe_reply
 )
-from .constants import (
+from ..core.constants import (
     HELP_TEXT, ADMIN_NOTE_TEXT, SUPPORT_COMMANDS_TEXT, SUDO_COMMANDS_TEXT,
     DEVELOPER_COMMANDS_TEXT, OWNER_COMMANDS_TEXT
 )
