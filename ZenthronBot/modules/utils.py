@@ -32,20 +32,8 @@ logger = logging.getLogger(__name__)
 # --- UTILITY AND HELPER FUNCTIONS ---
 # --- HTML DICTIONARY ---
 def safe_escape(text: str) -> str:
-    escape_dict = {
-        "&": "&",
-        "<": "<",
-        ">": ">",
-        '"': '"',
-        "'": "’",
-    }
-
-    text_str = str(text)
-
-    for char, replacement in escape_dict.items():
-        text_str = text_str.replace(char, replacement)
-        
-    return text_str
+    escaped_text = html.escape(str(text))
+    return escaped_text.replace("'", "’")
 
 # --- TARGET CHECKING AND PROTECT ---
 async def check_target_protection(target_user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
