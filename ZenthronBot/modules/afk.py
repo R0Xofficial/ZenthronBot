@@ -9,13 +9,8 @@ from telegram.ext import (
     filters, ContextTypes, ApplicationHandlerStop
 )
 
-from ..core.database import (
-    set_afk, get_afk_status, clear_afk, get_user_from_db_by_username
-)
-from ..core.utils import (
-    send_safe_reply, get_readable_time_delta,
-    create_user_html_link, safe_escape
-)
+from ..core.database import set_afk, get_afk_status, clear_afk, get_user_from_db_by_username
+from ..core.utils import send_safe_reply, get_readable_time_delta, create_user_html_link, safe_escape
 
 logger = logging.getLogger(__name__)
 
