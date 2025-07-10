@@ -1,10 +1,10 @@
 import logging
 import sqlite3
-
 from telegram import Update
 from telegram.constants import ChatType
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
 
+from ..config import DB_NAME
 from ..core.database import update_user_in_db, add_chat_to_db
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ async def log_user_from_interaction(update: Update, context: ContextTypes.DEFAUL
         if 'known_chats' not in context.bot_data:
             context.bot_data['known_chats'] = set()
             try:
-                with sqlite3.connect("zenthron_data.db") as conn:
+                with sqlite3.connect("DB_NAME") as conn:
                     cursor = conn.cursor()
                     known_ids = {row[0] for row in cursor.execute("SELECT chat_id FROM bot_chats")}
                     context.bot_data['known_chats'] = known_ids
