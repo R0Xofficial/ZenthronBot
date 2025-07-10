@@ -17,6 +17,7 @@ import telegram
 from telegram import Update, User, Chat, constants, ChatPermissions
 from telegram.constants import ParseMode, ChatMemberStatus
 from telegram.error import TelegramError, BadRequest
+from telegram.ext import ContextTypes
 from telethon import TelegramClient
 from telethon.tl.types import User as TelethonUser
 
