@@ -4,8 +4,8 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ChatType
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-from modules.database import set_rules, get_rules, clear_rules
-from modules.utils import _can_user_perform_action
+from ..core.database import set_rules, get_rules, clear_rules
+from ..core.utils import _can_user_perform_action
 
 logger = logging.getLogger(__name__)
 
