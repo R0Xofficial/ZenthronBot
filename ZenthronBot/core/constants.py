@@ -1,8 +1,3 @@
-# ZenthronBot - Constants
-# Copyright (C) 2025 R0X
-# Licensed under the GNU General Public License v3.0
-# See the LICENSE file for details.
-
 # --- COMMAND HANDLERS ---
 HELP_TEXT = """
 <b>Here are the commands you can use:</b>
