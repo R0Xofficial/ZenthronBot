@@ -6,7 +6,7 @@ from telegram.constants import ChatType, ChatMemberStatus, ParseMode
 from telegram.ext import Application, CommandHandler, ContextTypes
 from telethon import TelegramClient
 
-from modules.utils import _can_user_perform_action, send_safe_reply, safe_escape
+from ..core.utils import _can_user_perform_action, send_safe_reply, safe_escape
 
 logger = logging.getLogger(__name__)
 
