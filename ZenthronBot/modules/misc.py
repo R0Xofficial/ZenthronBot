@@ -145,10 +145,10 @@ def format_entity_info(entity: Chat | User,
 
         info_lines.extend([
             f"<b>• ID:</b> <code>{user.id}</code>",
-            f"<b>• First Name:</b> {first_name}",
+            f"<b>• First Name:</b> {safe_escape(first_name)}",
         ])
         if getattr(user, 'last_name', None):
-            info_lines.append(f"<b>• Last Name:</b> {last_name}")
+            info_lines.append(f"<b>• Last Name:</b> {safe_escape(last_name)}")
         
         info_lines.extend([
             f"<b>• Username:</b> {username_display}",
