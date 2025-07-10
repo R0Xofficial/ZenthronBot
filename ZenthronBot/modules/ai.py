@@ -35,7 +35,7 @@ async def set_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.message.reply_html(
         f"✅ Public access to <b>/askai</b> command has been globally <b>{status_text}</b>."
     )
-    logger.info(f"Owner {config.OWNER_ID} toggled public AI access to: {status_text}")
+    logger.info(f"Owner {OWNER_ID} toggled public AI access to: {status_text}")
 
 async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
