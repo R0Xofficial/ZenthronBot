@@ -8,12 +8,12 @@ from telegram.ext import (
 )
 
 import config
-from modules.utils import is_privileged_user
-from modules.database import (
+from ..core.utils import is_privileged_user
+from ..core.database import (
     add_to_blacklist, remove_from_blacklist, get_blacklist_reason,
     is_user_blacklisted, is_whitelisted
 )
-from modules.utils import (
+from ..core.utils import (
     is_owner_or_dev, is_sudo_user, resolve_user_with_telethon,
     create_user_html_link, safe_escape, send_operational_log
 )
