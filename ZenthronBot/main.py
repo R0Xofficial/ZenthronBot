@@ -2,16 +2,14 @@ import asyncio
 import logging
 import os
 import importlib
-import sys
 import traceback
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import Application, ApplicationBuilder, JobQueue, ContextTypes
 from telethon import TelegramClient
 
-import config
-from core import database
-from modules.database import init_db
+from . import config
+from .core import database
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
