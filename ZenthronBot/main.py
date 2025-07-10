@@ -4,7 +4,8 @@ import os
 import importlib
 import sys
 import traceback
-from telegram import Update, ParseMode
+from telegram import Update
+from telegram.constants import ParseMode
 from telegram.ext import Application, ApplicationBuilder, JobQueue, ContextTypes
 from telethon import TelegramClient
 
