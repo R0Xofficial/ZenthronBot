@@ -1,19 +1,11 @@
 import logging
-
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, User, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ChatType, ChatMemberStatus, ParseMode
 from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler
 
-import config
-from ..core.database import (
-    add_warning, remove_warning_by_id, get_warnings, reset_warnings,
-    set_warn_limit, get_warn_limit
-)
-from ..core.utils import (
-    _can_user_perform_action, resolve_user_with_telethon,
-    create_user_html_link, send_safe_reply, safe_escape
-)
+from ..core.database import add_warning, remove_warning_by_id, get_warnings, reset_warnings, set_warn_limit, get_warn_limit
+from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, create_user_html_link, send_safe_reply, safe_escape
 
 logger = logging.getLogger(__name__)
 
