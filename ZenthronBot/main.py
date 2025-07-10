@@ -61,7 +61,7 @@ async def main() -> None:
 
         application = (
             ApplicationBuilder()
-            .token(config.BOT_TOKEN)
+            .token(BOT_TOKEN)
             .job_queue(JobQueue())
             .build()
         )
