@@ -5,7 +5,7 @@ import importlib
 import traceback
 from telegram import Update
 from telegram.constants import ParseMode
-from telegram.ext import Application, ApplicationBuilder, JobQueue, ContextTypes
+from telegram.ext import Application, ApplicationBuilder, JobQueue, ContextTypes, MessageHandler, filters, ApplicationHandlerStop
 from telethon import TelegramClient
 
 from .config import SESSION_NAME, API_ID, API_HASH, LOG_CHAT_ID, OWNER_ID, BOT_TOKEN
