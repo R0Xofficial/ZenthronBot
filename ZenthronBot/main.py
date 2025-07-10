@@ -10,6 +10,7 @@ from telegram.ext import Application, ApplicationBuilder, JobQueue, ContextTypes
 from telethon import TelegramClient
 
 import config
+from core import database
 from modules.database import init_db
 
 logging.basicConfig(
