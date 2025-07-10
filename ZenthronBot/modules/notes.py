@@ -1,6 +1,6 @@
 import logging
-
 from telegram import Update
+from telegram.constants import ChatType
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 from ..core.database import add_note, get_all_notes, remove_note, get_note
