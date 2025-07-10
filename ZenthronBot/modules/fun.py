@@ -1,17 +1,12 @@
 import logging
 import random
-
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-from ..core.utils import (
-    get_themed_gif, check_target_protection, check_username_protection
-)
-from ..core.constants import (
-    KILL_TEXTS, SLAP_TEXTS, PUNCH_TEXTS, PAT_TEXTS, BONK_TEXTS,
-    CANT_TARGET_OWNER_TEXTS, CANT_TARGET_SELF_TEXTS
-)
+from ..config import OWNER_ID
+from ..core.utils import get_themed_gif, check_target_protection, check_username_protection
+from ..core.constants import KILL_TEXTS, SLAP_TEXTS, PUNCH_TEXTS, PAT_TEXTS, BONK_TEXTS, CANT_TARGET_OWNER_TEXTS, CANT_TARGET_SELF_TEXTS
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +18,7 @@ async def _handle_action_command(update, context, texts, gifs, name, req_target=
         if update.message.reply_to_message:
             target = update.message.reply_to_message.from_user
             if await check_target_protection(target.id, context):
-                await update.message.reply_html(random.choice(CANT_TARGET_OWNER_TEXTS if target.id == config.OWNER_ID else CANT_TARGET_SELF_TEXTS)); return
+                await update.message.reply_html(random.choice(CANT_TARGET_OWNER_TEXTS if target.id == OWNER_ID else CANT_TARGET_SELF_TEXTS)); return
             target_mention = target.mention_html()
         elif context.args and context.args[0].startswith('@'):
             target_mention = context.args[0]
