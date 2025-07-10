@@ -5,8 +5,7 @@ from telegram.error import BadRequest
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 import config
-from modules.utils import is_privileged_user
-from modules.utils import is_owner_or_dev, markdown_to_html, get_gemini_response
+from ..core.utils import is_owner_or_dev, markdown_to_html, get_gemini_response, is_privileged_user
 
 logger = logging.getLogger(__name__)
 
