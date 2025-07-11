@@ -275,7 +275,7 @@ async def enforce_gban_command(update: Update, context: ContextTypes.DEFAULT_TYP
             bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
             if not (bot_member.status == "administrator" and bot_member.can_restrict_members):
                 permission_notice = (
-                    "\n\n<b>⚠️ Notice:</b> I do not have the 'Ban Users' permission in this chat. "
+                    "\n\n<b>⚠️ Notice:</b> I do not have the 'can_restrict_members' permission in this chat. "
                     "The feature is enabled in settings, but I cannot enforce it until I'm granted this right."
                 )
         except Exception:
@@ -304,7 +304,7 @@ async def enforce_gban_command(update: Update, context: ContextTypes.DEFAULT_TYP
 
         await update.message.reply_html(
             f"✅ <b>Global Ban enforcement is now ENABLED for this chat.</b>\n\n"
-            f"I will now automatically remove any user from the global ban list who tries to join or speak here."
+            f"I will now automatically remove any globally banned user who tries to join or speak here."
             f"{permission_notice}"
         )
         return
@@ -327,7 +327,7 @@ async def enforce_gban_command(update: Update, context: ContextTypes.DEFAULT_TYP
         
         await update.message.reply_html(
             "❌ <b>Global Ban enforcement is now DISABLED for this chat.</b>\n\n"
-            "<b>Notice:</b> This means users on the global ban list will be able to join and participate here. "
+            "<b>Notice:</b> This means globally banned users will be able to join and participate here. "
             "This may expose your community to users banned for severe offenses like spam, harassment, or illegal activities."
         )
 
