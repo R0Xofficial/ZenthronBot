@@ -56,6 +56,7 @@ def get_back_to_help_keyboard():
 # --- MISCELLANEOUS COMMAND FUNCTIONS ---
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.effective_message
+    user = update.effective_user
     if not message: return
     
     if context.args:
