@@ -156,8 +156,6 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await send_safe_reply(update, context, text=f"Failed to unmute user: {safe_escape(str(e))}")
 
 async def handle_bot_permission_changes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.info("--- handle_bot_permission_changes triggered! ---")
-    logger.info(f"Update object: {update.to_json()}")
     if not update.my_chat_member:
         return
 
@@ -186,4 +184,4 @@ async def handle_bot_permission_changes(update: Update, context: ContextTypes.DE
 def load_handlers(application: Application):
     application.add_handler(CommandHandler("mute", mute_command))
     application.add_handler(CommandHandler("unmute", unmute_command))
-    application.add_handler(ChatMemberHandler(handle_bot_permission_changes, ChatMemberHandler.MY_CHAT_MEMBER))
+    # application.add_handler(ChatMemberHandler(handle_bot_permission_changes, ChatMemberHandler.MY_CHAT_MEMBER))
