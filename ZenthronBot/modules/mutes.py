@@ -184,4 +184,3 @@ async def handle_bot_permission_changes(update: Update, context: ContextTypes.DE
 def load_handlers(application: Application):
     application.add_handler(CommandHandler("mute", mute_command))
     application.add_handler(CommandHandler("unmute", unmute_command))
-    # application.add_handler(ChatMemberHandler(handle_bot_permission_changes, ChatMemberHandler.MY_CHAT_MEMBER))
