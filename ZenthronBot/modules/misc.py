@@ -23,7 +23,6 @@ def get_start_keyboard(context: ContextTypes.DEFAULT_TYPE):
         ],
         [
             InlineKeyboardButton("աջ Support", url=f"https://t.me/{APPEAL_CHAT_USERNAME.lstrip('@')}"),
-            InlineKeyboardButton("🤖 Bot Status", callback_data="menu_status")
         ]
     ])
 
@@ -43,7 +42,8 @@ def get_help_main_keyboard():
         ],
         [
             InlineKeyboardButton("🔒 Security", callback_data="menu_help_security"),
-            InlineKeyboardButton("🤖 AI & Fun", callback_data="menu_help_ai_fun")
+            InlineKeyboardButton("🤖 AI", callback_data="menu_help_ai"),
+            InlineKeyboardButton("🤣 FUN", callback_data="menu_help_fun")
         ],
         [InlineKeyboardButton("⬅️ Back to Main Menu", callback_data="menu_start")]
     ])
@@ -138,25 +138,18 @@ async def menu_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         "menu_help_notes": (f"<b>📝 Notes</b>\n{NOTES}", get_back_to_help_keyboard()),
         "menu_help_settings": (f"<b>⚙️ Chat Settings</b>\n{CHAT_SETTINGS}", get_back_to_help_keyboard()),
         "menu_help_security": (f"<b>🔒 Chat Security</b>\n{CHAT_SECURITY}", get_back_to_help_keyboard()),
-        "menu_help_ai_fun": (f"<b>🤖 AI & Fun Commands</b>\n{AI_COMMANDS}\n\n{FUN_COMMANDS}", get_back_to_help_keyboard()),
+        "menu_help_ai": (f"<b>🤖 AI Commands</b>\n{AI_COMMANDS}", get_back_to_help_keyboard()),
+        "menu_help_fun": (f"<b>🤣 Fun Commands</b>\n{FUN_COMMANDS}", get_back_to_help_keyboard()),
     }
     
-    if command == "menu_status":
-        uptime_delta = datetime.now() - BOT_START_TIME 
-        readable_uptime = get_readable_time_delta(uptime_delta)
-        status_text = (
-            f"<b>🤖 Bot Status</b>\n\n"
-            f"<b>• State:</b> <code>Online and operational</code>\n"
-            f"<b>• Uptime:</b> <code>{readable_uptime}</code>"
-        )
-        await query.edit_message_text(
-            status_text,
-            parse_mode=ParseMode.HTML,
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("⬅️ Back to Main Menu", callback_data="menu_start")
-            ]])
-        )
-        return
+    await query.edit_message_text(
+        status_text,
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("⬅️ Back to Main Menu", callback_data="menu_start")
+        ]])
+    )
+    return
 
     if command in menu_map:
         text, keyboard = menu_map[command]
