@@ -39,7 +39,4 @@ async def log_user_from_interaction(update: Update, context: ContextTypes.DEFAUL
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    application.add_handler(MessageHandler(
-        filters.ALL & (~filters.UpdateType.EDITED_MESSAGE),
-        log_user_from_interaction
-    ), group=10)
+    pass
