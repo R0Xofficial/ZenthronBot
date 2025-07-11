@@ -300,7 +300,11 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         await context.bot.send_message(chat_id=target_chat_id, text=message_to_say)
         if is_remote_send:
-            await update.message.reply_text(f"✅ Message sent to <b>{safe_chat_title}</b> (<code>{target_chat_id}</code>).", parse_mode=ParseMode.HTML, quote=False)
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=f"✅ Message sent to <b>{safe_chat_title}</b> (<code>{target_chat_id}</code>).",
+                parse_mode=ParseMode.HTML
+            )
     except TelegramError as e:
         logger.error(f"Failed to send message via /say to {target_chat_id} ('{chat_title}'): {e}")
         await update.message.reply_text(f"❌ Couldn't send message to <b>{safe_chat_title}</b> (<code>{target_chat_id}</code>): {e}", parse_mode=ParseMode.HTML)
