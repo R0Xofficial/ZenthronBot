@@ -4,43 +4,84 @@ import telegram
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Chat, User
 from telegram.constants import ChatType, ChatMemberStatus, ParseMode
 from telegram.error import TelegramError
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler
 
 from ..config import OWNER_ID, APPEAL_CHAT_USERNAME
 from ..core.database import get_rules, is_dev_user, is_sudo_user, is_support_user, is_whitelisted, get_blacklist_reason, get_gban_reason, is_gban_enforced, update_user_in_db
 from ..core.utils import is_privileged_user, safe_escape, resolve_user_with_telethon, create_user_html_link, send_safe_reply
-from ..core.constants import HELP_TEXT, ADMIN_NOTE_TEXT, SUPPORT_COMMANDS_TEXT, SUDO_COMMANDS_TEXT, DEVELOPER_COMMANDS_TEXT, OWNER_COMMANDS_TEXT
+from ..core.constants import START_TEXT, HELP_MAIN_TEXT, GENERAL_COMMANDS, USER_CHAT_INFO, MODERATION_COMMANDS, ADMIN_TOOLS, NOTES, CHAT_SETTINGS, CHAT_SECURITY, AI_COMMANDS, FUN_COMMANDS, ADMIN_NOTE_TEXT, SUPPORT_COMMANDS_TEXT, SUDO_COMMANDS_TEXT, DEVELOPER_COMMANDS_TEXT, OWNER_COMMANDS_TEXT
 
 logger = logging.getLogger(__name__)
 
+# --- HELPERS ---
+def get_start_keyboard(context: ContextTypes.DEFAULT_TYPE):
+    bot_username = context.bot.username
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("📚 Commands", callback_data="menu_help_main"),
+            InlineKeyboardButton("➕ Add to Group", url=f"https://t.me/{bot_username}?startgroup=true")
+        ],
+        [
+            InlineKeyboardButton("աջ Support", url=f"https://t.me/{APPEAL_CHAT_USERNAME.lstrip('@')}"),
+            InlineKeyboardButton("🤖 Bot Status", callback_data="menu_status")
+        ]
+    ])
+
+def get_help_main_keyboard():
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🔹 General", callback_data="menu_help_general"),
+            InlineKeyboardButton("ℹ️ User & Chat", callback_data="menu_help_userinfo")
+        ],
+        [
+            InlineKeyboardButton("🛡️ Moderation", callback_data="menu_help_moderation"),
+            InlineKeyboardButton("👑 Admin Tools", callback_data="menu_help_admin")
+        ],
+        [
+            InlineKeyboardButton("📝 Notes", callback_data="menu_help_notes"),
+            InlineKeyboardButton("⚙️ Settings", callback_data="menu_help_settings")
+        ],
+        [
+            InlineKeyboardButton("🔒 Security", callback_data="menu_help_security"),
+            InlineKeyboardButton("🤖 AI & Fun", callback_data="menu_help_ai_fun")
+        ],
+        [InlineKeyboardButton("⬅️ Back to Main Menu", callback_data="menu_start")]
+    ])
+
+def get_back_to_help_keyboard():
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton("⬅️ Back to Help Categories", callback_data="menu_help_main")
+    ]])
 
 # --- MISCELLANEOUS COMMAND FUNCTIONS ---
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user = update.effective_user
-    
-    welcome_message = f"Welcome, {user.mention_html()}! I am a Zenthron. Your Telegram group assistant.\nUse /help to see available commands.\n\n<i>I'm Still a Work In Progress [WIP]. Various bugs and security holes may appear for which Bot creators are not responsible [You add me to group at your own risk]. For any questions or issues, please contact our support team at {APPEAL_CHAT_USERNAME}.</i>"
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    if not message: return
     
     if context.args:
-        if context.args[0] == 'help':
-            await update.message.reply_html(HELP_TEXT, disable_web_page_preview=True)
+        arg = context.args[0]
+        
+        
+        if arg == 'help':
+            await message.reply_html(HELP_MAIN_TEXT, reply_markup=get_help_main_keyboard())
             return
-
-        elif context.args[0].startswith('rules_'):
+            
+        elif arg.startswith('rules_'):
             try:
-                chat_id = int(context.args[0].split('_')[1])
+                chat_id = int(arg.split('_')[1])
                 rules_text = get_rules(chat_id)
                 if rules_text:
-                    await update.message.reply_html(rules_text, disable_web_page_preview=True)
+                    await message.reply_html(rules_text, disable_web_page_preview=True)
                 else:
-                    await update.message.reply_text("The rules for that group are not set or I couldn't find them.")
+                    await message.reply_text("The rules for that group are not set or I couldn't find them.")
             except (IndexError, ValueError):
-                await update.message.reply_text("Invalid link for rules.")
+                await message.reply_text("Invalid link for rules.")
             return
-        
-        if context.args[0] == 'sudocmds':
-            if not is_privileged_user(user.id):
-                return
 
+        elif arg == 'sudocmds':
+            if not is_privileged_user(update.effective_user.id):
+                return
+            
             help_parts = []
 
             if is_sudo_user(user.id) or is_dev_user(user.id) or user.id == OWNER_ID:
@@ -63,28 +104,68 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             if final_sudo_help:
                 await update.message.reply_html(final_sudo_help, disable_web_page_preview=True)
             return
-            
-    await update.message.reply_html(welcome_message)
+
+    await message.reply_html(START_TEXT, reply_markup=get_start_keyboard(context))
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat = update.effective_chat
+    message = update.effective_message
+    if not message: return
+
+    if update.effective_chat.type == ChatType.PRIVATE:
+        await message.reply_html(HELP_MAIN_TEXT, reply_markup=get_help_main_keyboard())
+    else:
+        bot_username = context.bot.username
+        await message.reply_text(
+            "I've sent you the help menu in a private message.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("📬 Open Help Menu", url=f"https://t.me/{bot_username}?start=help")
+            ]])
+        )
+
+async def menu_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+
+    command = query.data
+
+    menu_map = {
+        "menu_start": (START_TEXT, get_start_keyboard(context)),
+        "menu_help_main": (HELP_MAIN_TEXT, get_help_main_keyboard()),
+        "menu_help_general": (f"<b>🔹 General Commands</b>\n{GENERAL_COMMANDS}", get_back_to_help_keyboard()),
+        "menu_help_userinfo": (f"<b>ℹ️ User & Chat Info</b>\n{USER_CHAT_INFO}", get_back_to_help_keyboard()),
+        "menu_help_moderation": (f"<b>🛡️ Moderation Commands</b>\n{MODERATION_COMMANDS}", get_back_to_help_keyboard()),
+        "menu_help_admin": (f"<b>👑 Admin Tools</b>\n{ADMIN_TOOLS}", get_back_to_help_keyboard()),
+        "menu_help_notes": (f"<b>📝 Notes</b>\n{NOTES}", get_back_to_help_keyboard()),
+        "menu_help_settings": (f"<b>⚙️ Chat Settings</b>\n{CHAT_SETTINGS}", get_back_to_help_keyboard()),
+        "menu_help_security": (f"<b>🔒 Chat Security</b>\n{CHAT_SECURITY}", get_back_to_help_keyboard()),
+        "menu_help_ai_fun": (f"<b>🤖 AI & Fun Commands</b>\n{AI_COMMANDS}\n\n{FUN_COMMANDS}", get_back_to_help_keyboard()),
+    }
     
-    if chat.type == ChatType.PRIVATE:
-        await update.message.reply_html(HELP_TEXT, disable_web_page_preview=True)
+    if command == "menu_status":
+        uptime_delta = datetime.now() - BOT_START_TIME 
+        readable_uptime = get_readable_time_delta(uptime_delta)
+        status_text = (
+            f"<b>🤖 Bot Status</b>\n\n"
+            f"<b>• State:</b> <code>Online and operational</code>\n"
+            f"<b>• Uptime:</b> <code>{readable_uptime}</code>"
+        )
+        await query.edit_message_text(
+            status_text,
+            parse_mode=ParseMode.HTML,
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("⬅️ Back to Main Menu", callback_data="menu_start")
+            ]])
+        )
         return
 
-    bot_username = context.bot.username
-    deep_link_url = f"https://t.me/{bot_username}?start=help"
-    
-    keyboard = InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton(text="📬 Get Help (PM)", url=deep_link_url)]
-        ]
-    )
-    
-    message_text = "The help message has been sent to your private chat. Please click the button below to see it."
-    
-    await send_safe_reply(update, context, text=message_text, reply_markup=keyboard)
+    if command in menu_map:
+        text, keyboard = menu_map[command]
+        await query.edit_message_text(
+            text,
+            parse_mode=ParseMode.HTML,
+            reply_markup=keyboard,
+            disable_web_page_preview=True
+        )
 
 async def github(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     github_link = "https://github.com/R0Xofficial/ZenthronBot"
@@ -606,6 +687,7 @@ async def chat_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 def load_handlers(application: Application):
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CallbackQueryHandler(menu_button_handler, pattern=r"^menu_"))
     application.add_handler(CommandHandler("github", github))
     application.add_handler(CommandHandler("owner", owner_info))
     application.add_handler(CommandHandler("info", entity_info_command))
