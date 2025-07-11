@@ -4,7 +4,7 @@ import os
 import importlib
 import traceback
 from telegram import Update
-from telegram.constants import ParseMode
+from telegram.constants import ParseMode, UpdateType
 from telegram.ext import Application, ApplicationBuilder, JobQueue, ContextTypes, MessageHandler, filters, ApplicationHandlerStop
 from telethon import TelegramClient
 
@@ -89,8 +89,14 @@ async def main() -> None:
         
         await application.initialize()
         await application.start()
-        await application.updater.start_polling(allowed_updates=Update.ALL_TYPES)
-
+            allowed_updates = [
+                UpdateType.MESSAGE,
+                UpdateType.CALLBACK_QUERY,
+                UpdateType.CHAT_MEMBER,
+                UpdateType.MY_CHAT_MEMBER,
+                UpdateType.EDITED_MESSAGE
+            ]
+        await application.updater.start_polling(allowed_updates=allowed_updates)
         await telethon_client.run_until_disconnected()
 
         await application.updater.stop()
