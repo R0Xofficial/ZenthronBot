@@ -124,20 +124,3 @@ async def afk_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
     application.add_handler(CommandHandler("afk", afk_command))
-    
-    application.add_handler(MessageHandler(
-        filters.Regex(r'^(brb|BRB|Brb|bRB|brB|BRb|bRb)'), afk_brb_handler
-    ), group=-6)
-    
-    application.add_handler(MessageHandler(
-        (filters.TEXT | filters.COMMAND | filters.Sticker.ALL | filters.PHOTO | 
-         filters.VIDEO | filters.VOICE | filters.ANIMATION) & (~filters.UpdateType.EDITED_MESSAGE), 
-        check_afk_return
-    ), group=-5)
-
-    application.add_handler(MessageHandler(
-        filters.TEXT & (~filters.COMMAND) & 
-        (filters.REPLY | filters.Entity(constants.MessageEntityType.MENTION) | 
-         filters.Entity(constants.MessageEntityType.TEXT_MENTION)), 
-        afk_reply_handler
-    ), group=-4)
