@@ -11,12 +11,15 @@ from telethon import TelegramClient
 from .config import SESSION_NAME, API_ID, API_HASH, LOG_CHAT_ID, OWNER_ID, BOT_TOKEN
 from .core.database import init_db
 
+from .modules.core import error_handler
 from .modules.mutes import handle_bot_permission_changes
-from .modules.userlogger import log_user_from_interaction
+from .modules.bans import handle_bot_banned
 from .modules.blacklists import check_blacklist_handler
+from .modules.userlogger import log_user_from_interaction
 from .modules.globalbans import check_gban_on_message, check_gban_on_entry
-from .modules.notes import handle_note_trigger
 from .modules.afk import check_afk_return, afk_reply_handler, afk_brb_handler
+from .modules.notes import handle_note_trigger
+from .modules.welcomes import handle_new_group_members, handle_left_group_member
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -79,8 +82,20 @@ async def main() -> None:
             .build()
         )
         
-        application.add_handler(ChatMemberHandler(handle_bot_permission_changes, ChatMemberHandler.MY_CHAT_MEMBER))
+        application.add_error_handler(error_handler)
         application.add_handler(MessageHandler(filters.UpdateType.EDITED_MESSAGE & filters.COMMAND, ignore_edited_commands), group=-10)
+        application.add_handler(ChatMemberHandler(handle_bot_permission_changes, ChatMemberHandler.MY_CHAT_MEMBER))
+        application.add_handler(MessageHandler(filters.COMMAND, check_blacklist_handler), group=-1)
+        application.add_handler(MessageHandler(filters.ALL & (~filters.UpdateType.EDITED_MESSAGE), log_user_from_interaction), group=10)
+        application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND) & filters.ChatType.GROUPS, check_gban_on_message), group=-2)
+        application.add_handler(MessageHandler(filters.Regex(r'^(brb|BRB|Brb|bRB|brB|BRb|bRb)'), afk_brb_handler), group=-6)
+        application.add_handler(MessageHandler(filters.TEXT | filters.COMMAND | filters.Sticker.ALL | filters.PHOTO | filters.VIDEO | filters.VOICE | filters.ANIMATION, check_afk_return), group=-5)
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_note_trigger), group=0)
+        application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, check_gban_on_entry), group=-1)
+        application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_group_members))
+        application.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, handle_left_group_member))
+        application.add_handler(ChatMemberHandler(handle_bot_banned, ChatMemberHandler.MY_CHAT_MEMBER))
+        application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND) & (filters.REPLY | filters.Entity(constants.MessageEntityType.MENTION) | filters.Entity(constants.MessageEntityType.TEXT_MENTION)), afk_reply_handler), group=-4)
 
         application.bot_data["telethon_client"] = telethon_client
         logger.info("Telethon client has been injected into bot_data.")
