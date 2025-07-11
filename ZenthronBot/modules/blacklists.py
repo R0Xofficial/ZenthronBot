@@ -184,4 +184,3 @@ async def check_blacklist_handler(update: Update, context: ContextTypes.DEFAULT_
 def load_handlers(application: Application):
     application.add_handler(CommandHandler(["blacklist", "blist"],  blacklist_user_command))
     application.add_handler(CommandHandler(["unblacklist", "unblist"], unblacklist_user_command))
-    application.add_handler(MessageHandler(filters.COMMAND, check_blacklist_handler), group=-1)
