@@ -141,15 +141,6 @@ async def menu_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         "menu_help_ai": (f"<b>🤖 AI Commands</b>\n{AI_COMMANDS}", get_back_to_help_keyboard()),
         "menu_help_fun": (f"<b>🤣 Fun Commands</b>\n{FUN_COMMANDS}", get_back_to_help_keyboard()),
     }
-    
-    await query.edit_message_text(
-        status_text,
-        parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("⬅️ Back to Main Menu", callback_data="menu_start")
-        ]])
-    )
-    return
 
     if command in menu_map:
         text, keyboard = menu_map[command]
