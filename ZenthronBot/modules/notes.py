@@ -116,7 +116,6 @@ async def handle_note_trigger(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    application.add_handler(CommandHandler(["addnote", "savenote"], save_note_command))
-    application.add_handler(CommandHandler("notes", list_notes_command))
-    application.add_handler(CommandHandler(["delnote", "rmnote"], remove_note_command))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_note_trigger), group=0)
+    application.add_handler(CommandHandler(["addnote", "savenote", "save"], save_note_command))
+    application.add_handler(CommandHandler(["notes", "saved"], list_notes_command))
+    application.add_handler(CommandHandler(["delnote", "rmnote", "clear"], remove_note_command))
