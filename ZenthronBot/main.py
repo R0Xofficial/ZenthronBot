@@ -95,7 +95,7 @@ async def main() -> None:
                 UpdateType.CHAT_MEMBER,
                 UpdateType.MY_CHAT_MEMBER,
                 UpdateType.EDITED_MESSAGE
-        ]
+                ]
         await application.updater.start_polling(allowed_updates=allowed_updates)
         await telethon_client.run_until_disconnected()
 
