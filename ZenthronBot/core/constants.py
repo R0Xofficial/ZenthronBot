@@ -1,8 +1,8 @@
 # --- COMMAND HANDLERS ---
 START_TEXT = """
-"👋 Hello! I'm <b>Zenthron</b>, your new group assistant."
-"I can help with moderation, user management, fun commands, and much more."
-"<b>How can I assist you today?</b>"
+👋 Hello! I'm <b>Zenthron</b>, your new group assistant.
+I can help with moderation, user management, fun commands, and much more.
+<b>How can I assist you today?</b>
 """
 
 HELP_MAIN_TEXT = """
