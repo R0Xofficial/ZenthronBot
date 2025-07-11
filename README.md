@@ -24,7 +24,7 @@ Meet **ZenthronBot**, a powerful and feature-rich Telegram bot designed for adva
 
 2.  **Install requirements:**
     ```bash
-    pip install -r requirements.txt
+    pip install -r ~/tgbot/requirements.txt
     ```
 
 3.  **Set up your environment variables:**
