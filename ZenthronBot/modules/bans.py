@@ -185,4 +185,3 @@ async def handle_bot_banned(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 def load_handlers(application: Application):
     application.add_handler(CommandHandler("ban", ban_command))
     application.add_handler(CommandHandler("unban", unban_command))
-    application.add_handler(ChatMemberHandler(handle_bot_banned, ChatMemberHandler.MY_CHAT_MEMBER))
