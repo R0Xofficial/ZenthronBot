@@ -244,7 +244,7 @@ def format_entity_info(entity: Chat | User,
         if status in ["creator", "administrator"]:
             custom_title = getattr(chat_member_obj, 'custom_title', None)
             if custom_title: 
-                info_lines.append(f"<b>• Title:</b> {safe_escape(custom_title)}")
+                info_lines.append(f"<b>• Title:</b> <code>{safe_escape(custom_title)}</code>")
 
         if is_target_bot:
             info_lines.append(f"\n<b>• That’s me!</b> <code>BOMBOCLAT!</code>")
