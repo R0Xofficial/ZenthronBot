@@ -10,7 +10,13 @@ from telethon import TelegramClient
 
 from .config import SESSION_NAME, API_ID, API_HASH, LOG_CHAT_ID, OWNER_ID, BOT_TOKEN
 from .core.database import init_db
+
 from .modules.mutes import handle_bot_permission_changes
+from .modules.userlogger import log_user_from_interaction
+from .modules.blacklists import check_blacklist_handler
+from .modules.globalbans import check_gban_on_message, check_gban_on_entry
+from .modules.notes import handle_note_trigger
+from .modules.afk import check_afk_return, afk_reply_handler, afk_brb_handler
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
