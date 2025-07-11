@@ -1,22 +1,34 @@
 # --- COMMAND HANDLERS ---
-HELP_TEXT = """
-<b>Here are the commands you can use:</b>
+START_TEXT = """
+"👋 Hello! I'm <b>Zenthron</b>, your new group assistant."
+"I can help with moderation, user management, fun commands, and much more."
+"<b>How can I assist you today?</b>"
+"""
 
-<b>🔹 General Commands</b>
+HELP_MAIN_TEXT = """
+<b>📚 Zenthron Help Menu</b>
+Here you can find information about all my modules and commands. 
+Please choose a category below.
+<i>Note: Some commands are only available to administrators or bot staff.</i>
+"""
+
+GENERAL_COMMANDS = """
 /start - Shows the welcome message.
 /help - Shows this help message.
 /github - Get the link to the bot's source code.
 /owner - Info about the bot owner.
 /sudocmds - List privileged commands (for authorized users).
+"""
 
-<b>🔹 User & Chat Info</b>
+USER_CHAT_INFO = """
 /info &lt;ID/@user/reply&gt; - Get information about a user.
 /chatinfo - Get basic info about the current chat.
 /id - Get user or chat id.
 /listadmins - Show the list of administrators in this chat. <i>(Alias: /admins)</i>
 /afk &lt;Reason&gt; - Set afk status.
+"""
 
-<b>🔹 Moderation Commands</b>
+MODERATION_COMMANDS = """
 /ban &lt;ID/@user/reply&gt; [Time] [Reason] - Ban a user.
 /unban &lt;ID/@user/reply&gt; - Unban a user.
 /mute &lt;ID/@user/reply&gt; [Time] [Reason] - Mute a user.
@@ -26,8 +38,9 @@ HELP_TEXT = """
 /warn &lt;ID/@user/reply&gt; [Reason] - Warn a user.
 /warnings &lt;ID/@user/reply&gt; - Check a user's warnings.
 /resetwarns &lt;ID/@user/reply&gt; - Reset user's warnings.
+"""
 
-<b>🔹 Admin Tools</b>
+ADMIN_TOOLS = """
 /promote &lt;ID/@user/reply&gt; [Title] - Promote a user to admin.
 /demote &lt;ID/@user/reply&gt; - Demote an admin.
 /pin &lt;loud/notify&gt; - Pin the replied-to message.
@@ -35,14 +48,16 @@ HELP_TEXT = """
 /purge &lt;silent&gt; - Delete messages up to the replied-to message.
 /report &lt;reason&gt; - Report a user to the chat admins (reply to a message).
 /zombies &lt;clean&gt; - Find and optionally remove deleted accounts.
+"""
 
-<b>🔹 Notes</b>
+NOTES = """
 /notes - See all notes in this chat.
 /addnote &lt;name&gt; [content] - Create a new note.
 /delnote &lt;name&gt; - Delete a note.
 <i>To get a note, simply use #notename in the chat.</i>
+"""
 
-<b>🔹 Chat Settings</b>
+CHAT_SETTINGS = """
 /welcomehelp - Get help with text formatting and placeholders.
 /welcome &lt;on/off&gt; - Enable or disable welcome messages.
 /setwelcome &lt;text&gt; - Set a custom welcome message.
@@ -55,14 +70,17 @@ HELP_TEXT = """
 /rules - Check group rules.
 /setrules &lt;Text&gt; - Set rules on the group.
 /clearrules - Clear rules in a group.
+"""
 
-<b>🔹 Chat Security</b>
+CHAT_SECURITY = """
 /enforcegban &lt;yes/no&gt; - Enable/disable Global Ban enforcement. <i>(Chat Creator only)</i>
+"""
 
-<b>🔹 AI Commands</b>
+AI_COMMANDS = """
 /askai &lt;prompt&gt; - Ask the AI a question.
+"""
 
-<b>🔹 Fun Commands</b>
+FUN_COMMANDS = """
 /kill &lt;@user/reply&gt; - Metaphorically eliminate someone.
 /punch &lt;@user/reply&gt; - Deliver a textual punch.
 /slap &lt;@user/reply&gt; - Administer a swift slap.
