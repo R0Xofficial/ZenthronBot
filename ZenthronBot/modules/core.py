@@ -1686,8 +1686,6 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    application.add_error_handler(error_handler)
-    
     application.add_handler(CommandHandler("status", status_command))
     application.add_handler(CommandHandler("stats", stats_command))
     application.add_handler(CommandHandler("ping", ping_command))
