@@ -158,7 +158,7 @@ async def check_blacklist_handler(update: Update, context: ContextTypes.DEFAULT_
     if not is_user_blacklisted(user.id):
         return
 
-    always_allowed_commands = ['/start', '/help', '/info', '/id']
+    always_allowed_commands = ['/start', '/help', '/info', '/id', '/rules']
     appeal_chat_allowed_commands = ['/notes', '/warns', '/warnings']
 
     is_in_appeal_chat = (chat.id == APPEAL_CHAT_ID)
