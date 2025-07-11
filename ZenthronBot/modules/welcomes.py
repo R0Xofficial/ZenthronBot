@@ -394,5 +394,3 @@ def load_handlers(application: Application):
     application.add_handler(CommandHandler("resetgoodbye", reset_goodbye_command))
     application.add_handler(CommandHandler("welcomehelp", welcome_help_command))
     application.add_handler(CommandHandler("cleanservice", set_clean_service_command))
-    application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_group_members))
-    application.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, handle_left_group_member))
