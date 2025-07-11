@@ -231,7 +231,7 @@ async def permissions_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
-        logger.warning(f"Unauthorized /say attempt by user {user.id}.")
+        logger.warning(f"Unauthorized /echo attempt by user {user.id}.")
         return
 
     args = context.args
@@ -289,11 +289,11 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         target_chat_info = await context.bot.get_chat(target_chat_id)
         chat_title = target_chat_info.title or target_chat_info.first_name or f"Chat ID {target_chat_id}"
         safe_chat_title = safe_escape(chat_title)
-        logger.info(f"Target chat title for /say resolved to: '{chat_title}'")
+        logger.info(f"Target chat title for /echo resolved to: '{chat_title}'")
     except TelegramError as e:
-        logger.warning(f"Could not get chat info for {target_chat_id} for /say confirmation: {e}")
+        logger.warning(f"Could not get chat info for {target_chat_id} for /echo confirmation: {e}")
     except Exception as e:
-         logger.error(f"Unexpected error getting chat info for {target_chat_id} in /say: {e}", exc_info=True)
+         logger.error(f"Unexpected error getting chat info for {target_chat_id} in /echo: {e}", exc_info=True)
 
     logger.info(f"Privileged user ({user.id}) using /say. Target: {target_chat_id} ('{chat_title}'). Is remote: {is_remote_send}. Msg start: '{message_to_say[:50]}...'")
 
@@ -306,10 +306,10 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 parse_mode=ParseMode.HTML
             )
     except TelegramError as e:
-        logger.error(f"Failed to send message via /say to {target_chat_id} ('{chat_title}'): {e}")
+        logger.error(f"Failed to send message via /echo to {target_chat_id} ('{chat_title}'): {e}")
         await update.message.reply_text(f"❌ Couldn't send message to <b>{safe_chat_title}</b> (<code>{target_chat_id}</code>): {e}", parse_mode=ParseMode.HTML)
     except Exception as e:
-        logger.error(f"Unexpected error during /say execution: {e}", exc_info=True)
+        logger.error(f"Unexpected error during /echo execution: {e}", exc_info=True)
         await update.message.reply_text(f"💥 Oops! An unexpected error occurred while trying to send the message to <b>{safe_chat_title}</b> (<code>{target_chat_id}</code>). Check logs.", parse_mode=ParseMode.HTML)
 
 async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
