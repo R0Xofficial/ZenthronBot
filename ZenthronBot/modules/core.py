@@ -17,7 +17,7 @@ from telegram.constants import ParseMode, ChatType, ChatMemberStatus
 from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-from ..config import BOT_START_TIME, DB_NAME, OWNER_ID
+from ..config import BOT_START_TIME, DB_NAME, OWNER_ID, ADMIN_LOG_CHAT_ID
 from ..core.database import (
     get_all_bot_chats_from_db, remove_chat_from_db_by_id,
     get_all_dev_users_from_db, add_dev_user, remove_dev_user,
