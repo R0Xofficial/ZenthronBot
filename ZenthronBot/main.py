@@ -5,11 +5,12 @@ import importlib
 import traceback
 from telegram import Update
 from telegram.constants import ParseMode, UpdateType
-from telegram.ext import Application, ApplicationBuilder, JobQueue, ContextTypes, MessageHandler, filters, ApplicationHandlerStop
+from telegram.ext import Application, ApplicationBuilder, JobQueue, ContextTypes, MessageHandler, filters, ApplicationHandlerStop, ChatMemberHandler
 from telethon import TelegramClient
 
 from .config import SESSION_NAME, API_ID, API_HASH, LOG_CHAT_ID, OWNER_ID, BOT_TOKEN
 from .core.database import init_db
+from .modules.mutes import handle_bot_permission_changes
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -71,7 +72,8 @@ async def main() -> None:
             .job_queue(JobQueue())
             .build()
         )
-
+        
+        application.add_handler(ChatMemberHandler(handle_bot_permission_changes, ChatMemberHandler.MY_CHAT_MEMBER))
         application.add_handler(MessageHandler(filters.UpdateType.EDITED_MESSAGE & filters.COMMAND, ignore_edited_commands), group=-10)
 
         application.bot_data["telethon_client"] = telethon_client
