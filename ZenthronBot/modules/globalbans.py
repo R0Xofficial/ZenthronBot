@@ -334,16 +334,6 @@ async def enforce_gban_command(update: Update, context: ContextTypes.DEFAULT_TYP
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    application.add_handler(MessageHandler(
-        filters.TEXT & (~filters.COMMAND) & filters.ChatType.GROUPS,
-        check_gban_on_message
-    ), group=-2)
-
     application.add_handler(CommandHandler("gban", gban_command))
     application.add_handler(CommandHandler("ungban", ungban_command))
     application.add_handler(CommandHandler("enforcegban", enforce_gban_command))
-
-    application.add_handler(MessageHandler(
-        filters.StatusUpdate.NEW_CHAT_MEMBERS,
-        check_gban_on_entry
-    ), group=-1)
