@@ -1664,23 +1664,49 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
     tb_string = "".join(tb_list)
 
     update_str = update.to_dict() if isinstance(update, Update) else str(update)
-    
-    if isinstance(update_str, dict) and 'callback_query' in update_str and 'data' in update_str['callback_query']:
-        if len(update_str['callback_query']['data']) > 64:
-             update_str['callback_query']['data'] = update_str['callback_query']['data'][:64] + '...'
-        
     pretty_update_str = json.dumps(update_str, indent=2, ensure_ascii=False)
 
-    message_text = (
-        f"<b>🚨 An exception was raised while handling an update</b>\n\n"
-        f"<b>Error:</b>\n<pre>{safe_escape(str(context.error))}</pre>\n\n"
-        f"<b>Full Traceback (last 2000 chars):</b>\n"
-        f"<pre>{safe_escape(tb_string[-2000:])}</pre>\n\n"
-        f"<b>Causing update (first 1500 chars):</b>\n"
-        f"<pre>{safe_escape(pretty_update_str[:1500])}</pre>"
+    full_log_content = (
+        f"An exception was raised while handling an update\n"
+        f"--------------------------------------------------\n"
+        f"Error: {str(context.error)}\n"
+        f"--------------------------------------------------\n"
+        f"Full Traceback:\n{tb_string}\n"
+        f"--------------------------------------------------\n"
+        f"Causing update:\n{pretty_update_str}"
     )
 
-    await send_critical_log(context, message_text)
+    log_file = io.BytesIO(full_log_content.encode('utf-8'))
+    log_file.name = f"error_log_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt"
+
+
+    chat_info = "N/A"
+    user_info = "N/A"
+    if isinstance(update, Update) and update.effective_chat:
+        chat_info = f"{update.effective_chat.title} (<code>{update.effective_chat.id}</code>)"
+    if isinstance(update, Update) and update.effective_user:
+        user_info = f"{update.effective_user.mention_html()} (<code>{update.effective_user.id}</code>)"
+
+    short_message = (
+        f"<b>🚨 Bot Error Detected!</b>\n\n"
+        f"<b>Error:</b>\n<code>{safe_escape(str(context.error))}</code>\n\n"
+        f"<b>Chat:</b> {chat_info}\n"
+        f"<b>User:</b> {user_info}\n\n"
+        f"<i>Full traceback and update data are in the attached file.</i>"
+    )
+
+    if ADMIN_LOG_CHAT_ID or OWNER_ID:
+        target_id = ADMIN_LOG_CHAT_ID or OWNER_ID
+        try:
+            await context.bot.send_document(
+                chat_id=target_id,
+                document=log_file,
+                caption=short_message,
+                parse_mode=ParseMode.HTML
+            )
+        except Exception as e:
+            logger.critical(f"CRITICAL: Could not send error log with file to {target_id}: {e}")
+            await send_critical_log(context, short_message)
 
 
 
