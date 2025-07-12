@@ -35,19 +35,30 @@ async def disable_module_command(update: Update, context: ContextTypes.DEFAULT_T
         logger.warning(f"Unauthorized /disablemodule attempt by user {user.id}.")
         return
 
+    PROTECTED_MODULES = ['management']
+
+    if not context.args or len(context.args) != 1:
+        await update.message.reply_html("<b>Usage:</b> /disablemodule <module_name>")
+        return
+
+    module_name_to_disable = context.args[0]
+
+    if module_name_to_disable in PROTECTED_MODULES:
+        await update.message.reply_text(f"Module '<code>{safe_escape(module_name_to_disable)}</code>' is protected and cannot be disabled.", parse_mode=ParseMode.HTML)
+        return
+
     available_modules = _get_available_modules()
-    if not context.args or context.args[0] not in available_modules:
+    if module_name_to_disable not in available_modules:
         await update.message.reply_html(
-            f"<b>Usage:</b> /disablemodule &lt;module name&gt;\n"
-            f"<b>Available:</b> <code>{', '.join(available_modules)}</code>"
+            f"Unknown module '<code>{safe_escape(module_name_to_disable)}</code>'.\n"
+            f"<b>Available to disable:</b> <code>{', '.join(available_modules)}</code>"
         )
         return
 
-    module_name = context.args[0]
-    if disable_module(module_name):
-        await update.message.reply_text(f"✅ Module '<code>{safe_escape(module_name)}</code>' has been disabled.", parse_mode=ParseMode.HTML)
+    if disable_module(module_name_to_disable):
+        await update.message.reply_text(f"✅ Module '<code>{safe_escape(module_name_to_disable)}</code>' has been disabled. Commands from this module will not work (except for you).", parse_mode=ParseMode.HTML)
     else:
-        await update.message.reply_text(f"Module '<code>{safe_escape(module_name)}</code>' was already disabled or an error occurred.", parse_mode=ParseMode.HTML)
+        await update.message.reply_text(f"Module '<code>{safe_escape(module_name_to_disable)}</code>' was already disabled or an error occurred.", parse_mode=ParseMode.HTML)
 
 async def enable_module_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
