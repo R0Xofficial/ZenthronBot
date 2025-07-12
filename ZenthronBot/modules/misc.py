@@ -10,6 +10,7 @@ from ..config import OWNER_ID, APPEAL_CHAT_USERNAME, LOG_CHAT_USERNAME
 from ..core.database import get_rules, is_dev_user, is_sudo_user, is_support_user, is_whitelisted, get_blacklist_reason, get_gban_reason, is_gban_enforced, update_user_in_db
 from ..core.utils import is_privileged_user, safe_escape, resolve_user_with_telethon, create_user_html_link, send_safe_reply, is_owner_or_dev
 from ..core.constants import START_TEXT, HELP_MAIN_TEXT, GENERAL_COMMANDS, USER_CHAT_INFO, MODERATION_COMMANDS, ADMIN_TOOLS, NOTES, CHAT_SETTINGS, CHAT_SECURITY, AI_COMMANDS, FUN_COMMANDS, ADMIN_NOTE_TEXT, SUPPORT_COMMANDS_TEXT, SUDO_COMMANDS_TEXT, DEVELOPER_COMMANDS_TEXT, OWNER_COMMANDS_TEXT
+from ..core.decorators import check_module_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,7 @@ def get_back_to_help_keyboard():
     ]])
 
 # --- MISCELLANEOUS COMMAND FUNCTIONS ---
+@check_module_enabled("misc")
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.effective_message
     user = update.effective_user
@@ -111,6 +113,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     await message.reply_html(START_TEXT, reply_markup=get_start_keyboard(context))
 
+@check_module_enabled("misc")
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.effective_message
     if not message: return
@@ -155,10 +158,12 @@ async def menu_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             disable_web_page_preview=True
         )
 
+@check_module_enabled("misc")
 async def github(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     github_link = "https://github.com/R0Xofficial/ZenthronBot"
     await update.message.reply_text(f"This bot is open source. You can find the code here: {github_link}", disable_web_page_preview=True)
 
+@check_module_enabled("misc")
 async def owner_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if OWNER_ID:
         owner_mention = f"<code>{OWNER_ID}</code>"; owner_name = "Bot Owner"
@@ -306,6 +311,7 @@ def format_entity_info(entity: Chat | User,
 
     return "\n".join(info_lines)
 
+@check_module_enabled("misc")
 async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     target_entity: Chat | User | None = None
     
@@ -364,6 +370,7 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     await update.message.reply_html(info_message, disable_web_page_preview=True)
 
+@check_module_enabled("misc")
 async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.message
     chat = update.effective_chat
@@ -401,6 +408,7 @@ async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     else:
         await message.reply_html(f"<b>This chat's ID is:</b> <code>{chat.id}</code>")
 
+@check_module_enabled("misc")
 async def chat_sinfo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Displays basic statistics about the current chat."""
     chat = update.effective_chat
@@ -476,6 +484,7 @@ async def chat_sinfo_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     message_text = "\n".join(info_lines)
     await update.message.reply_html(message_text, disable_web_page_preview=True)
 
+@check_module_enabled("misc")
 async def chat_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
