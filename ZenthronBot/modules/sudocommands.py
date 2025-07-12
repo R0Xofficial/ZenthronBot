@@ -7,11 +7,13 @@ from ..config import OWNER_ID
 from ..core.utils import is_privileged_user, send_safe_reply
 from ..core.database import is_dev_user, is_sudo_user, is_support_user
 from ..core.constants import ADMIN_NOTE_TEXT, SUPPORT_COMMANDS_TEXT, SUDO_COMMANDS_TEXT, DEVELOPER_COMMANDS_TEXT, OWNER_COMMANDS_TEXT
+from ..core.decorators import check_module_enabled
 
 logger = logging.getLogger(__name__)
 
 
 # --- SUDO COMMANDS LIST FUNCTION ---
+@check_module_enabled("sudocommands")
 async def sudo_commands_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     chat = update.effective_chat
