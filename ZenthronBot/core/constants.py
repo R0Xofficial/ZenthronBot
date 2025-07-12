@@ -48,6 +48,9 @@ ADMIN_TOOLS = """
 /purge &lt;silent&gt; - Delete messages up to the replied-to message.
 /report &lt;reason&gt; - Report a user to the chat admins (reply to a message).
 /zombies &lt;clean&gt; - Find and optionally remove deleted accounts.
+/enable &lt:command name&gt; - Enable commands for all chat non-admin users.
+/disable &lt:command name&gt; - Disable commands for all chat non-admin users.
+/settings - Check your chat command settings.
 """
 
 NOTES = """
