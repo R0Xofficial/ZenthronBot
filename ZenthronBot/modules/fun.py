@@ -68,7 +68,7 @@ async def cowsay_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await send_safe_reply(
         update, 
         context, 
-        text=f"<pre>{safe_escape(cow_output)}</pre>", 
+        text=f"<code>{safe_escape(cow_output)}</code>", 
         parse_mode=ParseMode.HTML
     )
 
@@ -85,7 +85,7 @@ async def ascii_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     try:
         ascii_art = figlet_format(text_to_convert, font='standard')
-        formatted_message = f"<pre>{safe_escape(ascii_art)}</pre>"
+        formatted_message = f"<code>{safe_escape(ascii_art)}</code>"
         await send_safe_reply(update, context, text=formatted_message, parse_mode=ParseMode.HTML)
     except Exception as e:
         logging.error(f"Error generating ASCII art: {e}")
@@ -93,7 +93,7 @@ async def ascii_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 SKULL_ASCII = """
 💀
-<pre>
+<code>
 ⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀
 ⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀
 ⡀⡀⡀⡀⡀⡀⢀⣀⣤⣶⣶⣶⣶⣶⣶⣶⣶⣦⣄⡀⡀⡀⡀⡀⡀⡀
@@ -108,7 +108,7 @@ SKULL_ASCII = """
 ⡀⡀⡀⡀⡀⡀⡀⡀⡀⠈⠻⣕⣉⣛⡻⠋⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀
 ⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀
 ⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀
-</pre>
+</code>
 """
 
 async def skull_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
