@@ -4,6 +4,7 @@ from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import Application, CommandHandler, ContextTypes
 
+from ..config import OWNER_ID
 from ..core.database import disable_module, enable_module, get_disabled_modules
 from ..core.utils import is_owner_or_dev, safe_escape
 
@@ -28,7 +29,10 @@ def _get_available_modules():
         return []
 
 async def disable_module_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not is_owner_or_dev(update.effective_user.id):
+    user = update.effective_user
+    
+    if user.id != OWNER_ID:
+        logger.warning(f"Unauthorized /disablemodule attempt by user {user.id}.")
         return
 
     available_modules = _get_available_modules()
@@ -46,7 +50,10 @@ async def disable_module_command(update: Update, context: ContextTypes.DEFAULT_T
         await update.message.reply_text(f"Module '<code>{safe_escape(module_name)}</code>' was already disabled or an error occurred.", parse_mode=ParseMode.HTML)
 
 async def enable_module_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not is_owner_or_dev(update.effective_user.id):
+    user = update.effective_user
+
+    if user.id != OWNER_ID:
+        logger.warning(f"Unauthorized /enablemodule attempt by user {user.id}.")
         return
 
     if not context.args or len(context.args) != 1:
@@ -60,7 +67,10 @@ async def enable_module_command(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text(f"Module '<code>{safe_escape(module_name)}</code>' was already enabled or an error occurred.", parse_mode=ParseMode.HTML)
 
 async def list_modules_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not is_owner_or_dev(update.effective_user.id):
+    user = update.effective_user
+    
+    if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /listmodules attempt by user {user.id}.")
         return
         
     disabled_modules = get_disabled_modules()
