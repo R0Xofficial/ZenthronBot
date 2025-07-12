@@ -4,7 +4,7 @@ from telegram import Update, User, Chat
 from telegram.constants import ParseMode, ChatType
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ApplicationHandlerStop
 
-from ..config import OWNER_ID, APPEAL_CHAT_ID, LOG_CHAT_USERNAME
+from ..config import OWNER_ID, APPEAL_CHAT_ID
 from ..core.database import add_to_blacklist, remove_from_blacklist, get_blacklist_reason, is_user_blacklisted, is_whitelisted, is_sudo_user 
 from ..core.utils import is_privileged_user, is_owner_or_dev, resolve_user_with_telethon, create_user_html_link, safe_escape, send_operational_log
 
@@ -66,8 +66,6 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
 
     if add_to_blacklist(target_entity.id, user.id, reason):
         success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>added to the blacklist</b>.\n<b>Reason:</b> {safe_escape(reason)}"
-        if LOG_CHAT_USERNAME:
-            success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
         await message.reply_html(success_message, disable_web_page_preview=True)
         
         try:
@@ -122,8 +120,6 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
 
     if remove_from_blacklist(target_entity.id):
         success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>removed from the blacklist</b>."
-        if LOG_CHAT_USERNAME:
-            success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
         await message.reply_html(success_message, disable_web_page_preview=True)
         
         try:
