@@ -5,11 +5,12 @@ import importlib
 import traceback
 from telegram import Update, constants
 from telegram.constants import ParseMode, UpdateType
-from telegram.ext import Application, ApplicationBuilder, JobQueue, ContextTypes, MessageHandler, filters, ApplicationHandlerStop, ChatMemberHandler
+from telegram.ext import Application, ApplicationBuilder, JobQueue, ContextTypes, MessageHandler, filters, ApplicationHandlerStop, ChatMemberHandler, CommandHandler
 from telethon import TelegramClient
 
 from .config import SESSION_NAME, API_ID, API_HASH, LOG_CHAT_ID, OWNER_ID, BOT_TOKEN
-from .core.database import init_db
+from .core.database import init_db, disable_module, enable_module, get_disabled_modules
+from .core.utils import is_owner_or_dev, safe_escape
 
 from .modules.core import error_handler
 from .modules.mutes import handle_bot_permission_changes
@@ -69,6 +70,76 @@ def load_modules(application: Application) -> None:
                 logger.error(f"Failed to load module {module_name}: {e}")
                 traceback.print_exc()
 
+def _get_available_modules():
+    try:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        all_files = os.listdir(current_dir)
+        
+        modules = [
+            f[:-3] for f in all_files 
+            if f.endswith('.py') and not f.startswith('_')
+        ]
+            
+        return sorted(modules)
+    except Exception as e:
+        logger.error(f"Could not scan for available modules: {e}")
+        return []
+
+async def disable_module_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    
+    if user.id != OWNER_ID:
+        logger.warning(f"Unauthorized /disablemodule attempt by user {user.id}.")
+        return
+
+    available_modules = _get_available_modules()
+    if not context.args or context.args[0] not in available_modules:
+        await update.message.reply_html(
+            f"<b>Usage:</b> /disablemodule &lt;module name&gt;\n"
+            f"<b>Available:</b> <code>{', '.join(available_modules)}</code>"
+        )
+        return
+
+    module_name = context.args[0]
+    if disable_module(module_name):
+        await update.message.reply_text(f"✅ Module '<code>{safe_escape(module_name)}</code>' has been disabled.", parse_mode=ParseMode.HTML)
+    else:
+        await update.message.reply_text(f"Module '<code>{safe_escape(module_name)}</code>' was already disabled or an error occurred.", parse_mode=ParseMode.HTML)
+
+async def enable_module_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+
+    if user.id != OWNER_ID:
+        logger.warning(f"Unauthorized /enablemodule attempt by user {user.id}.")
+        return
+
+    if not context.args or len(context.args) != 1:
+        await update.message.reply_text("Usage: /enablemodule <module name>")
+        return
+        
+    module_name = context.args[0]
+    if enable_module(module_name):
+        await update.message.reply_text(f"✅ Module '<code>{safe_escape(module_name)}</code>' has been enabled.", parse_mode=ParseMode.HTML)
+    else:
+        await update.message.reply_text(f"Module '<code>{safe_escape(module_name)}</code>' was already enabled or an error occurred.", parse_mode=ParseMode.HTML)
+
+async def list_modules_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    
+    if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /listmodules attempt by user {user.id}.")
+        return
+        
+    disabled_modules = get_disabled_modules()
+    available_modules = _get_available_modules()
+    
+    message = "<b>Module Status:</b>\n\n"
+    for module in available_modules:
+        status = "🔴 Disabled" if module in disabled_modules else "🟢 Enabled"
+        message += f"• <code>{module}</code>: {status}\n"
+        
+    await update.message.reply_html(message)
+
 async def main() -> None:
     init_db()
 
@@ -109,6 +180,11 @@ async def main() -> None:
 
         # --- LAYER 6: LOWEST PRIORITY - PASSIVE LOGIN ---
         application.add_handler(MessageHandler(filters.ALL & (~filters.UpdateType.EDITED_MESSAGE), log_user_from_interaction), group=10)
+
+        # --- LAYER 7: COMMANDS - HANDLERS ---
+        application.add_handler(CommandHandler("disablemodule", disable_module_command))
+        application.add_handler(CommandHandler("enablemodule", enable_module_command))
+        application.add_handler(CommandHandler("listmodules", list_modules_command))
 
         application.bot_data["telethon_client"] = telethon_client
         logger.info("Telethon client has been injected into bot_data.")
