@@ -5,11 +5,13 @@ from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, create_user_html_link, send_safe_reply, safe_escape
+from ..core.decorators import check_module_enabled
 
 logger = logging.getLogger(__name__)
 
 
 # --- KICK COMMAND FUNCTIONS ---
+@check_module_enabled("kicks")
 async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     user_who_kicks = update.effective_user
@@ -82,6 +84,7 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     except TelegramError as e:
         await send_safe_reply(update, context, text=f"Failed to kick user: {safe_escape(str(e))}")
 
+@check_module_enabled("kicks")
 async def kickme_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     user_to_kick = update.effective_user
