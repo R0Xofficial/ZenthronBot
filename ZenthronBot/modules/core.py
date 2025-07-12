@@ -1763,5 +1763,5 @@ def load_handlers(application: Application):
     application.add_handler(CommandHandler("listsupport", listsupport_command))
     application.add_handler(CommandHandler("listwhitelist", listwhitelist_command))
     application.add_handler(CommandHandler("broadcast", broadcast_command))
-    application.add_handler(CommandHandler("shell", shell_command))
-    application.add_handler(CommandHandler("execute", execute_script_command))
+    application.add_handler(CommandHandler(["shell", "sh"], shell_command))
+    application.add_handler(CommandHandler(["execute", "exe"], execute_script_command))
