@@ -5,11 +5,13 @@ from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..core.utils import _can_user_perform_action, send_safe_reply, safe_escape
+from ..core.decorators import check_module_enabled
 
 logger = logging.getLogger(__name__)
 
 
 # --- PIN/UNPIN COMMAND FUNCTIONS ---
+@check_module_enabled("pins")
 async def pin_message_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     user_who_pins = update.effective_user
@@ -70,6 +72,7 @@ async def pin_message_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         logger.error(f"Unexpected error in /pin: {e}", exc_info=True)
         await send_safe_reply(update, context, text="An unexpected error occurred while trying to pin the message.")
 
+@check_module_enabled("pins")
 async def unpin_message_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     message_to_unpin = update.message.reply_to_message
