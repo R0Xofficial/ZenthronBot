@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 # --- AI COMMAND FUNCTIONS ---
+@check_module_enabled("ai")
 async def set_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     global PUBLIC_AI_ENABLED
@@ -37,6 +38,7 @@ async def set_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     )
     logger.info(f"Owner {OWNER_ID} toggled public AI access to: {status_text}")
 
+@check_module_enabled("ai")
 async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
 
