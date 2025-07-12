@@ -7,11 +7,13 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from ..config import OWNER_ID, APPEAL_CHAT_ID
 from ..core.database import add_to_blacklist, remove_from_blacklist, get_blacklist_reason, is_user_blacklisted, is_whitelisted, is_sudo_user 
 from ..core.utils import is_privileged_user, is_owner_or_dev, resolve_user_with_telethon, create_user_html_link, safe_escape, send_operational_log
+from ..core.decorators import check_module_enabled
 
 logger = logging.getLogger(__name__)
 
 
 # --- BLACKLIST COMMAND AND HANDLER FUNCTIONS ---
+@check_module_enabled("blacklists")
 async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.message
@@ -87,6 +89,7 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
     else:
         await message.reply_text("Failed to add user to the blacklist. Check logs.")
 
+@check_module_enabled("blacklists")
 async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.message
@@ -140,6 +143,7 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
     else:
         await message.reply_text("Failed to remove user from the blacklist. Check logs.")
 
+@check_module_enabled("blacklists")
 async def check_blacklist_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.effective_message
     if not message or not message.text or not update.effective_user:
