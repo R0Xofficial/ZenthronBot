@@ -131,8 +131,11 @@ DEVELOPER_COMMANDS_TEXT = """
 
 OWNER_COMMANDS_TEXT = """
 /leave &lt;Optional chat ID&gt; - Make the bot leave a chat.
-/adddev &lt;ID/@user/reply&gt; - Grant Developer (All) permissions to a user.
-/deldev &lt;ID/@user/reply&gt; - Revoke Developer (All) permissions from a user.
+/adddev &lt;ID/@user/reply&gt; - Grant Developer permissions to a user.
+/deldev &lt;ID/@user/reply&gt; - Revoke Developer permissions from a user.
+/enablemodule &lt;module name&gt; - Enable Bot module.
+/disablemodule &lt;module name&gt; - Disable Bot module.
+/listmodules - List all Bot modules.
 /shell &lt;command&gt; - Execute the command in the terminal.
 /execute &lt;file patch&gt; [args...] - Run script.
 """
