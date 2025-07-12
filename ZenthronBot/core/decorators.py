@@ -15,6 +15,7 @@ def check_module_enabled(module_name: str):
                 return await func(update, context, *args, **kwargs)
 
             if database.is_module_disabled(module_name):
+                await update.message.reply_text("This command is currently globally disabled.")
                 return
 
             return await func(update, context, *args, **kwargs)
