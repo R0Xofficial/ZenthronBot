@@ -6,11 +6,13 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 from telethon import TelegramClient
 
 from ..core.utils import _can_user_perform_action, send_safe_reply, safe_escape
+from ..core.decorators import check_module_enabled
 
 logger = logging.getLogger(__name__)
 
 
 # --- ZOMBIES COMMAND FUNCTIONS ---
+@check_module_enabled("zombies")
 async def _find_and_process_zombies(update: Update, context: ContextTypes.DEFAULT_TYPE, dry_run: bool) -> None:
     chat = update.effective_chat
     message = update.message
@@ -59,6 +61,7 @@ async def _find_and_process_zombies(update: Update, context: ContextTypes.DEFAUL
         
         await status_message.edit_text("\n".join(report), parse_mode=ParseMode.HTML)
 
+@check_module_enabled("zombies")
 async def zombies_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
