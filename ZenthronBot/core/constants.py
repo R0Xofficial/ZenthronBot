@@ -130,6 +130,7 @@ DEVELOPER_COMMANDS_TEXT = """
 /listdevs - List all users with developer privileges.
 /setrank &lt;ID/@user/reply&gt; [support/sudo/dev] - Change the rank of a privileged user.
 /broadcast &lt;message to send&gt; - Send message to all Bot groups.
+/listmodules - List all Bot modules.
 """
 
 OWNER_COMMANDS_TEXT = """
@@ -138,7 +139,6 @@ OWNER_COMMANDS_TEXT = """
 /deldev &lt;ID/@user/reply&gt; - Revoke Developer permissions from a user.
 /enablemodule &lt;module name&gt; - Enable Bot module.
 /disablemodule &lt;module name&gt; - Disable Bot module.
-/listmodules - List all Bot modules.
 /shell &lt;command&gt; - Execute the command in the terminal.
 /execute &lt;file patch&gt; [args...] - Run script.
 """
