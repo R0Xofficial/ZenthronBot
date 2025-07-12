@@ -6,11 +6,13 @@ from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes, ChatMemberHandler
 
 from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, parse_duration_to_timedelta, create_user_html_link, send_safe_reply, safe_escape, send_critical_log
+from ..core.decorators import check_module_enabled
 
 logger = logging.getLogger(__name__)
 
 
 # --- MUTE COMMAND FUNCTIONS ---
+@check_module_enabled("mutes")
 async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     user_who_mutes = update.effective_user
@@ -101,7 +103,8 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
     except TelegramError as e:
         await send_safe_reply(update, context, text=f"Failed to mute user: {safe_escape(str(e))}")
-        
+
+@check_module_enabled("mutes")
 async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     message = update.message
@@ -155,6 +158,7 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     except TelegramError as e:
         await send_safe_reply(update, context, text=f"Failed to unmute user: {safe_escape(str(e))}")
 
+@check_module_enabled("mutes")
 async def handle_bot_permission_changes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.my_chat_member:
         return
