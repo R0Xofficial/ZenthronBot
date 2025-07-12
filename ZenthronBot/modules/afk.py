@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 # --- AFK COMMAND AND HANDLER FUNCTIONS ---
+@check_module_enabled("afk")
 async def afk_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.effective_message
@@ -29,6 +30,7 @@ async def afk_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     else:
         await message.reply_text("Could not set AFK status due to a database error.")
 
+@check_module_enabled("afk")
 async def afk_brb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.effective_message
@@ -50,6 +52,7 @@ async def afk_brb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         else:
             await message.reply_text("Could not set AFK status due to a database error.")
 
+@check_module_enabled("afk")
 async def check_afk_return(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.effective_message
@@ -71,6 +74,7 @@ async def check_afk_return(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
         await message.reply_html(f"Welcome back, {user_display_name}!\n{time_info}.")
 
+@check_module_enabled("afk")
 async def afk_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.effective_message
     chat = update.effective_chat
