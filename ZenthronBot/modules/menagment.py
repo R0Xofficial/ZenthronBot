@@ -34,7 +34,7 @@ async def disable_module_command(update: Update, context: ContextTypes.DEFAULT_T
     available_modules = _get_available_modules()
     if not context.args or context.args[0] not in available_modules:
         await update.message.reply_html(
-            f"<b>Usage:</b> /disablemodule &lt;module_name&gt;\n"
+            f"<b>Usage:</b> /disablemodule &lt;module name&gt;\n"
             f"<b>Available:</b> <code>{', '.join(available_modules)}</code>"
         )
         return
@@ -50,7 +50,7 @@ async def enable_module_command(update: Update, context: ContextTypes.DEFAULT_TY
         return
 
     if not context.args or len(context.args) != 1:
-        await update.message.reply_text("Usage: /enablemodule <module_name>")
+        await update.message.reply_text("Usage: /enablemodule <module name>")
         return
         
     module_name = context.args[0]
