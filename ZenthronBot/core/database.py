@@ -128,9 +128,17 @@ def init_db():
                 module_name TEXT PRIMARY KEY
             )
         """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS disabled_commands_per_chat (
+                chat_id INTEGER,
+                command_name TEXT,
+                PRIMARY KEY (chat_id, command_name)
+            )
+        """)
         
         conn.commit()
-        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, whitelist_users, support_users, sudo_users, dev_users, global_bans, bot_chats, notes, warnings, afk_users ensured).")
+        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, whitelist_users, support_users, sudo_users, dev_users, global_bans, bot_chats, notes, warnings, afk_users, disable_modules, disabled_commands_per_chat ensured).")
     except sqlite3.Error as e:
         logger.error(f"SQLite error during DB initialization: {e}", exc_info=True)
     finally:
@@ -175,6 +183,57 @@ def get_disabled_modules() -> list:
             return [row[0] for row in cursor.fetchall()]
     except sqlite3.Error as e:
         logger.error(f"Błąd SQLite przy pobieraniu wyłączonych modułów: {e}")
+        return []
+
+# --- DISABLERS ---
+def is_command_disabled_in_chat(chat_id: int, command_name: str) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT 1 FROM disabled_commands_per_chat WHERE chat_id = ? AND command_name = ?",
+                (chat_id, command_name.lower())
+            )
+            return cursor.fetchone() is not None
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error checking disabled command '{command_name}' in chat {chat_id}: {e}")
+        return False
+
+def disable_command_in_chat(chat_id: int, command_name: str) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO disabled_commands_per_chat (chat_id, command_name) VALUES (?, ?)",
+                (chat_id, command_name.lower())
+            )
+            return conn.total_changes > 0
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error disabling command '{command_name}' in chat {chat_id}: {e}")
+        return False
+
+def enable_command_in_chat(chat_id: int, command_name: str) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            conn.execute(
+                "DELETE FROM disabled_commands_per_chat WHERE chat_id = ? AND command_name = ?",
+                (chat_id, command_name.lower())
+            )
+            return conn.total_changes > 0
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error enabling command '{command_name}' in chat {chat_id}: {e}")
+        return False
+
+def get_disabled_commands_in_chat(chat_id: int) -> list[str]:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT command_name FROM disabled_commands_per_chat WHERE chat_id = ?",
+                (chat_id,)
+            )
+            return [row[0] for row in cursor.fetchall()]
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error getting disabled commands for chat {chat_id}: {e}")
         return []
 
 # --- BLACKLIST ---
