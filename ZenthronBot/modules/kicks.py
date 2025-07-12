@@ -131,7 +131,7 @@ async def kickme_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await context.bot.ban_chat_member(chat_id=chat.id, user_id=user_to_kick.id)
         await context.bot.unban_chat_member(chat_id=chat.id, user_id=user_to_kick.id, only_if_banned=True)
         
-        logger.info(f"User {user_to_kick.id} ({user_display_name}) self-kicked from chat {chat.id} ('{chat.title}')")
+        logger.info(f"User {user_to_kick.id} self-kicked from chat {chat.id} ('{chat.title}')")
         
     except TelegramError as e:
         logger.error(f"Failed to self-kick user {user_to_kick.id} from chat {chat.id}: {e}")
