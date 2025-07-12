@@ -34,11 +34,13 @@ from ..core.utils import (
     send_critical_log
 )
 from ..core.constants import LEAVE_TEXTS
+from ..core.decorators import check_module_enabled
 
 logger = logging.getLogger(__name__)
 
 
 # --- CORE HANDLER FUNCTIONS ---
+@check_module_enabled("core")
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
@@ -99,6 +101,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     status_msg = "\n".join(status_lines)
     await update.message.reply_html(status_msg)
 
+@check_module_enabled("core")
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
@@ -162,6 +165,7 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     stats_msg = "\n".join(stats_lines)
     await update.message.reply_html(stats_msg)
 
+@check_module_enabled("core")
 async def ping_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not is_privileged_user(user.id):
@@ -178,6 +182,7 @@ async def ping_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         parse_mode=ParseMode.HTML
     )
 
+@check_module_enabled("core")
 async def permissions_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     chat = update.effective_chat
@@ -228,6 +233,7 @@ async def permissions_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     await message.reply_html("\n".join(response_lines))
 
+@check_module_enabled("core")
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
@@ -312,6 +318,7 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.error(f"Unexpected error during /echo execution: {e}", exc_info=True)
         await update.message.reply_text(f"💥 Oops! An unexpected error occurred while trying to send the message to <b>{safe_chat_title}</b> (<code>{target_chat_id}</code>). Check logs.", parse_mode=ParseMode.HTML)
 
+@check_module_enabled("core")
 async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if user.id != OWNER_ID:
@@ -447,6 +454,7 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
                                            text=f"💥 Unexpected error leaving chat <b>{safe_chat_title_to_leave}</b> (<code>{target_chat_id_to_leave}</code>). Check logs.", 
                                            parse_mode=ParseMode.HTML)
 
+@check_module_enabled("core")
 async def speedtest_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not is_owner_or_dev(user.id):
@@ -523,6 +531,7 @@ async def speedtest_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         except Exception:
             pass
 
+@check_module_enabled("core")
 async def list_sudo_users_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not is_owner_or_dev(user.id):
@@ -576,6 +585,7 @@ async def list_sudo_users_command(update: Update, context: ContextTypes.DEFAULT_
 
     await update.message.reply_html(message_text, disable_web_page_preview=True)
 
+@check_module_enabled("core")
 async def listsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not is_owner_or_dev(user.id):
@@ -624,6 +634,7 @@ async def listsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     message_text = "\n".join(response_lines)
     await update.message.reply_html(message_text, disable_web_page_preview=True)
 
+@check_module_enabled("core")
 async def listwhitelist_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not is_owner_or_dev(user.id):
@@ -672,6 +683,7 @@ async def listwhitelist_command(update: Update, context: ContextTypes.DEFAULT_TY
     message_text = "\n".join(response_lines)
     await update.message.reply_html(message_text, disable_web_page_preview=True)
 
+@check_module_enabled("core")
 async def listdevs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not is_owner_or_dev(user.id):
@@ -719,6 +731,7 @@ async def listdevs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     message_text = "\n".join(response_lines)
     await update.message.reply_html(message_text, disable_web_page_preview=True)
 
+@check_module_enabled("core")
 async def list_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not is_owner_or_dev(user.id):
@@ -757,6 +770,7 @@ async def list_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     if final_message:
         await update.message.reply_html(final_message, disable_web_page_preview=True)
 
+@check_module_enabled("core")
 async def del_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not is_owner_or_dev(user.id):
@@ -796,6 +810,7 @@ async def del_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     await update.message.reply_html("\n".join(response_lines))
 
+@check_module_enabled("core")
 async def clean_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not is_owner_or_dev(user.id):
@@ -853,6 +868,7 @@ async def clean_groups_command(update: Update, context: ContextTypes.DEFAULT_TYP
     except Exception as e:
         logger.error(f"Could not edit final report message: {e}")
 
+@check_module_enabled("core")
 async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.effective_message
@@ -908,6 +924,7 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     except Exception as e:
         logger.error(f"Failed to edit final broadcast report: {e}")
 
+@check_module_enabled("core")
 async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if user.id != OWNER_ID:
@@ -952,6 +969,7 @@ async def shell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         logger.error(f"Error executing shell command '{command}': {e}", exc_info=True)
         await status_message.edit_text(f"<b>Error:</b> {html.escape(str(e))}")
 
+@check_module_enabled("core")
 async def execute_script_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if user.id != OWNER_ID:
@@ -964,6 +982,7 @@ async def execute_script_command(update: Update, context: ContextTypes.DEFAULT_T
     
     await shell_command(update, context)
 
+@check_module_enabled("core")
 async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.message
@@ -1063,6 +1082,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     else:
         await message.reply_text("Failed to add user to sudo list. Check logs.")
 
+@check_module_enabled("core")
 async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.message
@@ -1134,6 +1154,7 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     else:
         await message.reply_text("Failed to remove user from sudo list. Check logs.")
 
+@check_module_enabled("core")
 async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.message
@@ -1236,6 +1257,7 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     else:
         await message.reply_text("An error occurred while changing the rank. Check logs.")
 
+@check_module_enabled("core")
 async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.message
@@ -1324,6 +1346,7 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     else:
         await message.reply_text("Failed to add user to Support list. Check logs.")
 
+@check_module_enabled("core")
 async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.message
@@ -1384,6 +1407,7 @@ async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     else:
         await message.reply_text("Failed to remove user from Support list. Check logs.")
 
+@check_module_enabled("core")
 async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.message
@@ -1469,6 +1493,7 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     else:
         await message.reply_text("Failed to add user to Developer list. Check logs.")
 
+@check_module_enabled("core")
 async def deldev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.message
@@ -1526,6 +1551,7 @@ async def deldev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     else:
         await message.reply_text("Failed to remove user from Developer list. Check logs.")
 
+@check_module_enabled("core")
 async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.message
@@ -1605,6 +1631,7 @@ async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_T
     else:
         await message.reply_text("Failed to add user to whitelist (they might be already on it).")
 
+@check_module_enabled("core")
 async def unwhitelist_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.message
@@ -1657,6 +1684,7 @@ async def unwhitelist_user_command(update: Update, context: ContextTypes.DEFAULT
     else:
         await update.message.reply_text("Failed to remove user from the whitelist.")
 
+@check_module_enabled("core")
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error("Exception while handling an update:", exc_info=context.error)
 
