@@ -40,10 +40,10 @@ async def disable_module_command(update: Update, context: ContextTypes.DEFAULT_T
         return
 
     module_name = context.args[0]
-    if database.disable_module(module_name):
-        await update.message.reply_text(f"✅ Module '<code>{safe_escape(module_name)}</code>' has been disabled.", parse_mode="HTML")
+    if disable_module(module_name):
+        await update.message.reply_text(f"✅ Module '<code>{safe_escape(module_name)}</code>' has been disabled.", parse_mode=ParseMode.HTML)
     else:
-        await update.message.reply_text(f"Module '<code>{safe_escape(module_name)}</code>' was already disabled or an error occurred.", parse_mode="HTML")
+        await update.message.reply_text(f"Module '<code>{safe_escape(module_name)}</code>' was already disabled or an error occurred.", parse_mode=ParseMode.HTML)
 
 async def enable_module_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not is_owner_or_dev(update.effective_user.id):
@@ -54,16 +54,16 @@ async def enable_module_command(update: Update, context: ContextTypes.DEFAULT_TY
         return
         
     module_name = context.args[0]
-    if database.enable_module(module_name):
-        await update.message.reply_text(f"✅ Module '<code>{safe_escape(module_name)}</code>' has been enabled.", parse_mode="HTML")
+    if enable_module(module_name):
+        await update.message.reply_text(f"✅ Module '<code>{safe_escape(module_name)}</code>' has been enabled.", parse_mode=ParseMode.HTML)
     else:
-        await update.message.reply_text(f"Module '<code>{safe_escape(module_name)}</code>' was already enabled or an error occurred.", parse_mode="HTML")
+        await update.message.reply_text(f"Module '<code>{safe_escape(module_name)}</code>' was already enabled or an error occurred.", parse_mode=ParseMode.HTML)
 
 async def list_modules_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not is_owner_or_dev(update.effective_user.id):
         return
         
-    disabled_modules = database.get_disabled_modules()
+    disabled_modules = get_disabled_modules()
     available_modules = _get_available_modules()
     
     message = "<b>Module Status:</b>\n\n"
