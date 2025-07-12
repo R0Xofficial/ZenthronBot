@@ -39,6 +39,8 @@ async def check_gban_on_entry(update: Update, context: ContextTypes.DEFAULT_TYPE
             except Exception as e:
                 logger.error(f"Failed to enforce gban on new member {member.id} in {chat.id}: {e}")
 
+    raise ApplicationHandlerStop 
+
 async def check_gban_on_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.effective_chat or update.effective_chat.type == ChatType.PRIVATE:
         return
@@ -82,6 +84,8 @@ async def check_gban_on_message(update: Update, context: ContextTypes.DEFAULT_TY
                 await context.bot.send_message(chat.id, text=message_text, parse_mode=ParseMode.HTML)
         except Exception as e:
             logger.error(f"Failed to take gban action on message for user {user.id} in chat {chat.id}: {e}")
+
+    raise ApplicationHandlerStop
 
 async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_who_gbans = update.effective_user
