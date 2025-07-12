@@ -11,6 +11,12 @@ logger = logging.getLogger(__name__)
 
 @check_module_enabled("disables")
 async def disable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+    
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't disable commands in private chat...")
+        return
+    
     can_disable = await _can_user_perform_action(
         update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission."
     )
@@ -32,6 +38,12 @@ async def disable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 @check_module_enabled("disables")
 async def enable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+    
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't enable commands in private chat...")
+        return
+        
     can_enable = await _can_user_perform_action(
         update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission."
     )
@@ -53,8 +65,14 @@ async def enable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 @check_module_enabled("disables")
 async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+    
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't group settings in private chat...")
+        return
+    
     can_see_settings = await _can_user_perform_action(
-        update, context, 'can_manage_chat', "Only chat admins can see chat settings."
+        update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission."
     )
     if not can_see_settings:
         return
