@@ -6,6 +6,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..config import GEMINI_API_KEY, OWNER_ID, PUBLIC_AI_ENABLED
 from ..core.utils import is_privileged_user, is_owner_or_dev, markdown_to_html, get_gemini_response
+from ..core.decorators import check_module_enabled
 
 logger = logging.getLogger(__name__)
 
