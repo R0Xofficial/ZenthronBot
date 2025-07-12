@@ -7,3 +7,5 @@ telethon
 requests
 speedtest-cli
 google-generativeai
+pyfiglet
+cowsay
