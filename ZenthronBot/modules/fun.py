@@ -7,7 +7,7 @@ from telegram.constants import ParseMode
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..config import OWNER_ID
-from ..core.utils import get_themed_gif, check_target_protection, check_username_protection
+from ..core.utils import get_themed_gif, check_target_protection, check_username_protection, send_safe_reply
 from ..core.constants import KILL_TEXTS, SLAP_TEXTS, PUNCH_TEXTS, PAT_TEXTS, BONK_TEXTS, CANT_TARGET_OWNER_TEXTS, CANT_TARGET_SELF_TEXTS
 
 logger = logging.getLogger(__name__)
