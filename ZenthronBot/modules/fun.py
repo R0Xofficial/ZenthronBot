@@ -9,11 +9,13 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 from ..config import OWNER_ID
 from ..core.utils import get_themed_gif, check_target_protection, check_username_protection, send_safe_reply, safe_escape
 from ..core.constants import KILL_TEXTS, SLAP_TEXTS, PUNCH_TEXTS, PAT_TEXTS, BONK_TEXTS, CANT_TARGET_OWNER_TEXTS, CANT_TARGET_SELF_TEXTS
+from ..core.decorators import check_module_enabled
 
 logger = logging.getLogger(__name__)
 
 
 # --- FUN COMMANDS HELPER ---
+@check_module_enabled("fun")
 async def _handle_action_command(update, context, texts, gifs, name, req_target=True, msg=""):
     target_mention = None
     if req_target:
@@ -35,12 +37,22 @@ async def _handle_action_command(update, context, texts, gifs, name, req_target=
         else: await update.message.reply_html(text)
     except Exception as e: logger.error(f"Error sending {name} action: {e}"); await update.message.reply_html(text)
 
+@check_module_enabled("fun")
 async def kill(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, KILL_TEXTS, ["gun", "gun shoting", "anime gun"], "kill", True, "Who to 'kill'?")
+
+@check_module_enabled("fun")
 async def punch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, PUNCH_TEXTS, ["punch", "hit", "anime punch"], "punch", True, "Who to 'punch'?")
+
+@check_module_enabled("fun")
 async def slap(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, SLAP_TEXTS, ["huge slap", "smack", "anime slap"], "slap", True, "Who to slap?")
+
+@check_module_enabled("fun")
 async def pat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, PAT_TEXTS, ["pat", "pat anime", "anime pat"], "pat", True, "Who to pat?")
+
+@check_module_enabled("fun")
 async def bonk(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, BONK_TEXTS, ["bonk", "anime bonk"], "bonk", True, "Who to bonk?")
 
+@check_module_enabled("fun")
 async def damnbroski(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     special_message = "💀Bro..."
     
@@ -54,6 +66,7 @@ async def damnbroski(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         ""
     )
 
+@check_module_enabled("fun")
 async def cowsay_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not context.args:
         text_to_say = "Mooooo!"
@@ -72,6 +85,7 @@ async def cowsay_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         parse_mode=ParseMode.HTML
     )
 
+@check_module_enabled("fun")
 async def ascii_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not context.args:
         await send_safe_reply(update, context, text="Usage: /ascii <your text>")
@@ -111,6 +125,7 @@ SKULL_ASCII = """
 </code>
 """
 
+@check_module_enabled("fun")
 async def skull_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await send_safe_reply(update, context, text=SKULL_ASCII, parse_mode=ParseMode.HTML)
 
