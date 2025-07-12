@@ -18,7 +18,7 @@ def get_start_keyboard(context: ContextTypes.DEFAULT_TYPE):
     bot_username = context.bot.username
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("📚 Commands", callback_data="menu_help_main"),
+            InlineKeyboardButton("📚 Commands", url=f"https://t.me/{bot_username}?start=help"),
             InlineKeyboardButton("➕ Add to Group", url=f"https://t.me/{bot_username}?startgroup=true")
         ],
         [
