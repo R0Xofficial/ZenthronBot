@@ -86,6 +86,9 @@ FUN_COMMANDS = """
 /slap &lt;@user/reply&gt; - Administer a swift slap.
 /pat &lt;@user/reply&gt; - Gently pat someone.
 /bonk &lt;@user/reply&gt; - Playfully bonk someone.
+/cowsay &lt;text&gt; - Generate ascii cow with optional text.
+/skull - Send ascii skull in chat.
+/ascii &lt;text&gt; - Generate ascii text.
 """
 
 ADMIN_NOTE_TEXT = """
