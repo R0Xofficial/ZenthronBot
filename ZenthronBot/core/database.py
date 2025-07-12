@@ -122,6 +122,12 @@ def init_db():
                 afk_since TEXT NOT NULL
             )
         """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS disabled_modules (
+                module_name TEXT PRIMARY KEY
+            )
+        """)
         
         conn.commit()
         logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, whitelist_users, support_users, sudo_users, dev_users, global_bans, bot_chats, notes, warnings, afk_users ensured).")
@@ -132,6 +138,45 @@ def init_db():
             conn.close()
 
 # --- DATABASE HELPER FUNCTIONS ---
+# --- MODULES ---
+def is_module_disabled(module_name: str) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT module_name FROM disabled_modules WHERE module_name = ?", (module_name,))
+            return cursor.fetchone() is not None
+    except sqlite3.Error as e:
+        logger.error(f"Błąd SQLite przy sprawdzaniu modułu {module_name}: {e}")
+        return False
+
+def disable_module(module_name: str) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            conn.execute("INSERT OR IGNORE INTO disabled_modules (module_name) VALUES (?)", (module_name,))
+            return conn.total_changes > 0
+    except sqlite3.Error as e:
+        logger.error(f"Błąd SQLite przy wyłączaniu modułu {module_name}: {e}")
+        return False
+
+def enable_module(module_name: str) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            conn.execute("DELETE FROM disabled_modules WHERE module_name = ?", (module_name,))
+            return conn.total_changes > 0
+    except sqlite3.Error as e:
+        logger.error(f"Błąd SQLite przy włączaniu modułu {module_name}: {e}")
+        return False
+
+def get_disabled_modules() -> list:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT module_name FROM disabled_modules")
+            return [row[0] for row in cursor.fetchall()]
+    except sqlite3.Error as e:
+        logger.error(f"Błąd SQLite przy pobieraniu wyłączonych modułów: {e}")
+        return []
+
 # --- BLACKLIST ---
 def add_to_blacklist(user_id: int, banned_by_id: int, reason: str | None = "No reason provided.") -> bool:
     conn = None
