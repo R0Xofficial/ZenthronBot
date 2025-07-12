@@ -6,6 +6,7 @@ import traceback
 from telegram import Update, constants
 from telegram.constants import ParseMode, UpdateType
 from telegram.ext import Application, ApplicationBuilder, JobQueue, ContextTypes, MessageHandler, filters, ApplicationHandlerStop, ChatMemberHandler, CommandHandler
+from telegram.request import HTTPXRequest
 from telethon import TelegramClient
 
 from .config import SESSION_NAME, API_ID, API_HASH, LOG_CHAT_ID, OWNER_ID, BOT_TOKEN
@@ -147,9 +148,12 @@ async def main() -> None:
     async with TelegramClient(SESSION_NAME, API_ID, API_HASH) as telethon_client:
         logger.info("Telethon client started.")
 
+        custom_request_settings = HTTPXRequest(connect_timeout=20.0, read_timeout=80.0, write_timeout=80.0, pool_timeout=20.0)
+        
         application = (
             ApplicationBuilder()
             .token(BOT_TOKEN)
+            .request(custom_request_settings)
             .job_queue(JobQueue())
             .build()
         )
