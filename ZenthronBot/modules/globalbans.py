@@ -6,7 +6,7 @@ from telegram import Update, User, Chat
 from telegram.constants import ParseMode, ChatType, ChatMemberStatus
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ApplicationHandlerStop
 
-from ..config import APPEAL_CHAT_USERNAME, LOG_CHAT_USERNAME, DB_NAME
+from ..config import APPEAL_CHAT_USERNAME, DB_NAME
 from ..core.database import is_gban_enforced, get_gban_reason, add_to_gban, remove_from_gban, is_whitelisted, add_chat_to_db
 from ..core.utils import is_privileged_user, resolve_user_with_telethon, create_user_html_link, safe_escape, send_operational_log, propagate_unban
 
@@ -208,8 +208,6 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     if remove_from_gban(target_entity.id):
         success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been globally unbanned.\n<i>Propagating unban...</i>"
-        if LOG_CHAT_USERNAME:
-            success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
         await message.reply_html(success_message, disable_web_page_preview=True)
     
         if context.job_queue:
