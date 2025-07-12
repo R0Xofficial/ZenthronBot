@@ -5,11 +5,13 @@ from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..core.utils import resolve_user_with_telethon, create_user_html_link, safe_escape
+from ..core.decorators import check_module_enabled
 
 logger = logging.getLogger(__name__)
 
 
 # --- REPORT COMMAND FUNCTION ---
+@check_module_enabled("reports")
 async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     reporter = update.effective_user
