@@ -7,11 +7,13 @@ from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..core.utils import safe_escape
+from ..core.decorators import check_module_enabled
 
 logger = logging.getLogger(__name__)
 
 
 # --- LIST ADMINS COMMAND FUNCTION ---
+@check_module_enabled("chatadmins")
 async def list_admins_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
