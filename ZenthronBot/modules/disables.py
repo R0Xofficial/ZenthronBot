@@ -5,9 +5,11 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..core.database import disable_command_in_chat, enable_command_in_chat, get_disabled_commands_in_chat
 from ..core.utils import safe_escape, _can_user_perform_action
+from ..core.decorators import check_module_enabled
 
 logger = logging.getLogger(__name__)
 
+@check_module_enabled("disables")
 async def disable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     can_disable = await _can_user_perform_action(
         update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission."
@@ -28,6 +30,7 @@ async def disable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     else:
         await update.message.reply_text("This command was already disabled or an error occurred.")
 
+@check_module_enabled("disables")
 async def enable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     can_enable = await _can_user_perform_action(
         update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission."
@@ -48,6 +51,7 @@ async def enable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     else:
         await update.message.reply_text("This command was already enabled or an error occurred.")
 
+@check_module_enabled("disables")
 async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     can_see_settings = await _can_user_perform_action(
         update, context, 'can_manage_chat', "Only chat admins can see chat settings."
