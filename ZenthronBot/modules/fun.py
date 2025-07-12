@@ -1,5 +1,7 @@
 import logging
 import random
+import cowsay
+from pyfiglet import figlet_format
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import Application, CommandHandler, ContextTypes
@@ -52,6 +54,66 @@ async def damnbroski(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         ""
     )
 
+async def cowsay_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not context.args:
+        text_to_say = "Mooooo!"
+    else:
+        text_to_say = " ".join(context.args)
+    
+    if len(text_to_say) > 100:
+        text_to_say = text_to_say[:100] + "..."
+
+    cow_output = cowsay.get_output_string('cow', text_to_say)
+    
+    await send_safe_reply(
+        update, 
+        context, 
+        text=f"<pre>{safe_escape(cow_output)}</pre>", 
+        parse_mode=ParseMode.HTML
+    )
+
+async def ascii_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not context.args:
+        await send_safe_reply(update, context, text="Usage: /ascii <your text>")
+        return
+
+    text_to_convert = " ".join(context.args)
+    
+    if len(text_to_convert) > 20:
+        await send_safe_reply(update, context, text="Text is too long! Please keep it under 20 characters.")
+        return
+
+    try:
+        ascii_art = figlet_format(text_to_convert, font='standard')
+        formatted_message = f"<pre>{safe_escape(ascii_art)}</pre>"
+        await send_safe_reply(update, context, text=formatted_message, parse_mode=ParseMode.HTML)
+    except Exception as e:
+        logging.error(f"Error generating ASCII art: {e}")
+        await send_safe_reply(update, context, text="Sorry, an error occurred while generating the art.")
+
+SKULL_ASCII = """
+💀
+<pre>
+⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀
+⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀
+⡀⡀⡀⡀⡀⡀⢀⣀⣤⣶⣶⣶⣶⣶⣶⣶⣶⣦⣄⡀⡀⡀⡀⡀⡀⡀
+⡀⡀⡀⢀⣴⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣦⡀⡀⡀⡀⡀
+⡀⡀⢀⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡀⡀⡀⡀
+⡀⡀⢸⣿⣿⣿⣿⣿⣿⣿⣿⡿⢛⣭⣭⣭⡙⣿⣿⢋⣭⣭⣅⡀⡀⡀
+⡀⡀⠘⢿⣿⣿⣿⣿⣿⣿⡏⡀⣿⣿⣟⠉⣻⢸⣿⠸⣿⣅⣽⡀⡀⡀
+⡀⡀⡀⡀⠻⡻⣿⣿⣿⣿⣧⣻⣌⣛⣛⣛⣵⡿⠋⢱⣬⣭⡆⡀⡀⡀
+⡀⡀⡀⡀⡀⡈⠢⣉⣻⠿⣿⣿⠿⠟⢋⣾⣿⡇⣤⡀⡏⠉⡀⡀⡀⡀
+⡀⡀⡀⡀⡀⡀⡀⡀⣿⡷⣴⠁⡀⡀⢿⣿⣿⣿⣿⣿⠇⡀⡀⡀⡀⡀
+⡀⡀⡀⡀⡀⡀⡀⡀⠻⣿⣎⢳⣄⣀⣀⠜⡻⠛⠛⠛⠁⡀⡀⡀⡀⡀
+⡀⡀⡀⡀⡀⡀⡀⡀⡀⠈⠻⣕⣉⣛⡻⠋⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀
+⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀
+⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀⡀
+</pre>
+"""
+
+async def skull_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await send_safe_reply(update, context, text=SKULL_ASCII, parse_mode=ParseMode.HTML)
+
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
@@ -61,3 +123,6 @@ def load_handlers(application: Application):
     application.add_handler(CommandHandler("pat", pat))
     application.add_handler(CommandHandler("bonk", bonk))
     application.add_handler(CommandHandler("touch", damnbroski))
+    application.add_handler(CommandHandler("cowsay", cowsay_command))
+    application.add_handler(CommandHandler("ascii", ascii_command))
+    application.add_handler(CommandHandler("skull", skull_command))
