@@ -13,11 +13,13 @@ from ..core.database import (
 )
 from ..core.utils import _can_user_perform_action, send_safe_reply, safe_escape, format_message_text, send_critical_log
 from ..core.constants import OWNER_WELCOME_TEXTS, DEV_WELCOME_TEXTS, SUDO_WELCOME_TEXTS, SUPPORT_WELCOME_TEXTS, GENERIC_WELCOME_TEXTS, GENERIC_GOODBYE_TEXTS
+from ..core.decorators import check_module_enabled
 
 logger = logging.getLogger(__name__)
 
 
 # --- WELCOME/GOODBYE COMMAND AND HANDLER FUNCTIONS ---
+@check_module_enabled("welcomes")
 async def welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -63,6 +65,7 @@ async def welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         message = f"Welcome messages are currently <b>{status}</b>.\nI will be sending one of my default welcome messages."
         await update.message.reply_html(message)
 
+@check_module_enabled("welcomes")
 async def set_welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -83,6 +86,7 @@ async def set_welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:
         await update.message.reply_text("Failed to set welcome message.")
 
+@check_module_enabled("welcomes")
 async def reset_welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -98,6 +102,7 @@ async def reset_welcome_command(update: Update, context: ContextTypes.DEFAULT_TY
     else:
         await update.message.reply_text("Failed to reset welcome message.")
 
+@check_module_enabled("welcomes")
 async def goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -138,6 +143,7 @@ async def goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         message = f"Goodbye messages are currently <b>{status}</b>.\nI will be sending one of my default goodbye messages."
         await update.message.reply_html(message)
 
+@check_module_enabled("welcomes")
 async def set_goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -157,7 +163,8 @@ async def set_goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_html("✅ Custom goodbye message has been set!")
     else:
         await update.message.reply_text("Failed to set goodbye message.")
-        
+
+@check_module_enabled("welcomes")
 async def reset_goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -173,6 +180,7 @@ async def reset_goodbye_command(update: Update, context: ContextTypes.DEFAULT_TY
     else:
         await update.message.reply_text("Failed to reset goodbye message.")
 
+@check_module_enabled("welcomes")
 async def welcome_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     help_text = """
 <b>Welcome Message Help</b>
@@ -195,6 +203,7 @@ Welcome messages support html, so you can make any elements bold (&lt;b&gt;,&lt;
 """
     await update.message.reply_html(help_text, disable_web_page_preview=True)
 
+@check_module_enabled("welcomes")
 async def set_clean_service_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -234,6 +243,7 @@ async def set_clean_service_command(update: Update, context: ContextTypes.DEFAUL
     else:
         await update.message.reply_text("An error occurred while saving the setting.")
 
+@check_module_enabled("welcomes")
 async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message or not update.message.new_chat_members:
         return
@@ -345,7 +355,8 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
             await update.message.delete()
         except Exception:
             pass
-            
+
+@check_module_enabled("welcomes")
 async def handle_left_group_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message or not update.message.left_chat_member:
         return
