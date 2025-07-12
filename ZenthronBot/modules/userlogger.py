@@ -6,11 +6,13 @@ from telegram.ext import Application, MessageHandler, filters, ContextTypes
 
 from ..config import DB_NAME
 from ..core.database import update_user_in_db, add_chat_to_db
+from ..core.decorators import check_module_enabled
 
 logger = logging.getLogger(__name__)
 
 
 # --- PASSIVE USER AND CHAT LOGGING FUNCTION ---
+@check_module_enabled("userlogger")
 async def log_user_from_interaction(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_user:
         update_user_in_db(update.effective_user)
