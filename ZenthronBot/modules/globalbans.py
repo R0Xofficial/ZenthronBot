@@ -36,6 +36,7 @@ async def check_gban_on_entry(update: Update, context: ContextTypes.DEFAULT_TYPE
                     f"<b>Appeal Chat:</b> {APPEAL_CHAT_USERNAME}"
                 )
                 await context.bot.send_message(chat.id, text=message_text, parse_mode=ParseMode.HTML)
+                raise ApplicationHandlerStop
             except Exception as e:
                 logger.error(f"Failed to enforce gban on new member {member.id} in {chat.id}: {e}")
 
@@ -80,6 +81,7 @@ async def check_gban_on_message(update: Update, context: ContextTypes.DEFAULT_TY
                     f"<b>Appeal Chat:</b> {APPEAL_CHAT_USERNAME}"
                 )
                 await context.bot.send_message(chat.id, text=message_text, parse_mode=ParseMode.HTML)
+                raise ApplicationHandlerStop
         except Exception as e:
             logger.error(f"Failed to take gban action on message for user {user.id} in chat {chat.id}: {e}")
 
