@@ -143,8 +143,6 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                 logger.warning(f"Could not enforce local ban for gban: {e}")
 
         success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>globally banned</b>.\n<b>Reason:</b> {safe_escape(reason)}"
-        if LOG_CHAT_USERNAME:
-            success_message += f'\n\n<b>Full Log:</b> <a href="https://t.me/{LOG_CHAT_USERNAME}">Here</a>'
         await message.reply_html(success_message, disable_web_page_preview=True)
     
         try:
