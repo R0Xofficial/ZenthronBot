@@ -1684,7 +1684,6 @@ async def unwhitelist_user_command(update: Update, context: ContextTypes.DEFAULT
     else:
         await update.message.reply_text("Failed to remove user from the whitelist.")
 
-@check_module_enabled("core")
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error("Exception while handling an update:", exc_info=context.error)
 
