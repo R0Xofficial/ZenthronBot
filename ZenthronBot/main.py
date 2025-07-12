@@ -72,14 +72,15 @@ def load_modules(application: Application) -> None:
 
 def _get_available_modules():
     try:
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        all_files = os.listdir(current_dir)
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        modules_dir = os.path.join(base_path, "modules")
+        
+        all_files = os.listdir(modules_dir)
         
         modules = [
             f[:-3] for f in all_files 
             if f.endswith('.py') and not f.startswith('_')
         ]
-            
         return sorted(modules)
     except Exception as e:
         logger.error(f"Could not scan for available modules: {e}")
