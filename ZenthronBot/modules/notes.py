@@ -5,11 +5,13 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 
 from ..core.database import add_note, get_all_notes, remove_note, get_note
 from ..core.utils import _can_user_perform_action, send_safe_reply, safe_escape
+from ..core.decorators import check_module_enabled
 
 logger = logging.getLogger(__name__)
 
 
 # --- NOTES COMMAND AND HANDLER FUNCTIONS ---
+@check_module_enabled("notes")
 async def save_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     user = update.effective_user
@@ -59,6 +61,7 @@ async def save_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     else:
         await message.reply_text("Failed to save the note due to a database error.")
 
+@check_module_enabled("notes")
 async def list_notes_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -76,6 +79,7 @@ async def list_notes_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     message = "<b>Notes in this chat:</b>\n" + "\n".join(note_list)
     await update.message.reply_html(message)
 
+@check_module_enabled("notes")
 async def remove_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -96,6 +100,7 @@ async def remove_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:
         await update.message.reply_html(f"Note <code>#{note_name.lower()}</code> not found.")
 
+@check_module_enabled("notes")
 async def handle_note_trigger(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     
