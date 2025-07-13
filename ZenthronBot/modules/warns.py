@@ -6,13 +6,13 @@ from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQuer
 
 from ..core.database import add_warning, remove_warning_by_id, get_warnings, reset_warnings, set_warn_limit, get_warn_limit
 from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, create_user_html_link, send_safe_reply, safe_escape
-from ..core.decorators import check_module_enabled
+from ..core.decorators import check_module_enabled, command_control
 
 logger = logging.getLogger(__name__)
 
 
 # --- WARNINGS COMMAND AND HANDLER FUNCTIONS ---
-@check_module_enabled("rules")
+@check_module_enabled("warns")
 async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     warner = update.effective_user
@@ -85,7 +85,7 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         except Exception as e:
             await message.reply_text(f"Failed to ban user after reaching max warnings: {e}")
 
-@check_module_enabled("rules")
+@check_module_enabled("warns")
 async def undo_warn_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
@@ -113,7 +113,8 @@ async def undo_warn_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     else:
         await query.edit_message_text(query.message.text_html + "\n\n<i>(This warn was already deleted or could not be found.)</i>", parse_mode=ParseMode.HTML, reply_markup=None)
 
-@check_module_enabled("rules")
+@check_module_enabled("warns")
+@command_control("warns")
 async def warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -158,7 +159,7 @@ async def warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     
     await update.message.reply_html("\n".join(message_lines))
 
-@check_module_enabled("rules")
+@check_module_enabled("warns")
 async def reset_warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     user = update.effective_user
@@ -187,7 +188,7 @@ async def reset_warnings_command(update: Update, context: ContextTypes.DEFAULT_T
     else:
         await update.message.reply_text("Failed to reset warnings (or user had no warnings).")
 
-@check_module_enabled("rules")
+@check_module_enabled("warns")
 async def set_warn_limit_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
