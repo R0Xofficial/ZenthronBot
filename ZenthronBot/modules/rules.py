@@ -5,7 +5,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..core.database import set_rules, get_rules, clear_rules
 from ..core.utils import _can_user_perform_action
-from ..core.decorators import check_module_enabled
+from ..core.decorators import check_module_enabled, command_control
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +61,7 @@ async def clear_rules_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await message.reply_text("A database error occurred while clearing the rules.")
 
 @check_module_enabled("rules")
+@command_control("rules")
 async def rules_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     message = update.effective_message
