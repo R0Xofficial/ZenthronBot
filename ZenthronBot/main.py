@@ -195,7 +195,7 @@ async def main() -> None:
 
         # --- LAYER 4: MAIN LOGIC - COMMANDS AND INTERACTIONS ---
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_note_trigger), group=0)
-        application.add_handler(MessageHandler(filters.TEXT | filters.COMMAND & filters.ChatType.GROUPS, check_message_for_filters), group=3)
+        application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND) & filters.ChatType.GROUPS, check_message_for_filters), group=3)
 
         # --- LAYER 5: GROUP MEMBERS SERVICING ---
         application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_group_members), group=5)
