@@ -66,16 +66,16 @@ ADMIN_TOOLS = """
 /zombies &lt;clean&gt; - Find and optionally remove deleted accounts.
 
 <b>🔹 Disables</b>
-/enable &lt:command name&gt; - Enable commands for all chat non-admin users.
-/disable &lt:command name&gt; - Disable commands for all chat non-admin users.
+/enable &lt;command name&gt; - Enable commands for all chat non-admin users.
+/disable &lt;command name&gt; - Disable commands for all chat non-admin users.
 /settings - Check your chat command settings.
 /disableshelp - Get a specific list of commands lib command packages to disable.
 
 <b>🔹 Joinfilters</b>
-/addjoinfilter &lt:filter&gt; - Add a joinfilter for your group.
-/deljoinfilter &lt:filter&gt; - Remove joinfilter from your group.
+/addjoinfilter &lt;filter&gt; - Add a joinfilter for your group.
+/deljoinfilter &lt;filter&gt; - Remove joinfilter from your group.
 /joinfilters - View currently running joinfilters.
-/setjoinaction &lt:ban/mute/kick&gt; - Set actions for joinfilter.
+/setjoinaction &lt;ban/mute/kick&gt; - Set actions for joinfilter.
 """
 
 DISABLES_HELP_TEXT = """
