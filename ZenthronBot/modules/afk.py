@@ -8,12 +8,14 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from ..core.database import set_afk, get_afk_status, clear_afk, get_user_from_db_by_username
 from ..core.utils import send_safe_reply, get_readable_time_delta, create_user_html_link, safe_escape
 from ..core.decorators import check_module_enabled
+from ..core.decorators import command_control
 
 logger = logging.getLogger(__name__)
 
 
 # --- AFK COMMAND AND HANDLER FUNCTIONS ---
 @check_module_enabled("afk")
+@command_control("afk")
 async def afk_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.effective_message
@@ -32,6 +34,7 @@ async def afk_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await message.reply_text("Could not set AFK status due to a database error.")
 
 @check_module_enabled("afk")
+@command_control("afk")
 async def afk_brb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.effective_message
@@ -54,6 +57,7 @@ async def afk_brb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await message.reply_text("Could not set AFK status due to a database error.")
 
 @check_module_enabled("afk")
+@command_control("afk")
 async def check_afk_return(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.effective_message
@@ -76,6 +80,7 @@ async def check_afk_return(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await message.reply_html(f"Welcome back, {user_display_name}!\n{time_info}.")
 
 @check_module_enabled("afk")
+@command_control("afk")
 async def afk_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.effective_message
     chat = update.effective_chat
