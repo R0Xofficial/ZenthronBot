@@ -8,7 +8,14 @@ from ..core.utils import safe_escape, _can_user_perform_action
 
 logger = logging.getLogger(__name__)
 
+@check_module_enabled("disables")
 async def disable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't disable command in private chat...")
+        return
+    
     can_disable = await _can_user_perform_action(
         update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission.", allow_bot_privileged_override=False
     )
@@ -33,7 +40,14 @@ async def disable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     else:
         await update.message.reply_text("This command was already disabled or an error occurred.")
 
+@check_module_enabled("disables")
 async def enable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't enable command in private chat...")
+        return
+    
     can_enable = await _can_user_perform_action(
         update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission.", allow_bot_privileged_override=False
     )
@@ -55,7 +69,14 @@ async def enable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     else:
         await update.message.reply_text("This command was already enabled or an error occurred.")
 
+@check_module_enabled("disables")
 async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't check settings in private chat...")
+        return
+    
     can_see_settings = await _can_user_perform_action(
         update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission."
     )
