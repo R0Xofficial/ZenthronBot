@@ -5,6 +5,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..core.database import disable_command_in_chat, enable_command_in_chat, get_disabled_commands_in_chat
 from ..core.utils import safe_escape, _can_user_perform_action
+from ..core.decorators import check_module_enabled
 
 logger = logging.getLogger(__name__)
 
