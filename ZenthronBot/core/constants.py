@@ -115,13 +115,20 @@ brb - Set afk status.
 <i>The remaining disables functions are single commands</i>
 """
 
+FILTERS = """
+/addfilter 'keyword' &lt;reply&gt; - Adds a new filter. The reply can be text or a replied-to media.
+/delfilter 'keyword' - Deletes a filter.
+/filters - Lists all active filters in the chat.
+/filterhelp - Get help with text formatting and placeholders.
+"""
+
 FILTERS_HELP_TEXT = """
 <b>Filters Module Help</b>
 
 This module allows you to set up automatic replies for specific keywords or patterns in your chat.
 
 <b>🔹 Commands:</b>
-• <code>/addfilter 'keyword' <reply></code> - Adds a new filter. The reply can be text or a replied-to media.
+• <code>/addfilter 'keyword' &lt;reply&gt;</code> - Adds a new filter. The reply can be text or a replied-to media.
 • <code>/delfilter 'keyword'</code> - Deletes a filter.
 • <code>/filters</code> - Lists all active filters in the chat.
 
