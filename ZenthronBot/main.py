@@ -22,6 +22,7 @@ from .modules.globalbans import check_gban_on_message, check_gban_on_entry
 from .modules.afk import check_afk_return, afk_reply_handler, afk_brb_handler
 from .modules.notes import handle_note_trigger
 from .modules.welcomes import handle_new_group_members, handle_left_group_member
+from .modules.joinfilters import check_new_member
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -182,6 +183,7 @@ async def main() -> None:
 
         # --- LAYER 2: USER FILTERING - BLACKLISTS AND GBANS ---
         application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, check_gban_on_entry), group=-20)
+        application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, check_new_member), group=-15)
         application.add_handler(MessageHandler(filters.COMMAND, check_blacklist_handler), group=-10)
         application.add_handler(MessageHandler(filters.TEXT | filters.COMMAND | filters.Sticker.ALL | filters.PHOTO | filters.VIDEO | filters.VOICE | filters.ANIMATION & filters.ChatType.GROUPS, check_gban_on_message), group=-10)
 
