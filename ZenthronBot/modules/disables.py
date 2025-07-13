@@ -24,7 +24,7 @@ async def disable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     manageable_commands = context.bot_data.get("manageable_commands", set())
-    command_to_disable = context.args[0].lower().lstrip('/') if context.args else ""
+    command_to_disable = context.args[0].lower().lstrip('') if context.args else ""
     
     if not command_to_disable or command_to_disable not in manageable_commands:
         await update.message.reply_html(
@@ -56,7 +56,7 @@ async def enable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
     
     manageable_commands = context.bot_data.get("manageable_commands", set())
-    command_to_enable = context.args[0].lower().lstrip('/') if context.args else ""
+    command_to_enable = context.args[0].lower().lstrip('') if context.args else ""
     
     if not command_to_enable or command_to_enable not in manageable_commands:
         await update.message.reply_html("<b>Usage:</b> /enable <command_name>\nThat command doesn't exist or isn't managed.")
@@ -94,7 +94,7 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     else:
         for cmd in sorted(list(manageable_commands)):
             status = "🔴 Disabled (for non-admins)" if cmd in disabled_commands else "🟢 Enabled"
-            message += f"• <code>/{cmd}</code>: {status}\n"
+            message += f"• <code>{cmd}</code>: {status}\n"
         
     await update.message.reply_html(message)
 
