@@ -22,7 +22,7 @@ def get_start_keyboard(context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("📚 Commands", url=f"https://t.me/{bot_username}?start=help"),
         ],
         [
-            InlineKeyboardButton("➕ Add to Group", url=f"https://t.me/{bot_username}?startgroup=true")
+            InlineKeyboardButton("🔗 Add to Group", url=f"https://t.me/{bot_username}?startgroup=true")
         ],
         [
             InlineKeyboardButton("🔹 Support", url=f"https://t.me/{APPEAL_CHAT_USERNAME.lstrip('@')}"),
