@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta
 from telegram import Update, ChatPermissions
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from telegram.constants import ParseMode, ChatType
@@ -32,13 +33,27 @@ async def check_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 
                 if action_to_take == "ban":
                     await context.bot.ban_chat_member(chat.id, member.id)
-                    await update.message.reply_html(f"User {user_link} has been <b>banned</b>. {reason}")
+                    await context.bot.send_message(
+                        chat_id=chat.id,
+                        text=f"User {user_link} has been <b>banned</b>. {reason}",
+                        parse_mode=ParseMode.HTML
+                    )
                 elif action_to_take == "kick":
-                    await context.bot.ban_chat_member(chat.id, member.id, until_date=35)
-                    await update.message.reply_html(f"User {user_link} has been <b>kicked</b>. {reason}")
+                    kick_time = datetime.now() + timedelta(seconds=30)
+                    await context.bot.ban_chat_member(chat.id, member.id, until_date=kick_time)
+                    await context.bot.send_message(
+                        chat_id=chat.id,
+                        text=f"User {user_link} has been <b>kicked</b>. {reason}",
+                        parse_mode=ParseMode.HTML
+                    )
                 elif action_to_take == "mute":
                     await context.bot.restrict_chat_member(chat.id, member.id, ChatPermissions(can_send_messages=False))
-                    await update.message.reply_html(f"User {user_link} has been <b>muted</b>. {reason}")
+                    await context.bot.send_message(
+                        chat_id=chat.id,
+                        text=f"User {user_link} has been <b>muted</b>. {reason}",
+                        parse_mode=ParseMode.HTML
+                    )
+                
                 break
 
 @check_module_enabled("joinfilters")
