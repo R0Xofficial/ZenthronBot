@@ -41,7 +41,7 @@ def command_control(command_name: str):
                     update, 
                     context, 
                     'can_manage_chat', 
-                    failure_message="",
+                    failure_message=None,
                     allow_bot_privileged_override=True
                 )
                 
