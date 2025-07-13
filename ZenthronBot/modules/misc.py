@@ -9,7 +9,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQuer
 from ..config import OWNER_ID, APPEAL_CHAT_USERNAME, LOG_CHAT_USERNAME
 from ..core.database import get_rules, is_dev_user, is_sudo_user, is_support_user, is_whitelisted, get_blacklist_reason, get_gban_reason, is_gban_enforced, update_user_in_db
 from ..core.utils import is_privileged_user, safe_escape, resolve_user_with_telethon, create_user_html_link, send_safe_reply, is_owner_or_dev
-from ..core.constants import START_TEXT, HELP_MAIN_TEXT, GENERAL_COMMANDS, USER_CHAT_INFO, MODERATION_COMMANDS, ADMIN_TOOLS, NOTES, CHAT_SETTINGS, CHAT_SECURITY, AI_COMMANDS, FUN_COMMANDS, ADMIN_NOTE_TEXT, SUPPORT_COMMANDS_TEXT, SUDO_COMMANDS_TEXT, DEVELOPER_COMMANDS_TEXT, OWNER_COMMANDS_TEXT
+from ..core.constants import START_TEXT, HELP_MAIN_TEXT, GENERAL_COMMANDS, USER_CHAT_INFO, MODERATION_COMMANDS, ADMIN_TOOLS, NOTES, CHAT_SETTINGS, CHAT_SECURITY, AI_COMMANDS, FUN_COMMANDS, ADMIN_NOTE_TEXT, SUPPORT_COMMANDS_TEXT, SUDO_COMMANDS_TEXT, DEVELOPER_COMMANDS_TEXT, OWNER_COMMANDS_TEXT, FILTERS
 from ..core.decorators import check_module_enabled, command_control
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,8 @@ def get_help_main_keyboard():
         ],
         [
             InlineKeyboardButton("📝 Notes", callback_data="menu_help_notes"),
-            InlineKeyboardButton("⚙️ Settings", callback_data="menu_help_settings")
+            InlineKeyboardButton("⚙️ Settings", callback_data="menu_help_settings"),
+            InlineKeyboardButton("🧲 Filters", callback_data="menu_help_filters")
         ],
         [
             InlineKeyboardButton("🔒 Security", callback_data="menu_help_security"),
@@ -144,6 +145,7 @@ async def menu_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         "menu_help_admin": (f"<b>👑 Admin Tools</b>\n{ADMIN_TOOLS}", get_back_to_help_keyboard()),
         "menu_help_notes": (f"<b>📝 Notes</b>\n{NOTES}", get_back_to_help_keyboard()),
         "menu_help_settings": (f"<b>⚙️ Chat Settings</b>\n{CHAT_SETTINGS}", get_back_to_help_keyboard()),
+        "menu_help_filters": (f"<b>🧲 Filters Commands</b>\n{FILTERS}", get_back_to_help_keyboard()),
         "menu_help_security": (f"<b>🔒 Chat Security</b>\n{CHAT_SECURITY}", get_back_to_help_keyboard()),
         "menu_help_ai": (f"<b>🤖 AI Commands</b>\n{AI_COMMANDS}", get_back_to_help_keyboard()),
         "menu_help_fun": (f"<b>🤣 Fun Commands</b>\n{FUN_COMMANDS}", get_back_to_help_keyboard()),
