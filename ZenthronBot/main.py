@@ -153,10 +153,6 @@ async def list_modules_command(update: Update, context: ContextTypes.DEFAULT_TYP
 async def main() -> None:
     init_db()
 
-    logger.info("--- Starting module discovery phase ---")
-    loaded_modules = discover_and_load_modules()
-    logger.info("--- Module discovery finished ---")
-
     async with TelegramClient(SESSION_NAME, API_ID, API_HASH) as telethon_client:
         logger.info("Telethon client started.")
 
@@ -203,16 +199,6 @@ async def main() -> None:
         application.add_handler(CommandHandler("disablemodule", disable_module_command))
         application.add_handler(CommandHandler("enablemodule", enable_module_command))
         application.add_handler(CommandHandler("listmodules", list_modules_command))
-
-        logger.info("--- Starting handler registration phase ---")
-        for module in loaded_modules:
-            if hasattr(module, "load_handlers"):
-                try:
-                    module.load_handlers(application)
-                    logger.info(f"Successfully registered handlers from: {module.__name__}")
-                except Exception as e:
-                    logger.error(f"Failed to register handlers from {module.__name__}: {e}")
-        logger.info("--- Handler registration finished ---")
 
         application.bot_data["telethon_client"] = telethon_client
         logger.info("Telethon client has been injected into bot_data.")
