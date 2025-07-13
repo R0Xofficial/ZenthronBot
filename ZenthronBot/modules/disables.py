@@ -137,3 +137,4 @@ def load_handlers(application: Application):
     application.add_handler(CommandHandler("disable", disable_command))
     application.add_handler(CommandHandler("enable", enable_command))
     application.add_handler(CommandHandler("settings", settings_command))
+    application.add_handler(CommandHandler("disableshelp", disables_help_command))
