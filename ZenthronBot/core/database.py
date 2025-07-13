@@ -145,9 +145,23 @@ def init_db():
                 action TEXT NOT NULL DEFAULT 'kick'
             )
         """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS chat_filters (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                chat_id INTEGER NOT NULL,
+                keyword TEXT NOT NULL,
+                reply_text TEXT,
+                reply_type TEXT NOT NULL DEFAULT 'text', -- 'text', 'photo', 'sticker', 'document', 'animation', 'video', 'voice'
+                file_id TEXT,
+                filter_type TEXT NOT NULL DEFAULT 'keyword', -- 'keyword', 'wildcard', 'regex'
+                buttons TEXT,
+                UNIQUE (chat_id, keyword)
+            )
+        """)
         
         conn.commit()
-        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, whitelist_users, support_users, sudo_users, dev_users, global_bans, bot_chats, notes, warnings, afk_users, disable_modules, disabled_commands_per_chat, chat_join_settings ensured).")
+        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, whitelist_users, support_users, sudo_users, dev_users, global_bans, bot_chats, notes, warnings, afk_users, disable_modules, disabled_commands_per_chat, chat_join_settings, chat_filters ensured).")
     except sqlite3.Error as e:
         logger.error(f"SQLite error during DB initialization: {e}", exc_info=True)
     finally:
@@ -1008,3 +1022,45 @@ def update_chat_join_settings(chat_id: int, filters: list[str] | None = None, ac
     except (sqlite3.Error, json.JSONDecodeError) as e:
         logger.error(f"Error updating join settings for chat {chat_id}: {e}")
         return False
+
+# --- FILTERS ---
+def add_or_update_filter(chat_id: int, keyword: str, data: dict) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO chat_filters 
+                (chat_id, keyword, reply_text, reply_type, file_id, filter_type, buttons) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    chat_id,
+                    keyword.lower(),
+                    data.get('reply_text'),
+                    data.get('reply_type', 'text'),
+                    data.get('file_id'),
+                    data.get('filter_type', 'keyword'),
+                    json.dumps(data.get('buttons')) if data.get('buttons') else None,
+                )
+            )
+            return True
+    except sqlite3.Error as e:
+        logger.error(f"SQLite error adding/updating filter '{keyword}' in chat {chat_id}: {e}")
+        return False
+
+def remove_filter(chat_id: int, keyword: str) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM chat_filters WHERE chat_id = ? AND keyword = ?", (chat_id, keyword.lower()))
+            return cursor.rowcount > 0
+    except sqlite3.Error: return False
+    
+def get_all_filters_for_chat(chat_id: int) -> list[dict]:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM chat_filters WHERE chat_id = ?", (chat_id,))
+            return [dict(row) for row in cursor.fetchall()]
+    except sqlite3.Error: return []
