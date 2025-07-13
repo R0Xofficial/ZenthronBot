@@ -60,8 +60,8 @@ DISABLES_HELP_TEXT = """
 You can disable/enable commands for non-admins in this chat.
 
 <b>Usage:</b>
-• <code>/disable <command></code>
-• <code>/enable <command></code>
+• <code>/disable &lt;command&gt;</code>
+• <code>/enable &lt;command&gt;</code>
 • <code>/settings</code> - Shows current settings.
 
 <b>🔹 Module: fun</b>
