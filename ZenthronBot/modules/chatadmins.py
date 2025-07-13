@@ -7,7 +7,7 @@ from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..core.utils import safe_escape
-from ..core.decorators import check_module_enabled. command_control
+from ..core.decorators import check_module_enabled, command_control
 
 logger = logging.getLogger(__name__)
 
