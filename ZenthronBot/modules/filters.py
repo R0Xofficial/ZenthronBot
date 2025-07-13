@@ -69,7 +69,6 @@ async def send_filter_reply(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         if reply_text:
             await update.effective_message.reply_html(f"<i>(Error sending media for this filter, showing text instead)</i>\n\n{reply_text}")
 
-@check_module_enabled("filters")
 async def check_message_for_filters(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     message = update.effective_message
