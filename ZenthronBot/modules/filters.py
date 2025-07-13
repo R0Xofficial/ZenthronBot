@@ -125,7 +125,7 @@ async def add_filter_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
     
     can_manage = await _can_user_perform_action(
-        update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission.", allow_bot_privileged_override=False"
+        update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission.", allow_bot_privileged_override=False
     )
     if not can_manage:
         return
@@ -207,7 +207,7 @@ async def remove_filter_command(update: Update, context: ContextTypes.DEFAULT_TY
         return
         
     can_manage = await _can_user_perform_action(
-        update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission.", allow_bot_privileged_override=False"
+        update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission.", allow_bot_privileged_override=False
     )
     if not can_manage:
         return
@@ -233,7 +233,7 @@ async def list_filters_command(update: Update, context: ContextTypes.DEFAULT_TYP
         return
     
     can_see = await _can_user_perform_action(
-        update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission.", allow_bot_privileged_override=True"
+        update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission.", allow_bot_privileged_override=True
     )
     if not can_see:
         return
