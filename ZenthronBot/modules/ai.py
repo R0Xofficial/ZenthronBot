@@ -6,7 +6,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..config import GEMINI_API_KEY, OWNER_ID, PUBLIC_AI_ENABLED
 from ..core.utils import is_privileged_user, is_owner_or_dev, markdown_to_html, get_gemini_response
-from ..core.decorators import check_module_enabled
+from ..core.decorators import check_module_enabled, command_control
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,7 @@ async def set_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     logger.info(f"Owner {OWNER_ID} toggled public AI access to: {status_text}")
 
 @check_module_enabled("ai")
+@command_control("askai")
 async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
 
