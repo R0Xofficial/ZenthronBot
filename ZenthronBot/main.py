@@ -172,7 +172,7 @@ async def main() -> None:
             .build()
         )
 
-        # --- GLOBAL LAYER: ERRORS - TRACEBACKS ---
+        # --- GLOBAL LAYER: TRACEBACKS - MODULE LOADER ---
         application.add_error_handler(error_handler)
         discover_and_register_handlers(application)
 
@@ -181,7 +181,7 @@ async def main() -> None:
         application.add_handler(ChatMemberHandler(handle_bot_banned, ChatMemberHandler.MY_CHAT_MEMBER), group=-100)
         application.add_handler(MessageHandler(filters.UpdateType.EDITED_MESSAGE & filters.COMMAND, ignore_edited_commands), group=-50)
 
-        # --- LAYER 2: USER FILTERING - BLACKLISTS AND GBANS ---
+        # --- LAYER 2: USER FILTERING - BLACKLISTS - GBANS - JOINFILTER ---
         application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, check_gban_on_entry), group=-20)
         application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, check_new_member), group=-15)
         application.add_handler(MessageHandler(filters.COMMAND, check_blacklist_handler), group=-10)
