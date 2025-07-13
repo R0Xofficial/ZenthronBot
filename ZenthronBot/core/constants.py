@@ -71,7 +71,7 @@ ADMIN_TOOLS = """
 /settings - Check your chat command settings.
 /disableshelp - Get a specific list of commands lib command packages to disable.
 
-<b>🔹 Joinfilters</b>
+<b>🔹 Join filters</b>
 /addjoinfilter &lt;filter&gt; - Add a join filter for your group.
 /deljoinfilter &lt;filter&gt; - Remove join filter from your group.
 /joinfilters - View currently running join filters.
