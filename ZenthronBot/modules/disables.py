@@ -1,6 +1,6 @@
 import logging
 from telegram import Update
-from telegram.constants import ParseMode
+from telegram.constants import ParseMode, ChatType
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..core.database import disable_command_in_chat, enable_command_in_chat, get_disabled_commands_in_chat
