@@ -4,6 +4,7 @@ from telegram.constants import ParseMode, ChatType
 from telegram.ext import Application, CommandHandler, ContextTypes
 from collections import defaultdict
 
+from ..core.constants import DISABLES_HELP_TEXT
 from ..core.database import disable_command_in_chat, enable_command_in_chat, get_disabled_commands_in_chat
 from ..core.utils import safe_escape, _can_user_perform_action, send_safe_reply
 from ..core.decorators import check_module_enabled
@@ -101,12 +102,10 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 @check_module_enabled("disables")
 async def disables_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user = update.effective_user
-    chat = update.effective_chat
-
+    
     can_see_help = False
-    if chat.type == ChatType.PRIVATE:
-        if is_owner_or_dev(user.id):
+    if update.effective_chat.type == ChatType.PRIVATE:
+        if is_owner_or_dev(update.effective_user.id):
             can_see_help = True
     else:
         is_admin_in_chat = await _can_user_perform_action(
@@ -115,35 +114,8 @@ async def disables_help_command(update: Update, context: ContextTypes.DEFAULT_TY
         if is_admin_in_chat:
             can_see_help = True
 
-    if not can_see_help:
-        if chat.type != ChatType.PRIVATE:
-            await update.message.reply_text("Only chat admins can use this command.")
-        return
-
-    command_registry = context.bot_data.get("manageable_commands", {})
-    
-    if not command_registry:
-        await update.message.reply_html("No manageable commands found to describe.")
-        return
-
-    commands_by_module = defaultdict(list)
-    for cmd_name, meta in command_registry.items():
-        module_name = meta.get("module", "unknown")
-        description = meta.get("description", "No description.")
-        commands_by_module[module_name].append(f"<code>/{cmd_name}</code> - {safe_escape(description)}")
-
-    help_message = "<b>Help for manageable commands</b>\n\n"
-    help_message += "In a group, you can disable commands for non-admins using /disable <command_name>.\nHere's what each command does:\n\n"
-
-    for module_name in sorted(commands_by_module.keys()):
-        help_message += f"<b>🔹 Module: {safe_escape(module_name)}</b>\n"
-        
-        for command_line in sorted(commands_by_module[module_name]):
-            help_message += f"  {command_line}\n"
-        
-        help_message += "\n"
-
-    await update.message.reply_html(help_message)
+    if can_see_help:
+        await update.message.reply_html(DISABLES_HELP_TEXT)
 
 
 def load_handlers(application: Application):
