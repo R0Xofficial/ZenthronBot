@@ -1,6 +1,7 @@
 import logging
 import re
 import json
+import time
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, User, Chat
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from telegram.constants import ParseMode, ChatType
@@ -76,7 +77,7 @@ async def check_message_for_filters(update: Update, context: ContextTypes.DEFAUL
     if not chat or not message or not message.text or chat.type == ChatType.PRIVATE:
         return
 
-    current_time = context.application.run_time.timestamp()
+    current_time = time.time()
     if 'filters_cache' not in context.chat_data or context.chat_data.get('filters_last_update', 0) < (current_time - 60):
         context.chat_data['filters_cache'] = get_all_filters_for_chat(chat.id)
         context.chat_data['filters_last_update'] = current_time
