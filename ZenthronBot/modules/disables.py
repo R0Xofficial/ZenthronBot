@@ -95,7 +95,7 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         message += "No manageable commands found."
     else:
         for cmd in sorted(list(manageable_commands)):
-            status = "🔴 Disabled (for non-admins)" if cmd in disabled_commands else "🟢 Enabled"
+            status = "🔴 Disabled" if cmd in disabled_commands else "🟢 Enabled"
             message += f"• <code>{cmd}</code>: {status}\n"
         
     await update.message.reply_html(message)
