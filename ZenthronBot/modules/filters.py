@@ -8,7 +8,8 @@ from telegram.constants import ParseMode, ChatType
 
 from ..core.database import add_or_update_filter, remove_filter, get_all_filters_for_chat
 from ..core.utils import _can_user_perform_action, safe_escape
-from ..core.decorators import check_module_enabled
+from ..core.decorators import check_module_enabled, command_control
+from ..core.constants import FILTERS_HELP_TEXT
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +125,7 @@ async def add_filter_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
     
     can_manage = await _can_user_perform_action(
-        update, context, 'can_manage_chat', "You need admin rights to manage filters."
+        update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission.", allow_bot_privileged_override=False"
     )
     if not can_manage:
         return
@@ -206,7 +207,7 @@ async def remove_filter_command(update: Update, context: ContextTypes.DEFAULT_TY
         return
         
     can_manage = await _can_user_perform_action(
-        update, context, 'can_manage_chat', "You need admin rights to manage filters."
+        update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission.", allow_bot_privileged_override=False"
     )
     if not can_manage:
         return
@@ -232,7 +233,7 @@ async def list_filters_command(update: Update, context: ContextTypes.DEFAULT_TYP
         return
     
     can_see = await _can_user_perform_action(
-        update, context, 'can_manage_chat', "You need admin rights to see the filter list."
+        update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission.", allow_bot_privileged_override=True"
     )
     if not can_see:
         return
@@ -256,8 +257,14 @@ async def list_filters_command(update: Update, context: ContextTypes.DEFAULT_TYP
 
     await update.message.reply_html(message)
 
+@check_module_enabled("filters")
+@command_control("filterhelp")
+async def filter_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_html(FILTERS_HELP_TEXT)
+
 
 def load_handlers(application: Application):  
     application.add_handler(CommandHandler(["addfilter", "filter"], add_filter_command))
     application.add_handler(CommandHandler(["delfilter", "stop"], remove_filter_command))
     application.add_handler(CommandHandler("filters", list_filters_command))
+    application.add_handler(CommandHandler("filterhelp", filter_help_command))
