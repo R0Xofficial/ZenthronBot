@@ -207,8 +207,6 @@ async def main() -> None:
         application.bot_data["telethon_client"] = telethon_client
         logger.info("Telethon client has been injected into bot_data.")
 
-        load_modules(application)
-
         if application.job_queue:
             application.job_queue.run_once(send_startup_log, when=1)
             logger.info("Startup message job scheduled to run in 1 second.")
