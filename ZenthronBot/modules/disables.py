@@ -7,7 +7,7 @@ from collections import defaultdict
 from ..core.constants import DISABLES_HELP_TEXT
 from ..core.database import disable_command_in_chat, enable_command_in_chat, get_disabled_commands_in_chat
 from ..core.utils import safe_escape, _can_user_perform_action, send_safe_reply
-from ..core.decorators import check_module_enabled
+from ..core.decorators import check_module_enabled, command_control
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +101,7 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     await update.message.reply_html(message)
 
 @check_module_enabled("disables")
+@command_control("disableshelp")
 async def disables_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_html(DISABLES_HELP_TEXT)
 
