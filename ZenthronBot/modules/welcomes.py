@@ -13,7 +13,7 @@ from ..core.database import (
 )
 from ..core.utils import _can_user_perform_action, send_safe_reply, safe_escape, format_message_text, send_critical_log
 from ..core.constants import OWNER_WELCOME_TEXTS, DEV_WELCOME_TEXTS, SUDO_WELCOME_TEXTS, SUPPORT_WELCOME_TEXTS, GENERIC_WELCOME_TEXTS, GENERIC_GOODBYE_TEXTS
-from ..core.decorators import check_module_enabled
+from ..core.decorators import check_module_enabled, command_control
 
 logger = logging.getLogger(__name__)
 
