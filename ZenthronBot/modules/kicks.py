@@ -5,7 +5,7 @@ from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, create_user_html_link, send_safe_reply, safe_escape
-from ..core.decorators import check_module_enabled. command_control
+from ..core.decorators import check_module_enabled, command_control
 
 logger = logging.getLogger(__name__)
 
