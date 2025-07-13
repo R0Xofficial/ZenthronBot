@@ -1,5 +1,6 @@
 import sqlite3
 import logging
+import json
 from datetime import datetime, timezone
 from typing import List, Tuple
 from telegram import User
@@ -136,9 +137,17 @@ def init_db():
                 PRIMARY KEY (chat_id, command_name)
             )
         """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS chat_join_settings (
+                chat_id INTEGER PRIMARY KEY,
+                filters TEXT,
+                action TEXT NOT NULL DEFAULT 'kick'
+            )
+        """)
         
         conn.commit()
-        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, whitelist_users, support_users, sudo_users, dev_users, global_bans, bot_chats, notes, warnings, afk_users, disable_modules, disabled_commands_per_chat ensured).")
+        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, whitelist_users, support_users, sudo_users, dev_users, global_bans, bot_chats, notes, warnings, afk_users, disable_modules, disabled_commands_per_chat, chat_join_settings ensured).")
     except sqlite3.Error as e:
         logger.error(f"SQLite error during DB initialization: {e}", exc_info=True)
     finally:
@@ -960,4 +969,42 @@ def clear_afk(user_id: int) -> bool:
             return cursor.rowcount > 0
     except sqlite3.Error as e:
         logger.error(f"Error clearing AFK status for user {user_id}: {e}")
+        return False
+
+# --- JOINFILTERS ---
+def get_chat_join_settings(chat_id: int) -> tuple[list[str], str]:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT filters, action FROM chat_join_settings WHERE chat_id = ?", (chat_id,))
+            row = cursor.fetchone()
+            if row:
+                filters_json, action = row
+                filters_list = json.loads(filters_json) if filters_json else []
+                return filters_list, action
+            else:
+                return [], 'kick'
+    except (sqlite3.Error, json.JSONDecodeError) as e:
+        logger.error(f"Error getting join settings for chat {chat_id}: {e}")
+        return [], 'kick'
+
+def update_chat_join_settings(chat_id: int, filters: list[str] | None = None, action: str | None = None) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            
+            current_filters, current_action = get_chat_join_settings(chat_id)
+
+            new_filters = filters if filters is not None else current_filters
+            new_action = action if action is not None else current_action
+
+            filters_json = json.dumps(sorted(list(set(new_filters))))
+
+            cursor.execute(
+                "INSERT OR REPLACE INTO chat_join_settings (chat_id, filters, action) VALUES (?, ?, ?)",
+                (chat_id, filters_json, new_action)
+            )
+        return True
+    except (sqlite3.Error, json.JSONDecodeError) as e:
+        logger.error(f"Error updating join settings for chat {chat_id}: {e}")
         return False
