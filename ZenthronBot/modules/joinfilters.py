@@ -50,7 +50,7 @@ async def add_filter_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
   
     if not await _can_user_perform_action(update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission.", allow_bot_privileged_override=False): return
-    if not context.args: await update.message.reply_html("<b>Usage:</b> /addjoinfilter <keyword>"); return
+    if not context.args: await update.message.reply_html("<b>Usage:</b> /addjoinfilter &lt:filter&gt;"); return
     
     chat_id = update.effective_chat.id
     filters, _ = get_chat_join_settings(chat_id)
@@ -74,7 +74,7 @@ async def remove_filter_command(update: Update, context: ContextTypes.DEFAULT_TY
         return
   
     if not await _can_user_perform_action(update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission.", allow_bot_privileged_override=False): return
-    if not context.args: await update.message.reply_html("<b>Usage:</b> /deljoinfilter <keyword>"); return
+    if not context.args: await update.message.reply_html("<b>Usage:</b> /deljoinfilter &lt:filter&gt;"); return
 
     chat_id = update.effective_chat.id
     filters, _ = get_chat_join_settings(chat_id)
@@ -128,7 +128,7 @@ async def set_action_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     action_to_set = context.args[0].lower() if context.args else None
     
     if action_to_set not in actions:
-        await update.message.reply_html("<b>Usage:</b> /setjoinaction <ban|kick|mute>"); return
+        await update.message.reply_html("<b>Usage:</b> /setjoinaction &lt:ban/mute/kick&gt;"); return
         
     if update_chat_join_settings(update.effective_chat.id, action=action_to_set):
         await update.message.reply_text(f"✅ Join filter action has been set to <b>{action_to_set.upper()}</b>.", parse_mode=ParseMode.HTML)
