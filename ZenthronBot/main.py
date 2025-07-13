@@ -66,6 +66,7 @@ def discover_and_register_handlers(application: Application):
                 
                 if hasattr(module, "load_handlers"):
                     module.load_handlers(application)
+                    logger.info(f"Successfully loaded module: {module_name}")
                 
                 for attr_name in dir(module):
                     attr = getattr(module, attr_name)
@@ -75,9 +76,13 @@ def discover_and_register_handlers(application: Application):
                         
             except Exception as e:
                 logger.error(f"Error processing module {module_name}: {e}")
+                traceback.print_exc()
     
     application.bot_data["manageable_commands"] = manageable_commands
-    logger.info(f"Registered manageable commands: {sorted(list(manageable_commands))}")
+    if manageable_commands:
+        logger.info(f"Registered manageable commands: {sorted(list(manageable_commands))}")
+    else:
+        logger.info("No manageable commands found.")
 
 def _get_available_modules():
     try:
