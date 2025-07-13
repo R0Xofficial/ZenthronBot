@@ -1,16 +1,18 @@
 import logging
 import re
 import json
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, User, Chat
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from telegram.constants import ParseMode, ChatType
 
 from ..core.database import add_or_update_filter, remove_filter, get_all_filters_for_chat
-from ..core.utils import _can_user_perform_action, safe_escape, create_user_html_link
+from ..core.utils import _can_user_perform_action, safe_escape
+from ..core.decorators import check_module_enabled
 
 logger = logging.getLogger(__name__)
 
-def fill_reply_template(text: str | None, user: 'User', chat: 'Chat') -> str:
+
+def fill_reply_template(text: str | None, user: User, chat: Chat) -> str:
     if not text:
         return ""
     
@@ -21,6 +23,7 @@ def fill_reply_template(text: str | None, user: 'User', chat: 'Chat') -> str:
                .replace('{id}', str(user.id))\
                .replace('{chatname}', safe_escape(chat.title or "this chat"))
 
+@check_module_enabled("filters")
 async def send_filter_reply(update: Update, context: ContextTypes.DEFAULT_TYPE, filter_data: dict):
     user = update.effective_user
     chat = update.effective_chat
@@ -28,14 +31,25 @@ async def send_filter_reply(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     reply_text = fill_reply_template(filter_data.get('reply_text'), user, chat)
     reply_type = filter_data.get('reply_type', 'text')
     file_id = filter_data.get('file_id')
-    
+    buttons_json = filter_data.get('buttons')
     reply_markup = None
+
+    if buttons_json:
+        try:
+            buttons_data = json.loads(buttons_json)
+            keyboard = [
+                [InlineKeyboardButton(text, url=url) for text, url in row]
+                for row in buttons_data
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            logger.warning(f"Could not parse buttons for filter '{filter_data.get('keyword')}': {e}")
 
     try:
         target_message = update.effective_message
         
         if reply_type == 'text':
-            await target_message.reply_html(reply_text, reply_markup=reply_markup)
+            await target_message.reply_html(reply_text, reply_markup=reply_markup, disable_web_page_preview=True)
         elif reply_type == 'photo':
             await target_message.reply_photo(file_id, caption=reply_text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
         elif reply_type == 'sticker':
@@ -48,50 +62,105 @@ async def send_filter_reply(update: Update, context: ContextTypes.DEFAULT_TYPE, 
             await target_message.reply_voice(file_id, caption=reply_text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
         elif reply_type == 'document':
             await target_message.reply_document(file_id, caption=reply_text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+    
     except Exception as e:
-        logger.error(f"Failed to send filter reply for keyword '{filter_data['keyword']}': {e}")
+        logger.error(f"Failed to send filter reply for keyword '{filter_data.get('keyword')}': {e}")
         if reply_text:
-            await target_message.reply_html(f"<i>(Error sending media, showing text instead)</i>\n{reply_text}")
+            await update.effective_message.reply_html(f"<i>(Error sending media for this filter, showing text instead)</i>\n\n{reply_text}")
 
+@check_module_enabled("filters")
 async def check_message_for_filters(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not update.effective_chat or not update.effective_message or not update.effective_message.text:
+    chat = update.effective_chat
+    message = update.effective_message
+
+    if not chat or not message or not message.text or chat.type == ChatType.PRIVATE:
         return
 
-    if 'filters_cache' not in context.chat_data or context.chat_data.get('filters_last_update', 0) < (context.application.run_time.timestamp() - 60):
-        context.chat_data['filters_cache'] = get_all_filters_for_chat(update.effective_chat.id)
-        context.chat_data['filters_last_update'] = context.application.run_time.timestamp()
-
+    current_time = context.application.run_time.timestamp()
+    if 'filters_cache' not in context.chat_data or context.chat_data.get('filters_last_update', 0) < (current_time - 60):
+        context.chat_data['filters_cache'] = get_all_filters_for_chat(chat.id)
+        context.chat_data['filters_last_update'] = current_time
+    
     all_filters = context.chat_data.get('filters_cache', [])
     if not all_filters:
         return
     
-    message_text_lower = update.effective_message.text.lower()
-    
+    message_text = message.text
+
     for f in all_filters:
         keyword = f['keyword']
         filter_type = f['filter_type']
         
         match = False
-        if filter_type == 'keyword' and re.search(r'\b' + re.escape(keyword) + r'\b', message_text_lower, re.IGNORECASE):
-            match = True
-        
+        try:
+            if filter_type == 'keyword':
+                if re.search(r'\b' + re.escape(keyword) + r'\b', message_text, re.IGNORECASE):
+                    match = True
+            
+            elif filter_type == 'wildcard':
+                pattern = re.escape(keyword).replace(r'\*', '.*')
+                if re.search(pattern, message_text, re.IGNORECASE):
+                    match = True
+            
+            elif filter_type == 'regex':
+                if re.search(keyword, message_text, re.IGNORECASE):
+                    match = True
+
+        except re.error as e:
+            logger.warning(f"Invalid regex pattern in filter for chat {chat.id}: {keyword} | Error: {e}")
+            continue
+
         if match:
             await send_filter_reply(update, context, f)
             return
 
+@check_module_enabled("filters")
 async def add_filter_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    can_manage = await _can_user_perform_action(update, context, 'can_manage_chat', "You need admin rights to manage filters.")
-    if not can_manage: return
+    chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't add filter in private chat...")
+        return
+    
+    can_manage = await _can_user_perform_action(
+        update, context, 'can_manage_chat', "You need admin rights to manage filters."
+    )
+    if not can_manage:
+        return
 
     msg = update.effective_message
-    
+    args = msg.text.split(None, 1)
+
+    if len(args) < 2:
+        await msg.reply_html(
+            "<b>Usage:</b>\n"
+            "• <code>/addfilter 'keyword' Your reply text</code>\n"
+            "• <code>/addfilter type:wildcard 'key*' Reply</code>\n"
+            "• Reply to a message/media with <code>/addfilter 'keyword'</code>"
+        )
+        return
+
+    full_args_text = args[1]
+    filter_type = 'keyword'
+
+    if full_args_text.lower().startswith('type:'):
+        try:
+            type_part, keyword_part = full_args_text.split("'", 1)
+            type_value = type_part.split(':')[1].strip().lower()
+            if type_value in ['wildcard', 'regex']:
+                filter_type = type_value
+            full_args_text = "'" + keyword_part
+        except (ValueError, IndexError):
+            await msg.reply_html("Invalid type format. Use <code>type:wildcard</code> or <code>type:regex</code>.")
+            return
+
     try:
-        keyword = msg.text.split("'", 2)[1]
+        keyword = full_args_text.split("'", 2)[1]
     except IndexError:
-        await msg.reply_html("<b>Usage:</b> /addfilter 'keyword' <reply>\n<i>(You can also reply to a message/media with the keyword)</i>")
+        await msg.reply_html("You need to wrap your keyword in single quotes, e.g., 'hello'.")
         return
         
-    filter_data = {'filter_type': 'keyword'}
+    filter_data = {'filter_type': filter_type}
     
     replied_msg = msg.reply_to_message
     if replied_msg:
@@ -113,24 +182,33 @@ async def add_filter_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
             filter_data['reply_type'] = 'text'
     else:
         try:
-            filter_data['reply_text'] = msg.text.split(f"'{keyword}'", 1)[1].strip()
+            filter_data['reply_text'] = full_args_text.split(f"'{keyword}'", 1)[1].strip()
             filter_data['reply_type'] = 'text'
             if not filter_data['reply_text']:
                  raise IndexError
         except IndexError:
-            await msg.reply_html("You need to provide a reply text after the keyword, or reply to a message.")
+            await msg.reply_html("You must provide a reply text after the keyword, or reply to a message.")
             return
 
     if add_or_update_filter(msg.chat_id, keyword, filter_data):
         context.chat_data.pop('filters_cache', None)
-        await msg.reply_text(f"✅ Filter for '<code>{safe_escape(keyword)}</code>' has been saved.", parse_mode=ParseMode.HTML)
+        await msg.reply_text(f"✅ Filter for '<code>{safe_escape(keyword)}</code>' has been saved with type <code>{filter_type}</code>.", parse_mode=ParseMode.HTML)
     else:
         await msg.reply_text("An error occurred while saving the filter.")
 
-
+@check_module_enabled("filters")
 async def remove_filter_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    can_manage = await _can_user_perform_action(update, context, 'can_manage_chat', "You need admin rights to manage filters.")
-    if not can_manage: return
+    chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't remove filter in private chat...")
+        return
+        
+    can_manage = await _can_user_perform_action(
+        update, context, 'can_manage_chat', "You need admin rights to manage filters."
+    )
+    if not can_manage:
+        return
 
     try:
         keyword_to_remove = update.message.text.split("'", 2)[1]
@@ -142,12 +220,21 @@ async def remove_filter_command(update: Update, context: ContextTypes.DEFAULT_TY
         context.chat_data.pop('filters_cache', None)
         await update.message.reply_text(f"✅ Filter for '<code>{safe_escape(keyword_to_remove)}</code>' has been removed.", parse_mode=ParseMode.HTML)
     else:
-        await update.message.reply_text("This filter doesn't exist or an error occurred.")
+        await update.message.reply_text("This filter doesn't exist or an error occurred while removing it.")
 
-
+@check_module_enabled("filters")
 async def list_filters_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    can_see = await _can_user_perform_action(update, context, 'can_manage_chat', "You need admin rights to see the filter list.")
-    if not can_see: return
+    chat = update.effective_chat
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't list filters in private chat...")
+        return
+    
+    can_see = await _can_user_perform_action(
+        update, context, 'can_manage_chat', "You need admin rights to see the filter list."
+    )
+    if not can_see:
+        return
     
     all_filters = get_all_filters_for_chat(update.effective_chat.id)
     if not all_filters:
@@ -155,12 +242,21 @@ async def list_filters_command(update: Update, context: ContextTypes.DEFAULT_TYP
         return
         
     message = "<b>Active filters in this chat:</b>\n\n"
-    for f in sorted(all_filters, key=lambda x: x['keyword']):
-        message += f"• <code>{safe_escape(f['keyword'])}</code>\n"
+    filters_by_type = {'keyword': [], 'wildcard': [], 'regex': []}
+    for f in all_filters:
+        filters_by_type[f['filter_type']].append(f['keyword'])
+        
+    for f_type, keywords in filters_by_type.items():
+        if keywords:
+            message += f"<b>{f_type.capitalize()}:</b>\n"
+            for keyword in sorted(keywords):
+                message += f"• <code>{safe_escape(keyword)}</code>\n"
+            message += "\n"
+
     await update.message.reply_html(message)
 
 
-def load_handlers(application: Application):
-    application.add_handler(CommandHandler("addfilter", add_filter_command))
-    application.add_handler(CommandHandler("delfilter", remove_filter_command))
+def load_handlers(application: Application):  
+    application.add_handler(CommandHandler(["addfilter", "filter"], add_filter_command))
+    application.add_handler(CommandHandler(["delfilter", "stop"], remove_filter_command))
     application.add_handler(CommandHandler("filters", list_filters_command))
