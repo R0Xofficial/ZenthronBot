@@ -23,6 +23,8 @@ async def check_gban_on_entry(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not new_members or not chat or not is_gban_enforced(chat.id):
         return
 
+    user_banned = False
+    
     for member in new_members:
         gban_reason = get_gban_reason(member.id)
         if gban_reason and not is_privileged_user(member.id):
@@ -38,9 +40,12 @@ async def check_gban_on_entry(update: Update, context: ContextTypes.DEFAULT_TYPE
                     f"<b>Appeal Chat:</b> {APPEAL_CHAT_USERNAME}"
                 )
                 await context.bot.send_message(chat.id, text=message_text, parse_mode=ParseMode.HTML)
-                raise ApplicationHandlerStop
+                user_banned = True
             except Exception as e:
                 logger.error(f"Failed to enforce gban on new member {member.id} in {chat.id}: {e}")
+
+            if user_banned:
+                raise ApplicationHandlerStop
 
 @check_module_enabled("globalbans")
 async def check_gban_on_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -59,6 +64,8 @@ async def check_gban_on_message(update: Update, context: ContextTypes.DEFAULT_TY
     gban_reason = get_gban_reason(user.id)
     if gban_reason:
         message = update.effective_message
+
+        user_banned = False
         
         try:
             bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
@@ -84,9 +91,12 @@ async def check_gban_on_message(update: Update, context: ContextTypes.DEFAULT_TY
                     f"<b>Appeal Chat:</b> {APPEAL_CHAT_USERNAME}"
                 )
                 await context.bot.send_message(chat.id, text=message_text, parse_mode=ParseMode.HTML)
-                raise ApplicationHandlerStop
+                user_banned = True
         except Exception as e:
             logger.error(f"Failed to take gban action on message for user {user.id} in chat {chat.id}: {e}")
+
+        if user_banned:
+            raise ApplicationHandlerStop
 
 @check_module_enabled("globalbans")
 async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
