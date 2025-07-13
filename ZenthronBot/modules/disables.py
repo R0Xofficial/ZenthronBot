@@ -28,14 +28,14 @@ async def disable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     
     if not command_to_disable or command_to_disable not in manageable_commands:
         await update.message.reply_html(
-            f"<b>Usage:</b> /disable <command_name>\n"
+            f"<b>Usage:</b> /disable &lt;command name&gt;\n"
             f"This command doesn't exist or cannot be managed."
         )
         return
 
     if disable_command_in_chat(update.effective_chat.id, command_to_disable):
         await update.message.reply_text(
-            f"✅ Command <code>/{safe_escape(command_to_disable)}</code> is now disabled for non-admins in this chat.",
+            f"✅ Command <code>{safe_escape(command_to_disable)}</code> is now disabled for non-admins in this chat.",
             parse_mode=ParseMode.HTML
         )
     else:
@@ -59,12 +59,12 @@ async def enable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     command_to_enable = context.args[0].lower().lstrip('') if context.args else ""
     
     if not command_to_enable or command_to_enable not in manageable_commands:
-        await update.message.reply_html("<b>Usage:</b> /enable <command_name>\nThat command doesn't exist or isn't managed.")
+        await update.message.reply_html("<b>Usage:</b> /enable &lt;command name&gt;\nThat command doesn't exist or isn't managed.")
         return
         
     if enable_command_in_chat(update.effective_chat.id, command_to_enable):
         await update.message.reply_text(
-            f"✅ Command <code>/{safe_escape(command_to_enable)}</code> is now enabled for everyone in this chat.",
+            f"✅ Command <code>{safe_escape(command_to_enable)}</code> is now enabled for everyone in this chat.",
             parse_mode=ParseMode.HTML
         )
     else:
