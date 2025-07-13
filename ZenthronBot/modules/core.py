@@ -301,7 +301,7 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     except Exception as e:
          logger.error(f"Unexpected error getting chat info for {target_chat_id} in /echo: {e}", exc_info=True)
 
-    logger.info(f"Privileged user ({user.id}) using /say. Target: {target_chat_id} ('{chat_title}'). Is remote: {is_remote_send}. Msg start: '{message_to_say[:50]}...'")
+    logger.info(f"Privileged user ({user.id}) using /echo. Target: {target_chat_id} ('{chat_title}'). Is remote: {is_remote_send}. Msg start: '{message_to_say[:50]}...'")
 
     try:
         await context.bot.send_message(chat_id=target_chat_id, text=message_to_say)
