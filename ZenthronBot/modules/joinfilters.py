@@ -47,6 +47,13 @@ async def check_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                             text=f"User {user_link} has been <b>kicked</b>. {reason}",
                             parse_mode=ParseMode.HTML
                         )
+                    except Exception as e:
+                        logger.error(f"Failed to perform kick for user {member.id} in chat {chat.id}: {e}")
+                        await context.bot.send_message(
+                            chat_id=chat.id,
+                            text=f"Failed to kick {user_link}. Please check my permissions.",
+                            parse_mode=ParseMode.HTML
+                        )
                 elif action_to_take == "mute":
                     await context.bot.restrict_chat_member(chat.id, member.id, ChatPermissions(can_send_messages=False))
                     await context.bot.send_message(
