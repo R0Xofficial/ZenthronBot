@@ -181,6 +181,7 @@ async def reset_goodbye_command(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text("Failed to reset goodbye message.")
 
 @check_module_enabled("welcomes")
+@command_control("welcomehelp")
 async def welcome_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     help_text = """
 <b>Welcome Message Help</b>
