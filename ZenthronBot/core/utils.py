@@ -309,7 +309,7 @@ async def _can_user_perform_action(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
     permission: str,
-    failure_message: str,
+    failure_message: str | None, 
     allow_bot_privileged_override: bool = True
 ) -> bool:
     user = update.effective_user
@@ -332,7 +332,9 @@ async def _can_user_perform_action(
         await send_safe_reply(update, context, text="Error: Couldn't verify your permissions due to an API error.")
         return False
 
-    await send_safe_reply(update, context, text=failure_message)
+    if failure_message is not None:
+        await send_safe_reply(update, context, text=failure_message)
+        
     return False
 
 # --- LOG ---
