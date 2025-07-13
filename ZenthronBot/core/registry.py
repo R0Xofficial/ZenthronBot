@@ -1,1 +1,0 @@
-MANAGEABLE_COMMANDS = set()
