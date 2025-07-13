@@ -115,6 +115,44 @@ brb - Set afk status.
 <i>The remaining disables functions are single commands</i>
 """
 
+FILTERS_HELP_TEXT = """
+<b>Filters Module Help</b>
+
+This module allows you to set up automatic replies for specific keywords or patterns in your chat.
+
+<b>🔹 Commands:</b>
+• <code>/addfilter 'keyword' <reply></code> - Adds a new filter. The reply can be text or a replied-to media.
+• <code>/delfilter 'keyword'</code> - Deletes a filter.
+• <code>/filters</code> - Lists all active filters in the chat.
+
+<b>🔹 Filter Types:</b>
+You can specify a filter type before the keyword. If no type is given, it defaults to <code>keyword</code>.
+
+🔹 <b>Keyword (default):</b>
+Matches an exact word or phrase.
+<code>/addfilter 'hello' Hello there, {first}!</code>
+
+🔹 <b>Wildcard:</b>
+Uses <code>*</code> as a placeholder for any characters.
+<code>/addfilter type:wildcard 'good*' Have a good day!</code>
+(This will trigger on "good morning", "goodbye", etc.)
+
+🔹 <b>Regex:</b>
+Uses powerful regular expressions for advanced matching.
+<code>/addfilter type:regex '(hello|hi|hey)' Hello!</code>
+(This will trigger on "hello", "hi", or "hey")
+
+<b>🔹 Media & Dynamic Fills:</b>
+- To create a filter with a media reply (photo, sticker, GIF), simply reply to that media with <b>/addfilter 'keyword'</b>.
+- You can use these placeholders in your replies:
+  <code>{first}</code> - User's first name
+  <code>{last}</code> - User's last name
+  <code>{fullname}</code> - User's full name
+  <code>{username}</code> - User's @username or mention
+  <code>{id}</code> - User's ID
+  <code>{chatname}</code> - Name of the current chat
+"""
+
 NOTES = """
 /notes - See all notes in this chat.
 /addnote &lt;name&gt; [content] - Create a new note.
