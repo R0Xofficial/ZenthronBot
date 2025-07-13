@@ -25,6 +25,9 @@ def check_module_enabled(module_name: str):
 
 def command_control(command_name: str):
     def decorator(func):
+        setattr(func, '_is_manageable', True)
+        setattr(func, '_command_name', command_name)
+        
         @wraps(func)
         async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
             chat = update.effective_chat
