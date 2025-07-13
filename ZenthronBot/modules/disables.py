@@ -99,12 +99,25 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         
     await update.message.reply_html(message)
 
+@check_module_enabled("disables")
 async def disables_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    chat = update.effective_chat
 
-    can_see_help = await _can_user_perform_action(
-        update, context, 'can_manage_chat', "You must be an admin to see this help."
-    )
+    can_see_help = False
+    if chat.type == ChatType.PRIVATE:
+        if is_owner_or_dev(user.id):
+            can_see_help = True
+    else:
+        is_admin_in_chat = await _can_user_perform_action(
+            update, context, 'can_manage_chat', ""
+        )
+        if is_admin_in_chat:
+            can_see_help = True
+
     if not can_see_help:
+        if chat.type != ChatType.PRIVATE:
+            await update.message.reply_text("Only chat admins can use this command.")
         return
 
     command_registry = context.bot_data.get("manageable_commands", {})
@@ -120,7 +133,7 @@ async def disables_help_command(update: Update, context: ContextTypes.DEFAULT_TY
         commands_by_module[module_name].append(f"<code>/{cmd_name}</code> - {safe_escape(description)}")
 
     help_message = "<b>Help for manageable commands</b>\n\n"
-    help_message += "You can disable commands for non-admins in this chat using /disable <command_name>.\nHere's what each command does:\n\n"
+    help_message += "In a group, you can disable commands for non-admins using /disable <command_name>.\nHere's what each command does:\n\n"
 
     for module_name in sorted(commands_by_module.keys()):
         help_message += f"<b>🔹 Module: {safe_escape(module_name)}</b>\n"
