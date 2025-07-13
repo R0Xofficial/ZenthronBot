@@ -5,72 +5,57 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..core.database import disable_command_in_chat, enable_command_in_chat, get_disabled_commands_in_chat
 from ..core.utils import safe_escape, _can_user_perform_action
-from ..core.decorators import check_module_enabled
+from ..core.registry import MANAGEABLE_COMMANDS
 
 logger = logging.getLogger(__name__)
 
-@check_module_enabled("disables")
 async def disable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat = update.effective_chat
-    
-    if chat.type == ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="Huh? You can't disable commands in private chat...")
-        return
     
     can_disable = await _can_user_perform_action(
-        update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission."
+        update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission.", allow_bot_privileged_override=False
     )
     if not can_disable:
         return
 
-    if not context.args or len(context.args) != 1:
-        await update.message.reply_html("<b>Usage:</b> /disable &lt:command name&gt;")
+    command_name_to_disable = context.args[0].lower().lstrip('/') if context.args else ""
+    
+    if not command_name_to_disable or command_name_to_disable not in MANAGEABLE_COMMANDS:
+        await update.message.reply_html(
+            f"<b>Usage:</b> /disable &lt;command name&gt;\n"
+            f"This command doesn't exist or cannot be managed."
+        )
         return
 
-    command_name = context.args[0].lower().lstrip('/')
-    if disable_command_in_chat(update.effective_chat.id, command_name):
+    if disable_command_in_chat(update.effective_chat.id, command_name_to_disable):
         await update.message.reply_text(
-            f"✅ Command <code>/{safe_escape(command_name)}</code> is now disabled for non-admins in this chat.",
+            f"✅ Command <code>/{safe_escape(command_name_to_disable)}</code> is now disabled for non-admins in this chat.",
             parse_mode=ParseMode.HTML
         )
     else:
         await update.message.reply_text("This command was already disabled or an error occurred.")
 
-@check_module_enabled("disables")
 async def enable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat = update.effective_chat
-    
-    if chat.type == ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="Huh? You can't enable commands in private chat...")
-        return
-        
     can_enable = await _can_user_perform_action(
-        update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission."
+        update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission.", allow_bot_privileged_override=False
     )
     if not can_enable:
         return
     
-    if not context.args or len(context.args) != 1:
-        await update.message.reply_html("<b>Usage:</b> /enable &lt:command name&gt;")
+    command_name_to_enable = context.args[0].lower().lstrip('/') if context.args else ""
+    
+    if not command_name_to_enable or command_name_to_enable not in MANAGEABLE_COMMANDS:
+        await update.message.reply_html("<b>Usage:</b> /enable &lt;command name&gt;\nThat command doesn't exist or isn't managed.")
         return
         
-    command_name = context.args[0].lower().lstrip('/')
-    if enable_command_in_chat(update.effective_chat.id, command_name):
+    if enable_command_in_chat(update.effective_chat.id, command_name_to_enable):
         await update.message.reply_text(
-            f"✅ Command <code>/{safe_escape(command_name)}</code> is now enabled for everyone in this chat.",
+            f"✅ Command <code>/{safe_escape(command_name_to_enable)}</code> is now enabled for everyone in this chat.",
             parse_mode=ParseMode.HTML
         )
     else:
         await update.message.reply_text("This command was already enabled or an error occurred.")
 
-@check_module_enabled("disables")
 async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat = update.effective_chat
-    
-    if chat.type == ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="Huh? You can't group settings in private chat...")
-        return
-    
     can_see_settings = await _can_user_perform_action(
         update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission."
     )
@@ -79,12 +64,11 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     disabled_commands = get_disabled_commands_in_chat(update.effective_chat.id)
     
-    if not disabled_commands:
-        message = f"<b>Settings for {safe_escape(update.effective_chat.title)}:</b>\n\nAll commands are currently enabled for everyone."
-    else:
-        message = f"<b>Settings for {safe_escape(update.effective_chat.title)}:</b>\n\nThe following commands are <b>disabled</b> for non-admins:\n"
-        for cmd in sorted(disabled_commands):
-            message += f"• <code>/{cmd}</code>\n"
+    message = f"<b>Settings for {safe_escape(update.effective_chat.title)}:</b>\n\n"
+    
+    for cmd in sorted(list(MANAGEABLE_COMMANDS)):
+        status = "🔴 Disabled (for non-admins)" if cmd in disabled_commands else "🟢 Enabled"
+        message += f"• <code>/{cmd}</code>: {status}\n"
         
     await update.message.reply_html(message)
 
