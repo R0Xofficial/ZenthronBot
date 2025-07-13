@@ -29,29 +29,53 @@ USER_CHAT_INFO = """
 """
 
 MODERATION_COMMANDS = """
+<b>🔹 Bans</b>
 /ban &lt;ID/@user/reply&gt; [Time] [Reason] - Ban a user.
 /unban &lt;ID/@user/reply&gt; - Unban a user.
+
+<b>🔹 Mutes</b>
 /mute &lt;ID/@user/reply&gt; [Time] [Reason] - Mute a user.
 /unmute &lt;ID/@user/reply&gt; - Unmute a user.
+
+<b>🔹 Kicks</b>
 /kick &lt;ID/@user/reply&gt; [Reason] - Kick a user.
 /kickme - Kick yourself from the chat.
+
+<b>🔹 Warns</b>
 /warn &lt;ID/@user/reply&gt; [Reason] - Warn a user.
 /warnings &lt;ID/@user/reply&gt; - Check a user's warnings.
 /resetwarns &lt;ID/@user/reply&gt; - Reset user's warnings.
 """
 
 ADMIN_TOOLS = """
+<b>🔹 Promotes</b>
 /promote &lt;ID/@user/reply&gt; [Title] - Promote a user to admin.
 /demote &lt;ID/@user/reply&gt; - Demote an admin.
+
+<b>🔹 Pins</b>
 /pin &lt;loud/notify&gt; - Pin the replied-to message.
 /unpin - Unpin the currently pinned message.
+
+<b>🔹 Purges</b>
 /purge &lt;silent&gt; - Delete messages up to the replied-to message.
+
+<b>🔹 Reports</b>
 /report &lt;reason&gt; - Report a user to the chat admins (reply to a message).
+
+<b>🔹 Zombies</b>
 /zombies &lt;clean&gt; - Find and optionally remove deleted accounts.
+
+<b>🔹 Disables</b>
 /enable &lt:command name&gt; - Enable commands for all chat non-admin users.
 /disable &lt:command name&gt; - Disable commands for all chat non-admin users.
 /settings - Check your chat command settings.
 /disableshelp - Get a specific list of commands lib command packages to disable.
+
+<b>🔹 Joinfilters</b>
+/addjoinfilter &lt:filter&gt; - Add a joinfilter for your group.
+/deljoinfilter &lt:filter&gt; - Remove joinfilter from your group.
+/joinfilters - View currently running joinfilters.
+/setjoinaction &lt:ban/mute/kick&gt; - Set actions for joinfilter.
 """
 
 DISABLES_HELP_TEXT = """
