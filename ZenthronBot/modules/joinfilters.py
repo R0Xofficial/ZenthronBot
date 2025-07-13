@@ -120,7 +120,7 @@ async def list_filters_command(update: Update, context: ContextTypes.DEFAULT_TYP
         await send_safe_reply(update, context, text="Huh? You can't list joinfilters in private chat...")
         return
   
-    if not await _can_user_perform_action(update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission.", allow_bot_privileged_override=False): return
+    if not await _can_user_perform_action(update, context, 'can_manage_chat', "Why should I listen to a person with no privileges for this? You need 'can_manage_chat' permission.", allow_bot_privileged_override=True): return
     
     filters, action = get_chat_join_settings(update.effective_chat.id)
     
