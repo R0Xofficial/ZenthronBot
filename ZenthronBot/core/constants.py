@@ -72,10 +72,10 @@ ADMIN_TOOLS = """
 /disableshelp - Get a specific list of commands lib command packages to disable.
 
 <b>🔹 Joinfilters</b>
-/addjoinfilter &lt;filter&gt; - Add a joinfilter for your group.
-/deljoinfilter &lt;filter&gt; - Remove joinfilter from your group.
-/joinfilters - View currently running joinfilters.
-/setjoinaction &lt;ban/mute/kick&gt; - Set actions for joinfilter.
+/addjoinfilter &lt;filter&gt; - Add a join filter for your group.
+/deljoinfilter &lt;filter&gt; - Remove join filter from your group.
+/joinfilters - View currently running join filters.
+/setjoinaction &lt;ban/mute/kick&gt; - Set actions for join filter.
 """
 
 DISABLES_HELP_TEXT = """
