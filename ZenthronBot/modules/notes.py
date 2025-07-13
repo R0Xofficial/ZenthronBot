@@ -5,7 +5,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 
 from ..core.database import add_note, get_all_notes, remove_note, get_note
 from ..core.utils import _can_user_perform_action, send_safe_reply, safe_escape
-from ..core.decorators import check_module_enabled. command_control
+from ..core.decorators import check_module_enabled, command_control
 
 logger = logging.getLogger(__name__)
 
