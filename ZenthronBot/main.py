@@ -53,23 +53,22 @@ async def ignore_edited_commands(update: Update, context: ContextTypes.DEFAULT_T
     logger.info(f"Ignoring edited command: {update.edited_message.text}")
     raise ApplicationHandlerStop
 
-def load_modules(application: Application) -> None:
-    base_path = os.path.dirname(os.path.abspath(__file__)) 
+def discover_and_load_modules():
+    loaded_modules = []
+    base_path = os.path.dirname(os.path.abspath(__file__))
     modules_dir = os.path.join(base_path, "modules")
 
-    for filename in os.listdir(modules_dir):
+    for filename in sorted(os.listdir(modules_dir)):
         if filename.endswith(".py") and not filename.startswith("_"):
             module_name = filename[:-3]
             try:
                 module = importlib.import_module(f"ZenthronBot.modules.{module_name}")
-                if hasattr(module, "load_handlers"):
-                    module.load_handlers(application)
-                    logger.info(f"Successfully loaded module: {module_name}")
-                else:
-                    logger.warning(f"Module {module_name} does not have a load_handlers function.")
+                loaded_modules.append(module)
+                logger.info(f"Discovered and loaded module: {module_name}")
             except Exception as e:
-                logger.error(f"Failed to load module {module_name}: {e}")
+                logger.error(f"Failed to discover module {module_name}: {e}")
                 traceback.print_exc()
+    return loaded_modules
 
 def _get_available_modules():
     try:
@@ -145,6 +144,10 @@ async def list_modules_command(update: Update, context: ContextTypes.DEFAULT_TYP
 async def main() -> None:
     init_db()
 
+    logger.info("--- Starting module discovery phase ---")
+    loaded_modules = discover_and_load_modules()
+    logger.info("--- Module discovery finished ---")
+
     async with TelegramClient(SESSION_NAME, API_ID, API_HASH) as telethon_client:
         logger.info("Telethon client started.")
 
@@ -190,6 +193,16 @@ async def main() -> None:
         application.add_handler(CommandHandler("disablemodule", disable_module_command))
         application.add_handler(CommandHandler("enablemodule", enable_module_command))
         application.add_handler(CommandHandler("listmodules", list_modules_command))
+
+        logger.info("--- Starting handler registration phase ---")
+        for module in loaded_modules:
+            if hasattr(module, "load_handlers"):
+                try:
+                    module.load_handlers(application)
+                    logger.info(f"Successfully registered handlers from: {module.__name__}")
+                except Exception as e:
+                    logger.error(f"Failed to register handlers from {module.__name__}: {e}")
+        logger.info("--- Handler registration finished ---")
 
         application.bot_data["telethon_client"] = telethon_client
         logger.info("Telethon client has been injected into bot_data.")
