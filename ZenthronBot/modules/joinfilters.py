@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from telegram import Update, ChatPermissions
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from telegram.constants import ParseMode, ChatType
@@ -40,15 +40,20 @@ async def check_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                     )
                 elif action_to_take == "kick":
                     try:
-                        await context.bot.ban_chat_member(chat_id=chat.id, user_id=member.id)
-                        await context.bot.unban_chat_member(chat_id=chat.id, user_id=member.id, only_if_banned=True)
+                        kick_duration = timedelta(minutes=1)
+                        unban_date = datetime.now(timezone.utc) + kick_duration
+                        await context.bot.ban_chat_member(
+                            chat_id=chat.id, 
+                            user_id=member.id, 
+                            until_date=unban_date
+                        )
                         await context.bot.send_message(
                             chat_id=chat.id,
-                            text=f"User {user_link} has been <b>kicked</b>. {reason}",
+                            text=f"User {user_link} has been <b>kicked</b> and cannot rejoin for 1 minute. {reason}",
                             parse_mode=ParseMode.HTML
                         )
                     except Exception as e:
-                        logger.error(f"Failed to perform kick for user {member.id} in chat {chat.id}: {e}")
+                        logger.error(f"Failed to perform timeout kick for user {member.id} in chat {chat.id}: {e}")
                         await context.bot.send_message(
                             chat_id=chat.id,
                             text=f"Failed to kick {user_link}. Please check my permissions.",
