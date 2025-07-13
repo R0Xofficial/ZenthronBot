@@ -102,20 +102,7 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 @check_module_enabled("disables")
 async def disables_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    
-    can_see_help = False
-    if update.effective_chat.type == ChatType.PRIVATE:
-        if is_owner_or_dev(update.effective_user.id):
-            can_see_help = True
-    else:
-        is_admin_in_chat = await _can_user_perform_action(
-            update, context, 'can_manage_chat', ""
-        )
-        if is_admin_in_chat:
-            can_see_help = True
-
-    if can_see_help:
-        await update.message.reply_html(DISABLES_HELP_TEXT)
+    await update.message.reply_html(DISABLES_HELP_TEXT)
 
 
 def load_handlers(application: Application):
