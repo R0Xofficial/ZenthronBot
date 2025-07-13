@@ -53,8 +53,8 @@ async def ignore_edited_commands(update: Update, context: ContextTypes.DEFAULT_T
     logger.info(f"Ignoring edited command: {update.edited_message.text}")
     raise ApplicationHandlerStop
 
-def discover_and_load_modules():
-    loaded_modules = []
+def discover_and_register_handlers(application: Application):
+    manageable_commands = set()
     base_path = os.path.dirname(os.path.abspath(__file__))
     modules_dir = os.path.join(base_path, "modules")
 
@@ -63,12 +63,21 @@ def discover_and_load_modules():
             module_name = filename[:-3]
             try:
                 module = importlib.import_module(f"ZenthronBot.modules.{module_name}")
-                loaded_modules.append(module)
-                logger.info(f"Discovered and loaded module: {module_name}")
+                
+                if hasattr(module, "load_handlers"):
+                    module.load_handlers(application)
+                
+                for attr_name in dir(module):
+                    attr = getattr(module, attr_name)
+                    if callable(attr) and hasattr(attr, '_is_manageable'):
+                        command_name = getattr(attr, '_command_name')
+                        manageable_commands.add(command_name)
+                        
             except Exception as e:
-                logger.error(f"Failed to discover module {module_name}: {e}")
-                traceback.print_exc()
-    return loaded_modules
+                logger.error(f"Error processing module {module_name}: {e}")
+    
+    application.bot_data["manageable_commands"] = manageable_commands
+    logger.info(f"Registered manageable commands: {sorted(list(manageable_commands))}")
 
 def _get_available_modules():
     try:
@@ -163,6 +172,7 @@ async def main() -> None:
 
         # --- GLOBAL LAYER: ERRORS - TRACEBACKS ---
         application.add_error_handler(error_handler)
+        discover_and_register_handlers(application)
 
         # --- LAYER 1: TOP PRIORITY - SECURITY AND IGNORANCE ---
         application.add_handler(ChatMemberHandler(handle_bot_permission_changes, ChatMemberHandler.MY_CHAT_MEMBER), group=-100)
