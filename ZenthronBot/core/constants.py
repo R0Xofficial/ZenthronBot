@@ -51,6 +51,44 @@ ADMIN_TOOLS = """
 /enable &lt:command name&gt; - Enable commands for all chat non-admin users.
 /disable &lt:command name&gt; - Disable commands for all chat non-admin users.
 /settings - Check your chat command settings.
+/disableshelp - Get a specific list of commands lib command packages to disable.
+"""
+
+DISABLES_HELP_TEXT = """
+<b>Help for manageable commands</b>
+
+You can disable/enable commands for non-admins in this chat.
+
+<b>Usage:</b>
+• <code>/disable <command></code>
+• <code>/enable <command></code>
+• <code>/settings</code> - Shows current settings.
+
+<b>🔹 Module: fun</b>
+/kill - Metaphorically eliminate someone.
+/punch - Deliver a textual punch.
+/slap - Administer a swift slap.
+/pat - Gently pat someone.
+/bonk - Playfully bonk someone.
+/cowsay - Generate ascii cow with optional text.
+/skull - Send ascii skull in chat.
+/ascii - Generate ascii text.
+
+<b>🔹 Module: notes</b>
+/notes - See all notes in this chat.
+#notename - Get note.
+
+<b>🔹 Module: afk</b>
+/afk - Set afk status.
+brb - Set afk status.
+
+<b>🔹 Module: misc</b>
+/start - Shows the welcome message.
+/help - Shows this help message.
+/github - Get the link to the bot's source code.
+/owner - Info about the bot owner.
+
+<i>The remaining disables functions are single commands</i>
 """
 
 NOTES = """
