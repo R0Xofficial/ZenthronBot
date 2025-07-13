@@ -1,7 +1,7 @@
 import logging
 from telegram import Update, ChatPermissions
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from telegram.constants import ParseMode
+from telegram.constants import ParseMode, ChatType
 
 from ..core.database import get_chat_join_settings, update_chat_join_settings
 from ..core.utils import _can_user_perform_action, safe_escape, create_user_html_link
