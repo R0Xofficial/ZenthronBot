@@ -477,6 +477,7 @@ def run_speed_test_blocking():
 def run_speed_test_async() -> str:
     return run_speed_test_blocking()
 
+# --- UNGBAN ---
 async def propagate_unban(context: ContextTypes.DEFAULT_TYPE) -> None:
     job_data = context.job.data
     target_user_id = job_data['target_user_id']
