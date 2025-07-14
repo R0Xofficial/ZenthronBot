@@ -1,14 +1,12 @@
 import asyncio
 import html
 import io
-import json
 import logging
 import platform
 import random
 import sqlite3
 import subprocess
 import time
-import traceback
 from datetime import datetime, timezone, timedelta
 from telegram import Update, User, Chat
 from telegram import __version__ as ptb_version
@@ -30,8 +28,7 @@ from ..core.database import (
 )
 from ..core.utils import (
     is_owner_or_dev, get_readable_time_delta, safe_escape, resolve_user_with_telethon,
-    create_user_html_link, send_operational_log, run_speed_test_blocking, is_privileged_user,
-    send_critical_log, run_speed_test_async
+    create_user_html_link, send_operational_log, run_speed_test_blocking, is_privileged_user, run_speed_test_async
 )
 from ..core.constants import LEAVE_TEXTS
 from ..core.decorators import check_module_enabled
@@ -1683,58 +1680,6 @@ async def unwhitelist_user_command(update: Update, context: ContextTypes.DEFAULT
             logger.error(f"Error sending #UNWHITELISTED log: {e}", exc_info=True)
     else:
         await update.message.reply_text("Failed to remove user from the whitelist.")
-
-async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
-    logger.error("Exception while handling an update:", exc_info=context.error)
-
-    tb_list = traceback.format_exception(None, context.error, context.error.__traceback__)
-    tb_string = "".join(tb_list)
-
-    update_str = update.to_dict() if isinstance(update, Update) else str(update)
-    pretty_update_str = json.dumps(update_str, indent=2, ensure_ascii=False)
-
-    full_log_content = (
-        f"An exception was raised while handling an update\n"
-        f"--------------------------------------------------\n"
-        f"Error: {str(context.error)}\n"
-        f"--------------------------------------------------\n"
-        f"Full Traceback:\n{tb_string}\n"
-        f"--------------------------------------------------\n"
-        f"Causing update:\n{pretty_update_str}"
-    )
-
-    log_file = io.BytesIO(full_log_content.encode('utf-8'))
-    log_file.name = f"error_log_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt"
-
-
-    chat_info = "N/A"
-    user_info = "N/A"
-    if isinstance(update, Update) and update.effective_chat:
-        chat_info = f"{update.effective_chat.title} (<code>{update.effective_chat.id}</code>)"
-    if isinstance(update, Update) and update.effective_user:
-        user_info = f"{update.effective_user.mention_html()} (<code>{update.effective_user.id}</code>)"
-
-    short_message = (
-        f"<b>🚨 Bot Error Detected!</b>\n\n"
-        f"<b>Error:</b>\n<code>{safe_escape(str(context.error))}</code>\n\n"
-        f"<b>Chat:</b> {chat_info}\n"
-        f"<b>User:</b> {user_info}\n\n"
-        f"<i>Full traceback and update data are in the attached file.</i>"
-    )
-
-    if ADMIN_LOG_CHAT_ID or OWNER_ID:
-        target_id = ADMIN_LOG_CHAT_ID or OWNER_ID
-        try:
-            await context.bot.send_document(
-                chat_id=target_id,
-                document=log_file,
-                caption=short_message,
-                parse_mode=ParseMode.HTML
-            )
-        except Exception as e:
-            logger.critical(f"CRITICAL: Could not send error log with file to {target_id}: {e}")
-            await send_critical_log(context, short_message)
-
 
 
 # --- HANDLER LOADER ---
