@@ -106,6 +106,9 @@ async def remove_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 @command_control("notes")
 async def handle_note_trigger(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+    message = update.effective_message
+    if message and message.text and message.text.startswith(('!', '/')):
+        return
     
     if not update.message or not update.message.text:
         return
