@@ -197,8 +197,8 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
         f"<i>Full traceback and update data are in the attached file.</i>"
     )
 
-    if ADMIN_LOG_CHAT_ID or OWNER_ID:
-        target_id = ADMIN_LOG_CHAT_ID or OWNER_ID
+    if OWNER_ID:
+        target_id = OWNER_ID
         try:
             await context.bot.send_document(
                 chat_id=target_id,
