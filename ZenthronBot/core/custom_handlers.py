@@ -27,6 +27,6 @@ class CustomPrefixHandler(CommandHandler):
                                 return True
                 return False
 
-        custom_filter = CustomPrefixFilter() & filters.COMMAND
+        custom_filter = CustomPrefixFilter()
         
         super().__init__(command, callback, filters=custom_filter, **kwargs)
