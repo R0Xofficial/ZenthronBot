@@ -6,6 +6,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, create_user_html_link, send_safe_reply, safe_escape
 from ..core.decorators import check_module_enabled, command_control
+from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -147,5 +148,6 @@ async def kickme_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    application.add_handler(CommandHandler("kick", kick_command))
-    application.add_handler(CommandHandler("kickme", kickme_command))
+    prefixes = ['/', '!']
+    application.add_handler(CustomPrefixHandler("kick", kick_command, custom_prefixes=prefixes))
+    application.add_handler(CustomPrefixHandler("kickme", kickme_command, custom_prefixes=prefixes))
