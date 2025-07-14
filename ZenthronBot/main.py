@@ -35,7 +35,7 @@ logging.getLogger('telethon').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 async def send_startup_log(context: ContextTypes.DEFAULT_TYPE) -> None:
-    startup_message_text = "<i>Bot Started...</i>"
+    startup_message_text = "I'm already up!"
     target_id_for_log = LOG_CHAT_ID or OWNER_ID
     
     if target_id_for_log:
