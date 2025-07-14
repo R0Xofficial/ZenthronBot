@@ -18,7 +18,7 @@ class DebugApplication(Application):
                     handler_name = handler.callback.__name__
                 
                 try:
-                    check = await handler.check_update(update)
+                    check = handler.check_update(update)
                     if check:
                         logger.critical(f"✅ [MATCH FOUND] Handler '{handler_name}' w grupie {group} złapał tę aktualizację.")
                     else:
