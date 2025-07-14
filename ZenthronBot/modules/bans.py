@@ -8,6 +8,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, ChatMemberHa
 from ..core.database import remove_chat_from_db
 from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, parse_duration_to_timedelta, create_user_html_link, send_safe_reply, safe_escape
 from ..core.decorators import check_module_enabled
+from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -187,5 +188,6 @@ async def handle_bot_banned(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    application.add_handler(CommandHandler("ban", ban_command))
-    application.add_handler(CommandHandler("unban", unban_command))
+    prefixes = ['/', '!']
+    application.add_handler(CustomPrefixHandler("ban", ban_command, custom_prefixes=prefixes))
+    application.add_handler(CustomPrefixHandler("unban", unban_command, custom_prefixes=prefixes))
