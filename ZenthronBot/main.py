@@ -171,6 +171,7 @@ async def main() -> None:
             ApplicationBuilder()
             .token(BOT_TOKEN)
             .request(custom_request_settings)
+            .application_class(DebugApplication)
             .job_queue(JobQueue())
             .build()
         )
