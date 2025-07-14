@@ -7,6 +7,7 @@ from telegram.constants import ParseMode, ChatType
 from ..core.database import get_chat_join_settings, update_chat_join_settings
 from ..core.utils import _can_user_perform_action, safe_escape, create_user_html_link, send_safe_reply
 from ..core.decorators import check_module_enabled
+from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +166,8 @@ async def set_action_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 
 def load_handlers(application: Application):    
-    application.add_handler(CommandHandler("addjoinfilter", add_filter_command))
-    application.add_handler(CommandHandler("deljoinfilter", remove_filter_command))
-    application.add_handler(CommandHandler("joinfilters", list_filters_command))
-    application.add_handler(CommandHandler("setjoinaction", set_action_command))
+    prefixes = ['/', '!']
+    application.add_handler(CustomPrefixHandler("addjoinfilter", add_filter_command, custom_prefixes=prefixes))
+    application.add_handler(CustomPrefixHandler("deljoinfilter", remove_filter_command, custom_prefixes=prefixes))
+    application.add_handler(CustomPrefixHandler("joinfilters", list_filters_command, custom_prefixes=prefixes))
+    application.add_handler(CustomPrefixHandler("setjoinaction", set_action_command, custom_prefixes=prefixes))
