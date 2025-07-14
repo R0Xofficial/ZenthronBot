@@ -547,7 +547,7 @@ async def global_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     bot_id = context.bot.id
     chat_title_display = chat_object_for_details.title or chat_object_for_details.first_name or f"Chat ID {target_chat_id}"
-    info_lines = [f"🔎 <b>Chat Information for: {safe_escape(chat_title_display)}</b>\n"]
+    info_lines = [f"🔎 <b>Global Chat Information for: {safe_escape(chat_title_display)}</b>\n"]
 
     info_lines.append(f"<b>• ID:</b> <code>{target_chat_id}</code>")
     info_lines.append(f"<b>• Type:</b> {chat_object_for_details.type.capitalize()}")
