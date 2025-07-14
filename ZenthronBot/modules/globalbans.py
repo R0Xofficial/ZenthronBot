@@ -44,6 +44,10 @@ async def check_gban_on_entry(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 @check_module_enabled("globalbans")
 async def check_gban_on_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    if message and message.text and message.text.startswith(('!', '/')):
+        return
+    
     if not update.effective_chat or update.effective_chat.type == ChatType.PRIVATE:
         return
     
