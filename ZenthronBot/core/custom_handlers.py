@@ -3,10 +3,6 @@ from telegram import Update
 from telegram.ext import CommandHandler, filters
 
 class CustomPrefixHandler(CommandHandler):
-    """
-    Niestandardowy CommandHandler, który pozwala na użycie
-    niestandardowych prefiksów (np. '!', '.') zamiast '/'.
-    """
     def __init__(self, command: str | list[str], callback, custom_prefixes: str | list[str] = '/', **kwargs):
         
         class CustomPrefixFilter(filters.BaseFilter):
