@@ -35,6 +35,7 @@ from ..core.utils import (
 )
 from ..core.constants import LEAVE_TEXTS
 from ..core.decorators import check_module_enabled
+from ..core.async_utils import run_speed_test_async
 
 logger = logging.getLogger(__name__)
 
@@ -465,7 +466,7 @@ async def speedtest_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     
     loop = asyncio.get_event_loop()
     try:
-        results = await loop.run_in_executor(None, run_speed_test_blocking)
+        results = await run_speed_test_async()
         await asyncio.sleep(4)
 
         if results and "error" not in results:
