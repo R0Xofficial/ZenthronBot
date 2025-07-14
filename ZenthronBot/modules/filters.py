@@ -77,7 +77,6 @@ async def check_message_for_filters(update: Update, context: ContextTypes.DEFAUL
 
     if not chat or not message or not message.text or chat.type == ChatType.PRIVATE:
         return
-
     current_time = time.time()
     if 'filters_cache' not in context.chat_data or context.chat_data.get('filters_last_update', 0) < (current_time - 60):
         context.chat_data['filters_cache'] = get_all_filters_for_chat(chat.id)
@@ -88,7 +87,6 @@ async def check_message_for_filters(update: Update, context: ContextTypes.DEFAUL
         return
     
     message_text = message.text
-
     for f in all_filters:
         keyword = f['keyword']
         filter_type = f['filter_type']
@@ -96,7 +94,10 @@ async def check_message_for_filters(update: Update, context: ContextTypes.DEFAUL
         match = False
         try:
             if filter_type == 'keyword':
-                if re.search(r'\b' + re.escape(keyword) + r'\b', message_text, re.IGNORECASE):
+                normalized_text = re.sub(r'[^\w\s]', '', message_text)
+                words_in_message = normalized_text.lower().split()
+                
+                if keyword.lower() in words_in_message:
                     match = True
             
             elif filter_type == 'wildcard':
