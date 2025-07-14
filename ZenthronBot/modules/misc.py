@@ -416,7 +416,7 @@ async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 @check_module_enabled("misc")
 @command_control("chatinfo")
-async def chat_sinfo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def chat_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Displays basic statistics about the current chat."""
     chat = update.effective_chat
     if not chat:
@@ -492,7 +492,7 @@ async def chat_sinfo_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await update.message.reply_html(message_text, disable_web_page_preview=True)
 
 @check_module_enabled("misc")
-async def chat_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def global_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     if not (is_owner_or_dev(user.id) or is_sudo_user(user.id)):
         logger.warning(f"Unauthorized /cinfo attempt by user {user.id}.")
@@ -701,5 +701,5 @@ def load_handlers(application: Application):
     application.add_handler(CommandHandler("owner", owner_info))
     application.add_handler(CommandHandler("info", entity_info_command))
     application.add_handler(CommandHandler("id", id_command))
-    application.add_handler(CommandHandler("chatinfo", chat_sinfo_command))
-    application.add_handler(CommandHandler("cinfo", chat_info_command))
+    application.add_handler(CommandHandler(["chatinfo", "cinfo"], chat_info_command))
+    application.add_handler(CommandHandler("ginfo", global_info_command))
