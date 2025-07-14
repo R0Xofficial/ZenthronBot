@@ -6,6 +6,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..core.utils import _can_user_perform_action, send_safe_reply, safe_escape
 from ..core.decorators import check_module_enabled
+from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -119,5 +120,6 @@ async def unpin_message_command(update: Update, context: ContextTypes.DEFAULT_TY
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    application.add_handler(CommandHandler("pin", pin_message_command))
-    application.add_handler(CommandHandler("unpin", unpin_message_command))
+    prefixes = ['/', '!']
+    application.add_handler(CustomPrefixHandler("pin", pin_message_command, custom_prefixes=prefixes))
+    application.add_handler(CustomPrefixHandler("unpin", unpin_message_command, custom_prefixes=prefixes))
