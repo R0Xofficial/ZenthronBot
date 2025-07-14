@@ -27,6 +27,7 @@ from .database import (
     get_user_from_db_by_id, get_user_from_db_by_username,
     update_user_in_db
 )
+from .async_utils import aioify
 
 logger = logging.getLogger(__name__)
 
@@ -471,6 +472,10 @@ def run_speed_test_blocking():
     except Exception as e:
         logger.error(f"General error during blocking speedtest function: {e}", exc_info=True)
         return {"error": f"A general error occurred during test: {type(e).__name__}"}
+
+@aioify
+def run_speed_test_async() -> str:
+    return run_speed_test_blocking()
 
 async def propagate_unban(context: ContextTypes.DEFAULT_TYPE) -> None:
     job_data = context.job.data
