@@ -8,6 +8,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from ..core.database import set_afk, get_afk_status, clear_afk, get_user_from_db_by_username
 from ..core.utils import send_safe_reply, get_readable_time_delta, create_user_html_link, safe_escape
 from ..core.decorators import check_module_enabled, command_control
+from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -132,4 +133,5 @@ async def afk_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    application.add_handler(CommandHandler("afk", afk_command))
+    prefixes = ['/', '!']
+    application.add_handler(CustomPrefixHandler("afk", afk_command, custom_prefixes=prefixes))
