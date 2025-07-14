@@ -13,6 +13,7 @@ from .config import SESSION_NAME, API_ID, API_HASH, LOG_CHAT_ID, OWNER_ID, BOT_T
 from .core.database import init_db, disable_module, enable_module, get_disabled_modules
 from .core.utils import is_owner_or_dev, safe_escape
 from .core.custom_handlers import CustomPrefixHandler
+from .core.debugging_utils import DebugApplication
 
 from .modules.core import error_handler
 from .modules.mutes import handle_bot_permission_changes
