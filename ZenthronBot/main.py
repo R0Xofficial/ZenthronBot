@@ -12,6 +12,7 @@ from telethon import TelegramClient
 from .config import SESSION_NAME, API_ID, API_HASH, LOG_CHAT_ID, OWNER_ID, BOT_TOKEN
 from .core.database import init_db, disable_module, enable_module, get_disabled_modules
 from .core.utils import is_owner_or_dev, safe_escape
+from .core.custom_handlers import CustomPrefixHandler
 
 from .modules.core import error_handler
 from .modules.mutes import handle_bot_permission_changes
@@ -205,9 +206,10 @@ async def main() -> None:
         application.add_handler(MessageHandler(filters.ALL & (~filters.UpdateType.EDITED_MESSAGE), log_user_from_interaction), group=10)
 
         # --- LAYER 7: COMMANDS - HANDLERS ---
-        application.add_handler(CommandHandler("disablemodule", disable_module_command))
-        application.add_handler(CommandHandler("enablemodule", enable_module_command))
-        application.add_handler(CommandHandler("listmodules", list_modules_command))
+        prefixes = ['/', '!']
+        application.add_handler(CustomPrefixHandler("disablemodule", disable_module_command, custom_prefixes=prefixes))
+        application.add_handler(CustomPrefixHandler("enablemodule", enable_module_command, custom_prefixes=prefixes))
+        application.add_handler(CustomPrefixHandler("listmodules", list_modules_command, custom_prefixes=prefixes))
 
         application.bot_data["telethon_client"] = telethon_client
         logger.info("Telethon client has been injected into bot_data.")
