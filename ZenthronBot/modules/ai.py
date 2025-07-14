@@ -2,8 +2,7 @@ import logging
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.error import BadRequest
-from telegram.ext import Application, CommandHandler, ContextTypes, filters
-from ..core.prefix_filter import PrefixFilter
+from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..config import GEMINI_API_KEY, OWNER_ID, PUBLIC_AI_ENABLED
 from ..core.utils import is_privileged_user, is_owner_or_dev, markdown_to_html, get_gemini_response
@@ -100,7 +99,5 @@ async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    prefixes = ['/', '!']
-    prefix_filter = PrefixFilter(prefixes)
-    application.add_handler(CommandHandler("setai", set_ai_command, filters=prefix_filter))
-    application.add_handler(CommandHandler("askai", ask_ai_command, filters=prefix_filter))
+    application.add_handler(CommandHandler("setai", set_ai_command))
+    application.add_handler(CommandHandler("askai", ask_ai_command))
