@@ -2,7 +2,7 @@ import logging
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.error import BadRequest
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, ContextTypes, filters
 from ..core.prefix_filter import PrefixFilter
 
 from ..config import GEMINI_API_KEY, OWNER_ID, PUBLIC_AI_ENABLED
