@@ -11,6 +11,7 @@ from ..core.database import get_rules, is_dev_user, is_sudo_user, is_support_use
 from ..core.utils import is_privileged_user, safe_escape, resolve_user_with_telethon, create_user_html_link, send_safe_reply, is_owner_or_dev
 from ..core.constants import START_TEXT, HELP_MAIN_TEXT, GENERAL_COMMANDS, USER_CHAT_INFO, MODERATION_COMMANDS, ADMIN_TOOLS, NOTES, CHAT_SETTINGS, CHAT_SECURITY, AI_COMMANDS, FUN_COMMANDS, ADMIN_NOTE_TEXT, SUPPORT_COMMANDS_TEXT, SUDO_COMMANDS_TEXT, DEVELOPER_COMMANDS_TEXT, OWNER_COMMANDS_TEXT, FILTERS
 from ..core.decorators import check_module_enabled, command_control
+from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -694,12 +695,13 @@ async def chat_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    application.add_handler(CommandHandler("start", start_command))
-    application.add_handler(CommandHandler("help", help_command))
+    prefixes = ['/', '!']
+    application.add_handler(CustomPrefixHandler("start", start_command, custom_prefixes=prefixes))
+    application.add_handler(CustomPrefixHandler("help", help_command, custom_prefixes=prefixes))
     application.add_handler(CallbackQueryHandler(menu_button_handler, pattern=r"^menu_"))
-    application.add_handler(CommandHandler("github", github))
-    application.add_handler(CommandHandler("owner", owner_info))
-    application.add_handler(CommandHandler("info", entity_info_command))
-    application.add_handler(CommandHandler("id", id_command))
-    application.add_handler(CommandHandler("chatinfo", chat_sinfo_command))
-    application.add_handler(CommandHandler("cinfo", chat_info_command))
+    application.add_handler(CustomPrefixHandler("github", github, custom_prefixes=prefixes))
+    application.add_handler(CustomPrefixHandler("owner", owner_info, custom_prefixes=prefixes))
+    application.add_handler(CustomPrefixHandler("info", entity_info_command, custom_prefixes=prefixes))
+    application.add_handler(CustomPrefixHandler("id", id_command, custom_prefixes=prefixes))
+    application.add_handler(CustomPrefixHandler("chatinfo", chat_sinfo_command, custom_prefixes=prefixes))
+    application.add_handler(CustomPrefixHandler("cinfo", chat_info_command, custom_prefixes=prefixes))
