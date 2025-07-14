@@ -61,6 +61,9 @@ async def afk_brb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 async def check_afk_return(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.effective_message
+    if message and message.text and message.text.startswith(('!', '/')):
+        return
+    
     if not user or not message:
         return
 
