@@ -6,7 +6,6 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, create_user_html_link, safe_escape
 from ..core.decorators import check_module_enabled
-from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -168,6 +167,5 @@ async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    prefixes = ['/', '!']
-    application.add_handler(CustomPrefixHandler("promote", promote_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("demote", demote_command, custom_prefixes=prefixes))
+    application.add_handler(CommandHandler("promote", promote_command))
+    application.add_handler(CommandHandler("demote", demote_command))

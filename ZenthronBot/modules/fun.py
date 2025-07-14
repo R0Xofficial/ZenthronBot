@@ -10,7 +10,6 @@ from ..config import OWNER_ID
 from ..core.utils import get_themed_gif, check_target_protection, check_username_protection, send_safe_reply, safe_escape
 from ..core.constants import KILL_TEXTS, SLAP_TEXTS, PUNCH_TEXTS, PAT_TEXTS, BONK_TEXTS, CANT_TARGET_OWNER_TEXTS, CANT_TARGET_SELF_TEXTS
 from ..core.decorators import check_module_enabled, command_control
-from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -143,13 +142,12 @@ async def skull_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    prefixes = ['/', '!']
-    application.add_handler(CustomPrefixHandler("kill", kill, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("punch", punch, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("slap", slap, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("pat", pat, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("bonk", bonk, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("touch", damnbroski, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("cowsay", cowsay_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("ascii", ascii_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("skull", skull_command, custom_prefixes=prefixes))
+    application.add_handler(CommandHandler("kill", kill))
+    application.add_handler(CommandHandler("punch", punch))
+    application.add_handler(CommandHandler("slap", slap))
+    application.add_handler(CommandHandler("pat", pat))
+    application.add_handler(CommandHandler("bonk", bonk))
+    application.add_handler(CommandHandler("touch", damnbroski))
+    application.add_handler(CommandHandler("cowsay", cowsay_command))
+    application.add_handler(CommandHandler("ascii", ascii_command))
+    application.add_handler(CommandHandler("skull", skull_command))

@@ -14,10 +14,6 @@ logger = logging.getLogger(__name__)
 # --- PASSIVE USER AND CHAT LOGGING FUNCTION ---
 @check_module_enabled("userlogger")
 async def log_user_from_interaction(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    message = update.effective_message
-    if message and message.text and message.text.startswith(('!', '/')):
-        return
-        
     if update.effective_user:
         update_user_in_db(update.effective_user)
     

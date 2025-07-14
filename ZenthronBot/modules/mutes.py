@@ -7,7 +7,6 @@ from telegram.ext import Application, CommandHandler, ContextTypes, ChatMemberHa
 
 from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, parse_duration_to_timedelta, create_user_html_link, send_safe_reply, safe_escape, send_critical_log
 from ..core.decorators import check_module_enabled
-from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -187,6 +186,5 @@ async def handle_bot_permission_changes(update: Update, context: ContextTypes.DE
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    prefixes = ['/', '!']
-    application.add_handler(CustomPrefixHandler("mute", mute_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("unmute", unmute_command, custom_prefixes=prefixes))
+    application.add_handler(CommandHandler("mute", mute_command))
+    application.add_handler(CommandHandler("unmute", unmute_command))

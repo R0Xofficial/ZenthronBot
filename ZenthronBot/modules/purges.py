@@ -8,7 +8,6 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..core.utils import _can_user_perform_action, safe_escape
 from ..core.decorators import check_module_enabled
-from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -101,5 +100,4 @@ async def purge_messages_command(update: Update, context: ContextTypes.DEFAULT_T
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    prefixes = ['/', '!']
-    application.add_handler(CustomPrefixHandler("purge", purge_messages_command, custom_prefixes=prefixes))
+    application.add_handler(CommandHandler("purge", purge_messages_command))

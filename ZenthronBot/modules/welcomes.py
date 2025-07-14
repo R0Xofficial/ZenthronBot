@@ -14,7 +14,6 @@ from ..core.database import (
 from ..core.utils import _can_user_perform_action, send_safe_reply, safe_escape, format_message_text, send_critical_log
 from ..core.constants import OWNER_WELCOME_TEXTS, DEV_WELCOME_TEXTS, SUDO_WELCOME_TEXTS, SUPPORT_WELCOME_TEXTS, GENERIC_WELCOME_TEXTS, GENERIC_GOODBYE_TEXTS
 from ..core.decorators import check_module_enabled, command_control
-from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -399,12 +398,11 @@ async def handle_left_group_member(update: Update, context: ContextTypes.DEFAULT
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    prefixes = ['/', '!']
-    application.add_handler(CustomPrefixHandler("welcome", welcome_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("setwelcome", set_welcome_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("resetwelcome", reset_welcome_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("goodbye", goodbye_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("setgoodbye", set_goodbye_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("resetgoodbye", reset_goodbye_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("welcomehelp", welcome_help_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("cleanservice", set_clean_service_command, custom_prefixes=prefixes))
+    application.add_handler(CommandHandler("welcome", welcome_command))
+    application.add_handler(CommandHandler("setwelcome", set_welcome_command))
+    application.add_handler(CommandHandler("resetwelcome", reset_welcome_command))
+    application.add_handler(CommandHandler("goodbye", goodbye_command))
+    application.add_handler(CommandHandler("setgoodbye", set_goodbye_command))
+    application.add_handler(CommandHandler("resetgoodbye", reset_goodbye_command))
+    application.add_handler(CommandHandler("welcomehelp", welcome_help_command))
+    application.add_handler(CommandHandler("cleanservice", set_clean_service_command))

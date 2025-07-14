@@ -8,7 +8,6 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..core.utils import safe_escape
 from ..core.decorators import check_module_enabled, command_control
-from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -98,5 +97,4 @@ async def list_admins_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    prefixes = ['/', '!']
-    application.add_handler(CustomPrefixHandler(["listadmins", "admins"], list_admins_command, custom_prefixes=prefixes))
+    application.add_handler(CommandHandler(["listadmins", "admins"], list_admins_command))

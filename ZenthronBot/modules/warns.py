@@ -7,7 +7,6 @@ from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQuer
 from ..core.database import add_warning, remove_warning_by_id, get_warnings, reset_warnings, set_warn_limit, get_warn_limit
 from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, create_user_html_link, send_safe_reply, safe_escape
 from ..core.decorators import check_module_enabled, command_control
-from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -221,9 +220,9 @@ async def set_warn_limit_command(update: Update, context: ContextTypes.DEFAULT_T
 
 
 # --- HANDLER LOADER ---
-    prefixes = ['/', '!']
-    application.add_handler(CustomPrefixHandler("warn", warn_command, custom_prefixes=prefixes))
+def load_handlers(application: Application):
+    application.add_handler(CommandHandler("warn", warn_command))
     application.add_handler(CallbackQueryHandler(undo_warn_callback, pattern=r"^undo_warn_"))
-    application.add_handler(CustomPrefixHandler(["warnings", "warns"], warnings_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("resetwarns", reset_warnings_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("setwarnlimit", set_warn_limit_command, custom_prefixes=prefixes))
+    application.add_handler(CommandHandler(["warnings", "warns"], warnings_command))
+    application.add_handler(CommandHandler("resetwarns", reset_warnings_command))
+    application.add_handler(CommandHandler("setwarnlimit", set_warn_limit_command))

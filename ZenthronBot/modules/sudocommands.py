@@ -8,7 +8,6 @@ from ..core.utils import is_privileged_user, send_safe_reply
 from ..core.database import is_dev_user, is_sudo_user, is_support_user
 from ..core.constants import ADMIN_NOTE_TEXT, SUPPORT_COMMANDS_TEXT, SUDO_COMMANDS_TEXT, DEVELOPER_COMMANDS_TEXT, OWNER_COMMANDS_TEXT
 from ..core.decorators import check_module_enabled
-from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -55,5 +54,4 @@ async def sudo_commands_command(update: Update, context: ContextTypes.DEFAULT_TY
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    prefixes = ['/', '!']
-    application.add_handler(CustomPrefixHandler("sudocmds", sudo_commands_command, custom_prefixes=prefixes))
+    application.add_handler(CommandHandler("sudocmds", sudo_commands_command))

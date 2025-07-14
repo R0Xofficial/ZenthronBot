@@ -6,7 +6,6 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 from ..core.database import add_note, get_all_notes, remove_note, get_note
 from ..core.utils import _can_user_perform_action, send_safe_reply, safe_escape
 from ..core.decorators import check_module_enabled, command_control
-from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -106,9 +105,6 @@ async def remove_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 @command_control("notes")
 async def handle_note_trigger(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
-    message = update.effective_message
-    if message and message.text and message.text.startswith(('!', '/')):
-        return
     
     if not update.message or not update.message.text:
         return
@@ -127,7 +123,6 @@ async def handle_note_trigger(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    prefixes = ['/', '!']
-    application.add_handler(CustomPrefixHandler(["addnote", "savenote", "save"], save_note_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler(["notes", "saved"], list_notes_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler(["delnote", "rmnote", "clear"], remove_note_command, custom_prefixes=prefixes))
+    application.add_handler(CommandHandler(["addnote", "savenote", "save"], save_note_command))
+    application.add_handler(CommandHandler(["notes", "saved"], list_notes_command))
+    application.add_handler(CommandHandler(["delnote", "rmnote", "clear"], remove_note_command))

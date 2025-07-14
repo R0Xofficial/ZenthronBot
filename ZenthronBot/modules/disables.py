@@ -8,7 +8,6 @@ from ..core.constants import DISABLES_HELP_TEXT
 from ..core.database import disable_command_in_chat, enable_command_in_chat, get_disabled_commands_in_chat
 from ..core.utils import safe_escape, _can_user_perform_action, send_safe_reply
 from ..core.decorators import check_module_enabled, command_control
-from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -108,8 +107,7 @@ async def disables_help_command(update: Update, context: ContextTypes.DEFAULT_TY
 
 
 def load_handlers(application: Application):
-    prefixes = ['/', '!']
-    application.add_handler(CustomPrefixHandler("disable", disable_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("enable", enable_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("settings", settings_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("disableshelp", disables_help_command, custom_prefixes=prefixes))
+    application.add_handler(CommandHandler("disable", disable_command))
+    application.add_handler(CommandHandler("enable", enable_command))
+    application.add_handler(CommandHandler("settings", settings_command))
+    application.add_handler(CommandHandler("disableshelp", disables_help_command))

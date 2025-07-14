@@ -6,7 +6,6 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 from ..core.database import set_rules, get_rules, clear_rules
 from ..core.utils import _can_user_perform_action
 from ..core.decorators import check_module_enabled, command_control
-from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +86,6 @@ async def rules_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    prefixes = ['/', '!']
-    application.add_handler(CustomPrefixHandler("rules", rules_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("setrules", set_rules_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("clearrules", clear_rules_command, custom_prefixes=prefixes))
+    application.add_handler(CommandHandler("rules", rules_command))
+    application.add_handler(CommandHandler("setrules", set_rules_command))
+    application.add_handler(CommandHandler("clearrules", clear_rules_command))
