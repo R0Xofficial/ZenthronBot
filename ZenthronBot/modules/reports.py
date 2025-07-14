@@ -6,6 +6,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..core.utils import resolve_user_with_telethon, create_user_html_link, safe_escape
 from ..core.decorators import check_module_enabled, command_control
+from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -77,4 +78,5 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    application.add_handler(CommandHandler("report", report_command))
+    prefixes = ['/', '!']
+    application.add_handler(CustomPrefixHandler("report", report_command, custom_prefixes=prefixes))
