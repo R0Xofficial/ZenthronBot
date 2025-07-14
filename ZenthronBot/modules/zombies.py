@@ -7,6 +7,7 @@ from telethon import TelegramClient
 
 from ..core.utils import _can_user_perform_action, send_safe_reply, safe_escape
 from ..core.decorators import check_module_enabled
+from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -97,4 +98,5 @@ async def zombies_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    application.add_handler(CommandHandler("zombies", zombies_command))
+    prefixes = ['/', '!']
+    application.add_handler(CustomPrefixHandler("zombies", zombies_command, custom_prefixes=prefixes))
