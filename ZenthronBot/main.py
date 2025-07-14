@@ -12,7 +12,7 @@ from telethon import TelegramClient
 from .config import SESSION_NAME, API_ID, API_HASH, LOG_CHAT_ID, OWNER_ID, BOT_TOKEN
 from .core.database import init_db, disable_module, enable_module, get_disabled_modules
 from .core.utils import is_owner_or_dev, safe_escape
-from .core.custom_handlers import CustomPrefixHandler
+from .core.custom_handlers import CustomPrefixHandler, NotACommandFilter
 from .core.debugging_utils import DebugApplication
 
 from .modules.core import error_handler
@@ -176,6 +176,9 @@ async def main() -> None:
             .build()
         )
 
+        prefixes = ['/', '!']
+        not_a_command = NotACommandFilter(prefixes)
+
         # --- GLOBAL LAYER: TRACEBACKS - MODULE LOADER ---
         application.add_error_handler(error_handler)
         discover_and_register_handlers(application)
@@ -189,15 +192,15 @@ async def main() -> None:
         application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, check_gban_on_entry), group=-20)
         application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, check_new_member), group=-15)
         application.add_handler(MessageHandler(filters.COMMAND, check_blacklist_handler), group=-10)
-        application.add_handler(MessageHandler(filters.TEXT | filters.COMMAND | filters.Sticker.ALL | filters.PHOTO | filters.VIDEO | filters.VOICE | filters.ANIMATION & filters.ChatType.GROUPS, check_gban_on_message), group=-10)
+        application.add_handler(MessageHandler(filters.TEXT | filters.COMMAND | filters.Sticker.ALL | filters.PHOTO | filters.VIDEO | filters.VOICE | filters.ANIMATION & filters.ChatType.GROUPS & not_a_command, check_gban_on_message), group=-10)
 
         # --- LAYER 3: PASSIVE MECHANISMS - AFK ---
         application.add_handler(MessageHandler(filters.Regex(r'^(brb|BRB|Brb|bRB|brB|BRb|bRb)'), afk_brb_handler), group=-6)
-        application.add_handler(MessageHandler(filters.TEXT | filters.COMMAND | filters.Sticker.ALL | filters.PHOTO | filters.VIDEO | filters.VOICE | filters.ANIMATION, check_afk_return), group=-5)
-        application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND) & (filters.REPLY | filters.Entity(constants.MessageEntityType.MENTION) | filters.Entity(constants.MessageEntityType.TEXT_MENTION)), afk_reply_handler), group=-4)
+        application.add_handler(MessageHandler(filters.TEXT | filters.COMMAND | filters.Sticker.ALL | filters.PHOTO | filters.VIDEO | filters.VOICE | filters.ANIMATION & not_a_command, check_afk_return), group=-5)
+        application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND) & (filters.REPLY | filters.Entity(constants.MessageEntityType.MENTION) | filters.Entity(constants.MessageEntityType.TEXT_MENTION)) & not_a_command, afk_reply_handler), group=-4)
 
         # --- LAYER 4: MAIN LOGIC - COMMANDS AND INTERACTIONS ---
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_note_trigger), group=0)
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & not_a_command, handle_note_trigger), group=0)
         application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND) & filters.ChatType.GROUPS, check_message_for_filters), group=3)
 
         # --- LAYER 5: GROUP MEMBERS SERVICING ---
@@ -205,10 +208,9 @@ async def main() -> None:
         application.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER, handle_left_group_member), group=5)
 
         # --- LAYER 6: LOWEST PRIORITY - PASSIVE LOGIN ---
-        application.add_handler(MessageHandler(filters.ALL & (~filters.UpdateType.EDITED_MESSAGE), log_user_from_interaction), group=10)
+        application.add_handler(MessageHandler(filters.ALL & (~filters.UpdateType.EDITED_MESSAGE) & not_a_command, log_user_from_interaction), group=10)
 
         # --- LAYER 7: COMMANDS - HANDLERS ---
-        prefixes = ['/', '!']
         application.add_handler(CustomPrefixHandler("disablemodule", disable_module_command, custom_prefixes=prefixes))
         application.add_handler(CustomPrefixHandler("enablemodule", enable_module_command, custom_prefixes=prefixes))
         application.add_handler(CustomPrefixHandler("listmodules", list_modules_command, custom_prefixes=prefixes))
