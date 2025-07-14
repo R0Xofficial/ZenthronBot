@@ -1743,7 +1743,7 @@ def load_handlers(application: Application):
     prefixes = ['/', '!']
     application.add_handler(CustomPrefixHandler("status", status_command, custom_prefixes=prefixes))
     application.add_handler(CustomPrefixHandler("stats", stats_command, custom_prefixes=prefixes))
-    application.add_handler(CustomPrefixHandler("ping", ping_command, custom_prefixes=prefixes), group=-1)
+    application.add_handler(CustomPrefixHandler("ping", ping_command, custom_prefixes=['/', '!']))
     application.add_handler(CustomPrefixHandler(["permissions", "perms"], permissions_command, custom_prefixes=prefixes))
     application.add_handler(CustomPrefixHandler("echo", echo, custom_prefixes=prefixes))
     application.add_handler(CustomPrefixHandler("leave", leave_chat, custom_prefixes=prefixes))
