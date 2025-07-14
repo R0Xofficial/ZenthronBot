@@ -7,6 +7,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 from ..config import GEMINI_API_KEY, OWNER_ID, PUBLIC_AI_ENABLED
 from ..core.utils import is_privileged_user, is_owner_or_dev, markdown_to_html, get_gemini_response
 from ..core.decorators import check_module_enabled, command_control
+from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -99,5 +100,6 @@ async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
-    application.add_handler(CommandHandler("setai", set_ai_command))
-    application.add_handler(CommandHandler("askai", ask_ai_command))
+    prefixes = ['/', '!']
+    application.add_handler(CustomPrefixHandler("setai", set_ai_command, custom_prefixes=prefixes))
+    application.add_handler(CustomPrefixHandler("askai", ask_ai_command, custom_prefixes=prefixes))
