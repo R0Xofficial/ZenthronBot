@@ -26,3 +26,14 @@ class CustomPrefixHandler(CommandHandler):
         final_filter = filters.UpdateType.MESSAGE & CustomPrefixFilter()
         
         super().__init__(command, callback, filters=final_filter, **kwargs)
+
+class NotACommandFilter(filters.BaseFilter):
+    def __init__(self, prefixes: list[str]):
+        super().__init__()
+        self.prefixes = tuple(prefixes)
+
+    def filter(self, message) -> bool:
+        if not hasattr(message, 'text') or not message.text:
+            return True
+            
+        return not message.text.startswith(self.prefixes)
