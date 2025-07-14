@@ -215,7 +215,7 @@ SUPPORT_COMMANDS_TEXT = """
 SUDO_COMMANDS_TEXT = """
 /status - Show bot status.
 /stats - Show bot database stats.
-/ginfo &lt;Optional chat ID&gt; - Get detailed info about the current or specified chat.
+/ginfo &lt;Optional chat ID&gt; - Get global detailed info about the current or specified chat.
 /echo &lt;Optional chat ID&gt; [Your text] - Send a message as the bot.
 /blist &lt;ID/@user/reply&gt; [Reason] - Add a user to the blacklist.
 /unblist &lt;ID/@user/reply&gt; - Remove a user from the blacklist.
