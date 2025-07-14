@@ -31,11 +31,10 @@ from ..core.database import (
 from ..core.utils import (
     is_owner_or_dev, get_readable_time_delta, safe_escape, resolve_user_with_telethon,
     create_user_html_link, send_operational_log, run_speed_test_blocking, is_privileged_user,
-    send_critical_log
+    send_critical_log, run_speed_test_async
 )
 from ..core.constants import LEAVE_TEXTS
 from ..core.decorators import check_module_enabled
-from ..core.async_utils import run_speed_test_async
 
 logger = logging.getLogger(__name__)
 
