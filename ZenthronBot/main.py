@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import io
 import importlib
 import traceback
 import json
@@ -11,7 +12,7 @@ from telegram.ext import Application, ApplicationBuilder, JobQueue, ContextTypes
 from telegram.request import HTTPXRequest
 from telethon import TelegramClient
 
-from .config import SESSION_NAME, API_ID, API_HASH, LOG_CHAT_ID, OWNER_ID, BOT_TOKEN
+from .config import SESSION_NAME, API_ID, API_HASH, LOG_CHAT_ID, OWNER_ID, BOT_TOKEN, ADMIN_LOG_CHAT_ID
 from .core.database import init_db, disable_module, enable_module, get_disabled_modules
 from .core.utils import is_owner_or_dev, safe_escape, send_critical_log
 
@@ -37,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 async def send_startup_log(context: ContextTypes.DEFAULT_TYPE) -> None:
     startup_message_text = "<i>I'm already up!<i>"
-    target_id_for_log = LOG_CHAT_ID or OWNER_ID
+    target_id_for_log = ADMIN_LOG_CHAT_ID or LOG_CHAT_ID or OWNER_ID
     
     if target_id_for_log:
         try:
