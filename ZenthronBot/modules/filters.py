@@ -10,6 +10,7 @@ from ..core.database import add_or_update_filter, remove_filter, get_all_filters
 from ..core.utils import _can_user_perform_action, safe_escape
 from ..core.decorators import check_module_enabled, command_control
 from ..core.constants import FILTERS_HELP_TEXT
+from ..core.custom_handlers import CustomPrefixHandler
 
 logger = logging.getLogger(__name__)
 
@@ -265,7 +266,8 @@ async def filter_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 def load_handlers(application: Application):  
-    application.add_handler(CommandHandler(["addfilter", "filter"], add_filter_command))
-    application.add_handler(CommandHandler(["delfilter", "stop"], remove_filter_command))
-    application.add_handler(CommandHandler("filters", list_filters_command))
-    application.add_handler(CommandHandler("filterhelp", filter_help_command))
+    prefixes = ['/', '!']
+    application.add_handler(CustomPrefixHandler(["addfilter", "filter"], add_filter_command, custom_prefixes=prefixes))
+    application.add_handler(CustomPrefixHandler(["delfilter", "stop"], remove_filter_command, custom_prefixes=prefixes))
+    application.add_handler(CustomPrefixHandler("filters", list_filters_command, custom_prefixes=prefixes))
+    application.add_handler(CustomPrefixHandler("filterhelp", filter_help_command, custom_prefixes=prefixes))
