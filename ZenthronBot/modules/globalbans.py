@@ -165,8 +165,8 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                 f"<b>Initiated From:</b> {chat_name_display} [<code>{chat.id}</code>]\n\n"
                 f"<b>User:</b> {log_user_display} [<code>{target_entity.id}</code>]\n"
                 f"<b>Reason:</b> <code>{reason_display}</code>\n"
-                f"<b>Date:</b> <code>{current_time}</code>"
-                f"<b>Admin:</b> {admin_link} [<code>{user_who_gbans.id}</code>]\n"
+                f"<b>Date:</b> <code>{current_time}</code>\n"
+                f"<b>Admin:</b> {admin_link} [<code>{user_who_gbans.id}</code>]"
             )
             await send_operational_log(context, log_message)
         except Exception as e:
@@ -234,8 +234,8 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 f"<b>Initiated From:</b> {chat_name_display} [<code>{chat.id}</code>]\n\n"
                 f"<b>User:</b> {log_user_display} [<code>{target_entity.id}</code>]\n"
                 f"<b>Reason:</b> <code>{reason_display}</code>\n"
-                f"<b>Date:</b> <code>{current_time}</code>"
-                f"<b>Admin:</b> {admin_link} [<code>{user_who_ungbans.id}</code>]\n"
+                f"<b>Date:</b> <code>{current_time}</code>\n"
+                f"<b>Admin:</b> {admin_link} [<code>{user_who_ungbans.id}</code>]"
             )
             await send_operational_log(context, log_message)
         except Exception as e:
