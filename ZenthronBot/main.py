@@ -12,7 +12,7 @@ from telegram.ext import Application, ApplicationBuilder, JobQueue, ContextTypes
 from telegram.request import HTTPXRequest
 from telethon import TelegramClient
 
-from .config import SESSION_NAME, API_ID, API_HASH, LOG_CHAT_ID, OWNER_ID, BOT_TOKEN, ADMIN_LOG_CHAT_ID, DB_NAME, OWNER_ID
+from .config import SESSION_NAME, API_ID, API_HASH, LOG_CHAT_ID, OWNER_ID, BOT_TOKEN, ADMIN_LOG_CHAT_ID, DB_NAME
 from .core.database import init_db, disable_module, enable_module, get_disabled_modules
 from .core.utils import is_owner_or_dev, safe_escape, send_critical_log
 
