@@ -172,7 +172,7 @@ async def backup_db_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         await context.bot.send_document(
             chat_id=OWNER_ID,
             document=open(DB_NAME, 'rb'),
-            filename="zenthron_backup.db",
+            filename="zenthron_data_backup.db",
             caption=f"Here is backuped database."
         )
         await message.edit_text("✅ Backup has been successfully sent to you in a private message.")
