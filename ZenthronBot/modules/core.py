@@ -1014,7 +1014,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     user_display = create_user_html_link(target_user)
     if is_privileged_user(target_user.id):
-        await message.reply_html(f"ℹ️ User {user_display} (<code>{target_user.id}</code>) already has a privileged role. Use /setrank if want change it.")
+        await message.reply_html(f"ℹ️ User {user_display} [<code>{target_user.id}</code>] already has a privileged role. Use /setrank if want change it.")
         return
     
     if not isinstance(target_user, User):
@@ -1035,7 +1035,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if gban_reason:
         error_message = (
             f"❌ <b>Promotion Failed!</b>\n\n"
-            f"User {user_display} (<code>{target_user.id}</code>) cannot be promoted to <code>Sudo</code> because they are <b>Globally Bannned</b>.\n\n"
+            f"User {user_display} [<code>{target_user.id}</code>] cannot be promoted to <code>Sudo</code> because they are <b>Globally Bannned</b>.\n\n"
             f"<b>Reason:</b> {safe_escape(gban_reason)}\n\n"
             f"<i>For security reasons, this action has been blocked. "
             f"Please remove global ban first using /ungban if you wish to proceed.</i>"
@@ -1046,7 +1046,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if blist_reason:
         error_message = (
             f"❌ <b>Promotion Failed!</b>\n\n"
-            f"User {user_display} (<code>{target_user.id}</code>) cannot be promoted to <code>Sudo</code> because they are on the <b>Blacklist</b>.\n\n"
+            f"User {user_display} [<code>{target_user.id}</code>] cannot be promoted to <code>Sudo</code> because they are on the <b>Blacklist</b>.\n\n"
             f"<b>Reason:</b> {safe_escape(blist_reason)}\n\n"
             f"<i>For security reasons, this action has been blocked. "
             f"Please remove the user from the blacklist first using /unblist if you wish to proceed.</i>"
@@ -1055,7 +1055,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     if add_sudo_user(target_user.id, user.id):
-        await message.reply_html(f"✅ User {user_display} (<code>{target_user.id}</code>) has been granted <b>Sudo</b> powers.")
+        await message.reply_html(f"✅ User {user_display} [<code>{target_user.id}</code>] has been granted <b>Sudo</b> powers.")
         
         try:
             await context.bot.send_message(target_user.id, "You have been granted Sudo privileges.")
@@ -1122,11 +1122,11 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     user_display = create_user_html_link(target_user)
 
     if not is_sudo_user(target_user.id):
-        await message.reply_html(f"User {user_display} (<code>{target_user.id}</code>) does not have sudo powers.")
+        await message.reply_html(f"User {user_display} [<code>{target_user.id}</code>] does not have sudo powers.")
         return
 
     if remove_sudo_user(target_user.id):
-        await message.reply_html(f"✅ <b>Sudo</b> powers for user {user_display} (<code>{target_user.id}</code>) have been revoked.")
+        await message.reply_html(f"✅ <b>Sudo</b> powers for user {user_display} [<code>{target_user.id}</code>] have been revoked.")
         
         try:
             await context.bot.send_message(target_user.id, "Your sudo privileges have been revoked.")
@@ -1236,7 +1236,7 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         user_display = create_user_html_link(target_user)
         admin_link = create_user_html_link(user)
         
-        feedback_message = f"✅ User {user_display} (<code>{target_user.id}</code>) rank has been changed from <b>{current_role_full_name}</b> to <b>{new_role_full_name}</b>."
+        feedback_message = f"✅ User {user_display} [<code>{target_user.id}</code>] rank has been changed from <b>{current_role_full_name}</b> to <b>{new_role_full_name}</b>."
         await message.reply_html(feedback_message)
 
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -1280,7 +1280,7 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     user_display = create_user_html_link(target_user)
     if is_privileged_user(target_user.id):
-        await message.reply_html(f"ℹ️ User {user_display} (<code>{target_user.id}</code>) already has a privileged role. Use /setrank if want change it.")
+        await message.reply_html(f"ℹ️ User {user_display} [<code>{target_user.id}</code>] already has a privileged role. Use /setrank if want change it.")
         return
     
     if not isinstance(target_user, User):
@@ -1299,7 +1299,7 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if gban_reason:
         await message.reply_html(
             f"❌ <b>Promotion Failed!</b>\n\n"
-            f"User {user_display} (<code>{target_user.id}</code>) cannot be promoted to <code>Support</code> because they are <b>Globally Bannned</b>.\n\n"
+            f"User {user_display} [<code>{target_user.id}</code>] cannot be promoted to <code>Support</code> because they are <b>Globally Bannned</b>.\n\n"
             f"<b>Reason:</b> {safe_escape(gban_reason)}\n\n"
             f"<i>For security reasons, this action has been blocked. "
             f"Please remove global ban first using /ungban if you wish to proceed.</i>"
@@ -1309,7 +1309,7 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if blist_reason:
         await message.reply_html(
             f"❌ <b>Promotion Failed!</b>\n\n"
-            f"User {user_display} (<code>{target_user.id}</code>) cannot be promoted to <code>Sudo</code> because they are on the <b>Blacklist</b>.\n\n"
+            f"User {user_display} [<code>{target_user.id}</code>] cannot be promoted to <code>Sudo</code> because they are on the <b>Blacklist</b>.\n\n"
             f"<b>Reason:</b> {safe_escape(blist_reason)}\n\n"
             f"<i>For security reasons, this action has been blocked. "
             f"Please remove the user from the blacklist first using /unblist if you wish to proceed.</i>"
@@ -1317,7 +1317,7 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     if add_support_user(target_user.id, user.id):
-        await message.reply_html(f"✅ User {user_display} (<code>{target_user.id}</code>) has been granted <b>Support</b> powers.")
+        await message.reply_html(f"✅ User {user_display} [<code>{target_user.id}</code>] has been granted <b>Support</b> powers.")
         
         try:
             await context.bot.send_message(target_user.id, "You have been added to the Support team.")
@@ -1373,11 +1373,11 @@ async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     user_display = create_user_html_link(target_user)
 
     if not is_support_user(target_user.id):
-        await message.reply_html(f"ℹ️ User {user_display} (<code>{target_user.id}</code>) is not in Support.")
+        await message.reply_html(f"ℹ️ User {user_display} [<code>{target_user.id}</code>] is not in Support.")
         return
 
     if remove_support_user(target_user.id):
-        await message.reply_html(f"✅ <b>Support</b> role for user {user_display} (<code>{target_user.id}</code>) has been revoked.")
+        await message.reply_html(f"✅ <b>Support</b> role for user {user_display} [<code>{target_user.id}</code>] has been revoked.")
         
         try:
             await context.bot.send_message(target_user.id, "You have been removed from the Support team.")
@@ -1428,7 +1428,7 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     user_display = create_user_html_link(target_user)
     if is_privileged_user(target_user.id):
-        await message.reply_html(f"ℹ️ User {user_display} (<code>{target_user.id}</code>) already has a privileged role. Use /setrank if want change it.")
+        await message.reply_html(f"ℹ️ User {user_display} [<code>{target_user.id}</code>] already has a privileged role. Use /setrank if want change it.")
         return
     
     if not isinstance(target_user, User):
@@ -1447,7 +1447,7 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if gban_reason:
         await message.reply_html(
             f"❌ <b>Promotion Failed!</b>\n\n"
-            f"User {user_display} (<code>{target_user.id}</code>) cannot be promoted to <code>Developer</code> because they are <b>Globally Bannned</b>.\n\n"
+            f"User {user_display} [<code>{target_user.id}</code>] cannot be promoted to <code>Developer</code> because they are <b>Globally Bannned</b>.\n\n"
             f"<b>Reason:</b> {safe_escape(gban_reason)}\n\n"
             f"<i>For security reasons, this action has been blocked. "
             f"Please remove global ban first using /ungban if you wish to proceed.</i>"
@@ -1457,7 +1457,7 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if blist_reason:
         await message.reply_html(
             f"❌ <b>Promotion Failed!</b>\n\n"
-            f"User {user_display} (<code>{target_user.id}</code>) cannot be promoted to <code>Developer</code> because they are on the <b>Blacklist</b>.\n\n"
+            f"User {user_display} [<code>{target_user.id}</code>] cannot be promoted to <code>Developer</code> because they are on the <b>Blacklist</b>.\n\n"
             f"<b>Reason:</b> {safe_escape(blist_reason)}\n\n"
             f"<i>For security reasons, this action has been blocked. "
             f"Please remove the user from the blacklist first using /unblist if you wish to proceed.</i>"
@@ -1465,7 +1465,7 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     if add_dev_user(target_user.id, user.id):
-        await message.reply_html(f"✅ User {user_display} (<code>{target_user.id}</code>) has been granted <b>Developer</b> powers.")
+        await message.reply_html(f"✅ User {user_display} [<code>{target_user.id}</code>] has been granted <b>Developer</b> powers.")
         
         try:
             await context.bot.send_message(target_user.id, "You have been promoted to Developer by the Bot Owner.")
@@ -1518,11 +1518,11 @@ async def deldev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     user_display = create_user_html_link(target_user)
 
     if not is_dev_user(target_user.id):
-        await message.reply_html(f"User {user_display} (<code>{target_user.id}</code>) is not a Developer.")
+        await message.reply_html(f"User {user_display} [<code>{target_user.id}</code>] is not a Developer.")
         return
 
     if remove_dev_user(target_user.id):
-        await message.reply_html(f"✅ <b>Developer</b> role for user {user_display} (<code>{target_user.id}</code>) has been revoked.")
+        await message.reply_html(f"✅ <b>Developer</b> role for user {user_display} [<code>{target_user.id}</code>] has been revoked.")
         
         try:
             await context.bot.send_message(target_user.id, "Your Developer role has been revoked by the Bot Owner.")
@@ -1581,7 +1581,7 @@ async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_T
     if gban_reason:
         await message.reply_html(
             f"❌ <b>Promotion Failed!</b>\n\n"
-            f"User {user_display} (<code>{target_user.id}</code>) cannot be on <code>Whitelist</code> because they are <b>Globally Bannned</b>.\n\n"
+            f"User {user_display} [<code>{target_user.id}</code>] cannot be on <code>Whitelist</code> because they are <b>Globally Bannned</b>.\n\n"
             f"<b>Reason:</b> {safe_escape(gban_reason)}\n\n"
             f"<i>For security reasons, this action has been blocked. "
             f"Please remove global ban first using /ungban if you wish to proceed.</i>"
@@ -1591,7 +1591,7 @@ async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_T
     if blist_reason:
         await message.reply_html(
             f"❌ <b>Promotion Failed!</b>\n\n"
-            f"User {user_display} (<code>{target_user.id}</code>) cannot be on <code>Whitelist</code> because they are on the <b>Blacklist</b>.\n\n"
+            f"User {user_display} [<code>{target_user.id}</code>] cannot be on <code>Whitelist</code> because they are on the <b>Blacklist</b>.\n\n"
             f"<b>Reason:</b> {safe_escape(blist_reason)}\n\n"
             f"<i>For security reasons, this action has been blocked. "
             f"Please remove the user from the blacklist first using /unblist if you wish to proceed.</i>"
@@ -1599,11 +1599,11 @@ async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         return
 
     if is_whitelisted(target_user.id):
-        await message.reply_html(f"ℹ️ User {user_display} (<code>{target_user.id}</code>) is <b>already on the whitelist</b>.")
+        await message.reply_html(f"ℹ️ User {user_display} [<code>{target_user.id}</code>] is <b>already on the whitelist</b>.")
         return
 
     if add_to_whitelist(target_user.id, user.id):
-        await message.reply_html(f"✅ User {user_display} (<code>{target_user.id}</code>) has been <b>added to the whitelist</b>.")
+        await message.reply_html(f"✅ User {user_display} [<code>{target_user.id}</code>] has been <b>added to the whitelist</b>.")
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -1655,7 +1655,7 @@ async def unwhitelist_user_command(update: Update, context: ContextTypes.DEFAULT
         
     if remove_from_whitelist(target_user.id):
         user_display = create_user_html_link(target_user)
-        await update.message.reply_html(f"✅ User {user_display} (<code>{target_user.id}</code>) has been removed from the whitelist.")
+        await update.message.reply_html(f"✅ User {user_display} [<code>{target_user.id}</code>] has been removed from the whitelist.")
 
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
