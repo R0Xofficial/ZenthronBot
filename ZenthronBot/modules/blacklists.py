@@ -77,11 +77,9 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
 
             pm_message = (
                 f"<b>#BLACKLISTED</b>\n\n"
-                f"<b>User:</b> {log_user_display}\n"
-                f"<b>User ID:</b> <code>{target_entity.id}</code>\n"
-                f"<b>Reason:</b> {safe_escape(reason)}\n"
-                f"<b>Admin:</b> {admin_link}\n"
-                f"<b>Date:</b> <code>{current_time}</code>"
+                f"<b>User:</b> {log_user_display} [<code>{target_entity.id}</code>]\n"
+                f"<b>Date:</b> <code>{current_time}</code>\n"
+                f"<b>Admin:</b> {admin_link} [<code>{user.id}</code>]"
             )
             await send_operational_log(context, pm_message)
         except Exception as e:
@@ -132,10 +130,9 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
 
             log_message_to_send = (
                 f"<b>#UNBLACKLISTED</b>\n\n"
-                f"<b>User:</b> {log_user_display}\n"
-                f"<b>User ID:</b> <code>{target_entity.id}</code>\n"
-                f"<b>Admin:</b> {admin_link}\n"
-                f"<b>Date:</b> <code>{current_time}</code>"
+                f"<b>User:</b> {log_user_display} [<code>{target_entity.id}</code>]\n"
+                f"<b>Date:</b> <code>{current_time}</code>\n"
+                f"<b>Admin:</b> {admin_link} [<code>{user.id}</code>]"
             )
             await send_operational_log(context, log_message_to_send)
         except Exception as e:
