@@ -1068,10 +1068,9 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
             log_message = (
                 f"<b>#SUDO</b>\n\n"
-                f"<b>User:</b> {user_display}\n"
-                f"<b>User ID:</b> <code>{target_user.id}</code>\n"
-                f"<b>Admin:</b> {admin_link}\n"
-                f"<b>Date:</b> <code>{current_time}</code>"
+                f"<b>User:</b> {user_display} [<code>{target_user.id}</code>]\n"
+                f"<b>Date:</b> <code>{current_time}</code>\n"
+                f"<b>Admin:</b> {admin_link} [<code>{user.id}</code>]"
             )
             await send_operational_log(context, log_message)
         except Exception as e:
@@ -1140,10 +1139,9 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
             log_message = (
                 f"<b>#UNSUDO</b>\n\n"
-                f"<b>User:</b> {user_display}\n"
-                f"<b>User ID:</b> <code>{target_user.id}</code>\n"
-                f"<b>Admin:</b> {admin_link}\n"
-                f"<b>Date:</b> <code>{current_time}</code>"
+                f"<b>User:</b> {user_display} [<code>{target_user.id}</code>]\n"
+                f"<b>Date:</b> <code>{current_time}</code>\n"
+                f"<b>Admin:</b> {admin_link} [<code>{user.id}</code>]"
             )
             await send_operational_log(context, log_message)
         except Exception as e:
@@ -1244,12 +1242,11 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
         log_message = (f"<b>#ROLECHANGED</b>\n\n"
-                       f"<b>User:</b> {user_display}\n"
-                       f"<b>User ID:</b> <code>{target_user.id}</code>\n"
+                       f"<b>User:</b> {user_display} [<code>{target_user.id}</code>]\n"
                        f"<b>Old Role:</b> <code>{current_role_full_name}</code>\n"
                        f"<b>New Role:</b> <code>{new_role_full_name}</code>\n"
-                       f"<b>Admin:</b> {admin_link}\n"
-                       f"<b>Date:</b> <code>{current_time}</code>")
+                       f"<b>Date:</b> <code>{current_time}</code>\n"
+                       f"<b>Admin:</b> {admin_link} [<code>{user.id}</code>]"
         await send_operational_log(context, log_message)
     else:
         await message.reply_text("An error occurred while changing the rank. Check logs.")
@@ -1332,10 +1329,9 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
             log_message = (
                 f"<b>#SUPPORT</b>\n\n"
-                f"<b>User:</b> {user_display}\n"
-                f"<b>User ID:</b> <code>{target_user.id}</code>\n"
-                f"<b>Admin:</b> {admin_link}\n"
-                f"<b>Date:</b> <code>{current_time}</code>"
+                f"<b>User:</b> {user_display} [<code>{target_user.id}</code>]\n"
+                f"<b>Date:</b> <code>{current_time}</code>\n"
+                f"<b>Admin:</b> {admin_link} [<code>{user.id}</code>]"
             )
             await send_operational_log(context, log_message)
         except Exception as e:
@@ -1393,10 +1389,9 @@ async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
             log_message = (
                 f"<b>#UNSUPPORT</b>\n\n"
-                f"<b>User:</b> {user_display}\n"
-                f"<b>User ID:</b> <code>{target_user.id}</code>\n"
-                f"<b>Admin:</b> {admin_link}\n"
-                f"<b>Date:</b> <code>{current_time}</code>"
+                f"<b>User:</b> {user_display} [<code>{target_user.id}</code>]\n"
+                f"<b>Date:</b> <code>{current_time}</code>\n"
+                f"<b>Admin:</b> {admin_link} [<code>{user.id}</code>]"
             )
             await send_operational_log(context, log_message)
         except Exception as e:
@@ -1480,9 +1475,8 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
             log_message = (
                 f"<b>#DEVELOPER</b>\n\n"
-                f"<b>User:</b> {user_display}\n"
-                f"<b>User ID:</b> <code>{target_user.id}</code>\n"
-                f"<b>Date:</b> <code>{current_time}</code>"
+                f"<b>User:</b> {user_display} [<code>{target_user.id}</code>]\n"
+                f"<b>Date:</b> <code>{current_time}</code>\n"
             )
             await send_operational_log(context, log_message)
         except Exception as e:
@@ -1538,9 +1532,8 @@ async def deldev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
             log_message = (
                 f"<b>#UNDEVELOPER</b>\n\n"
-                f"<b>User:</b> {user_display}\n"
-                f"<b>User ID:</b> <code>{target_user.id}</code>\n"
-                f"<b>Date:</b> <code>{current_time}</code>"
+                f"<b>User:</b> {user_display} [<code>{target_user.id}</code>]\n"
+                f"<b>Date:</b> <code>{current_time}</code>\n"
             )
             await send_operational_log(context, log_message)
         except Exception as e:
@@ -1617,10 +1610,9 @@ async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_T
 
             log_message = (
                 f"<b>#WHITELISTED</b>\n\n"
-                f"<b>User:</b> {user_display}\n"
-                f"<b>User ID:</b> <code>{target_user.id}</code>\n"
-                f"<b>Admin:</b> {admin_link}\n"
-                f"<b>Date:</b> <code>{current_time}</code>"
+                f"<b>User:</b> {user_display} [<code>{target_user.id}</code>]\n"
+                f"<b>Date:</b> <code>{current_time}</code>\n"
+                f"<b>Admin:</b> {admin_link} [<code>{user.id}</code>]"
             )
             await send_operational_log(context, log_message)
         except Exception as e:
@@ -1670,10 +1662,9 @@ async def unwhitelist_user_command(update: Update, context: ContextTypes.DEFAULT
 
             log_message = (
                 f"<b>#UNWHITELISTED</b>\n\n"
-                f"<b>User:</b> {user_display}\n"
-                f"<b>User ID:</b> <code>{target_user.id}</code>\n"
-                f"<b>Admin:</b> {admin_link}\n"
-                f"<b>Date:</b> <code>{current_time}</code>"
+                f"<b>User:</b> {user_display} [<code>{target_user.id}</code>]\n"
+                f"<b>Date:</b> <code>{current_time}</code>\n"
+                f"<b>Admin:</b> {admin_link} [<code>{user.id}</code>]"
             )
             await send_operational_log(context, log_message)
         except Exception as e:
