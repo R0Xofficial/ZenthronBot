@@ -134,7 +134,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     existing_gban_reason = get_gban_reason(target_entity.id)
     if existing_gban_reason:
         await message.reply_html(
-            f"ℹ️ User {user_display} (<code>{target_entity.id}</code>) is <b>already globally banned</b>.\n"
+            f"ℹ️ User {user_display} [<code>{target_entity.id}</code>] is <b>already globally banned</b>.\n"
             f"<b>Reason:</b> {safe_escape(existing_gban_reason)}"
         )
         return
@@ -146,7 +146,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             except Exception as e:
                 logger.warning(f"Could not enforce local ban for gban: {e}")
 
-        success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been <b>globally banned</b>.\n<b>Reason:</b> {safe_escape(reason)}"
+        success_message = f"✅ User {user_display} [<code>{target_entity.id}</code>] has been <b>globally banned</b>.\n<b>Reason:</b> {safe_escape(reason)}"
         await message.reply_html(success_message, disable_web_page_preview=True)
     
         try:
@@ -207,11 +207,11 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     user_display = create_user_html_link(target_entity)
 
     if not get_gban_reason(target_entity.id):
-        await message.reply_html(f"User {user_display} (<code>{target_entity.id}</code>) is <b>not globally banned</b>.")
+        await message.reply_html(f"User {user_display} [<code>{target_entity.id}</code>] is <b>not globally banned</b>.")
         return
 
     if remove_from_gban(target_entity.id):
-        success_message = f"✅ User {user_display} (<code>{target_entity.id}</code>) has been globally unbanned.\n<i>Propagating unban...</i>"
+        success_message = f"✅ User {user_display} [<code>{target_entity.id}</code>] has been globally unbanned.\n<i>Propagating unban...</i>"
         await message.reply_html(success_message, disable_web_page_preview=True)
     
         if context.job_queue:
