@@ -246,6 +246,7 @@ OWNER_COMMANDS_TEXT = """
 /deldev &lt;ID/@user/reply&gt; - Revoke Developer permissions from a user.
 /enablemodule &lt;module name&gt; - Enable Bot module.
 /disablemodule &lt;module name&gt; - Disable Bot module.
+/backupdb - Backup Bot database.
 /shell &lt;command&gt; - Execute the command in the terminal.
 /execute &lt;file patch&gt; [args...] - Run script.
 """
