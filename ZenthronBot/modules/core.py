@@ -1247,6 +1247,7 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                        f"<b>New Role:</b> <code>{new_role_full_name}</code>\n"
                        f"<b>Date:</b> <code>{current_time}</code>\n"
                        f"<b>Admin:</b> {admin_link} [<code>{user.id}</code>]"
+        )
         await send_operational_log(context, log_message)
     else:
         await message.reply_text("An error occurred while changing the rank. Check logs.")
