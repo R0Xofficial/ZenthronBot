@@ -12,7 +12,7 @@ from telegram.ext import Application, ApplicationBuilder, JobQueue, ContextTypes
 from telegram.request import HTTPXRequest
 from telethon import TelegramClient
 
-from .config import SESSION_NAME, API_ID, API_HASH, LOG_CHAT_ID, OWNER_ID, BOT_TOKEN, ADMIN_LOG_CHAT_ID
+from .config import SESSION_NAME, API_ID, API_HASH, LOG_CHAT_ID, OWNER_ID, BOT_TOKEN, ADMIN_LOG_CHAT_ID, DB_NAME, OWNER_ID
 from .core.database import init_db, disable_module, enable_module, get_disabled_modules
 from .core.utils import is_owner_or_dev, safe_escape, send_critical_log
 
@@ -159,6 +159,31 @@ async def list_modules_command(update: Update, context: ContextTypes.DEFAULT_TYP
         
     await update.message.reply_html(message)
 
+async def backup_db_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+
+    if user.id != OWNER_ID:
+        logger.warning(f"Unauthorized /backupdb attempt by user {user.id}.")
+        return
+
+    message = await update.message.reply_text("Performing backup and sending the file...")
+
+    try:
+        await context.bot.send_document(
+            chat_id=OWNER_ID,
+            document=open(DB_NAME, 'rb'),
+            filename="zenthron_backup.db",
+            caption=f"Here is backuped database."
+        )
+        await message.edit_text("✅ Backup has been successfully sent to you in a private message.")
+    
+    except FileNotFoundError:
+        logger.error(f"Database file not found at: {DB_NAME}")
+        await message.edit_text("❌ Error: Database file not found.")
+    except Exception as e:
+        logger.error(f"Failed to send database backup: {e}")
+        await message.edit_text(f"❌ An error occurred while sending the backup: {e}")
+
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error("Exception while handling an update:", exc_info=context.error)
 
@@ -261,6 +286,7 @@ async def main() -> None:
         application.add_handler(CommandHandler("disablemodule", disable_module_command))
         application.add_handler(CommandHandler("enablemodule", enable_module_command))
         application.add_handler(CommandHandler("listmodules", list_modules_command))
+        application.add_handler(CommandHandler("backupdb", backup_db_command))
 
         application.bot_data["telethon_client"] = telethon_client
         logger.info("Telethon client has been injected into bot_data.")
