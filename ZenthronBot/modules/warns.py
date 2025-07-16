@@ -64,11 +64,11 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
     keyboard = InlineKeyboardMarkup(
-        [[InlineKeyboardButton("Delete Warn", callback_data=f"undo_warn_{new_warn_id}")]]
+        [[InlineKeyboardButton("Delete Warn [Admin Only]", callback_data=f"undo_warn_{new_warn_id}")]]
     )
 
     await message.reply_html(
-        f"User {user_display} (<code>{target_user.id}</code>) has been warned. ({warn_count}/{limit})\n"
+        f"User {user_display} [<code>{target_user.id}</code>] has been warned. ({warn_count}/{limit})\n"
         f"<b>Reason:</b> {safe_escape(reason)}",
         reply_markup=keyboard
     )
@@ -153,7 +153,7 @@ async def warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await update.message.reply_html(f"User {user_display} has no warnings in this chat.")
         return
 
-    message_lines = [f"<b>Warnings for {user_display}: ({len(user_warnings)}/{limit})</b>"]
+    message_lines = [f"<b>Warnings for {user_display}: [{len(user_warnings)}/{limit}]</b>"]
     for i, (reason, admin_id) in enumerate(user_warnings, 1):
         message_lines.append(f"\n{i}. <b>Reason:</b> {safe_escape(reason)}")
     
