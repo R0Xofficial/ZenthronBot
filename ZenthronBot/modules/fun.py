@@ -2,7 +2,7 @@ import logging
 import random
 import cowsay
 from pyfiglet import figlet_format
-from telegram import Update
+from telegram import Update, Dice
 from telegram.constants import ParseMode
 from telegram.ext import Application, CommandHandler, ContextTypes
 
@@ -138,6 +138,32 @@ SKULL_ASCII = """
 @command_control("fun")
 async def skull_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await send_safe_reply(update, context, text=SKULL_ASCII, parse_mode=ParseMode.HTML)
+
+@check_module_enabled("fun")
+@command_control("fun")
+async def gamble_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    
+    dice_emojis = [
+        Dice.DICE,
+        Dice.DARTS,
+        Dice.BASKETBALL,
+        Dice.FOOTBALL,
+        Dice.SLOT_MACHINE,
+        Dice.BOWLING,
+    ]
+
+    try:
+        await message.reply_dice(emoji=Dice.SLOT_MACHINE)
+        await message.reply_dice(emoji=Dice.DICE)
+        await message.reply_dice(emoji=Dice.DARTS)
+        await message.reply_dice(emoji=Dice.BASKETBALL)
+        await message.reply_dice(emoji=Dice.FOOTBALL)
+        await message.reply_dice(emoji=Dice.BOWLING)
+
+    except Exception as e:
+        logger.error(f"Failed to send dice emoji in gamble command: {e}")
+        await message.reply_text("Oops, the dice seem to be broken!")
 
 
 # --- HANDLER LOADER ---
