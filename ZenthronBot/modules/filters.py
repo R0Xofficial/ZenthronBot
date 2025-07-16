@@ -2,7 +2,6 @@ import logging
 import re
 import json
 import time
-import emoji
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, User, Chat
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from telegram.constants import ParseMode, ChatType
