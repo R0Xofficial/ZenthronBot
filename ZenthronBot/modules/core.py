@@ -305,15 +305,15 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if is_remote_send:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
-                text=f"✅ Message sent to <b>{safe_chat_title}</b> (<code>{target_chat_id}</code>).",
+                text=f"✅ Message sent to <b>{safe_chat_title}</b> [<code>{target_chat_id}</code>].",
                 parse_mode=ParseMode.HTML
             )
     except TelegramError as e:
         logger.error(f"Failed to send message via /echo to {target_chat_id} ('{chat_title}'): {e}")
-        await update.message.reply_text(f"❌ Couldn't send message to <b>{safe_chat_title}</b> (<code>{target_chat_id}</code>): {e}", parse_mode=ParseMode.HTML)
+        await update.message.reply_text(f"❌ Couldn't send message to <b>{safe_chat_title}</b> [<code>{target_chat_id}</code>]: {e}", parse_mode=ParseMode.HTML)
     except Exception as e:
         logger.error(f"Unexpected error during /echo execution: {e}", exc_info=True)
-        await update.message.reply_text(f"💥 Oops! An unexpected error occurred while trying to send the message to <b>{safe_chat_title}</b> (<code>{target_chat_id}</code>). Check logs.", parse_mode=ParseMode.HTML)
+        await update.message.reply_text(f"💥 Oops! An unexpected error occurred while trying to send the message to <b>{safe_chat_title}</b> [<code>{target_chat_id}</code>]. Check logs.", parse_mode=ParseMode.HTML)
 
 @check_module_enabled("core")
 async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -369,7 +369,7 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         reply_to_chat_id_for_error = chat_where_command_was_called_id
         if is_leaving_current_chat and OWNER_ID: reply_to_chat_id_for_error = OWNER_ID
         
-        error_message_text = f"❌ Cannot interact with chat <b>{safe_chat_title_to_leave}</b> (<code>{target_chat_id_to_leave}</code>): {safe_escape(str(e))}. I might not be a member there."
+        error_message_text = f"❌ Cannot interact with chat <b>{safe_chat_title_to_leave}</b> [<code>{target_chat_id_to_leave}</code>]: {safe_escape(str(e))}. I might not be a member there."
         if "bot is not a member" in str(e).lower() or "chat not found" in str(e).lower():
             pass 
         else:
@@ -400,7 +400,7 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
                 reply_to_chat_id_for_error = chat_where_command_was_called_id
                 if is_leaving_current_chat and OWNER_ID: reply_to_chat_id_for_error = OWNER_ID
                 if reply_to_chat_id_for_error:
-                    try: await context.bot.send_message(chat_id=reply_to_chat_id_for_error, text=f"❌ Failed to send farewell to <b>{safe_chat_title_to_leave}</b> (<code>{target_chat_id_to_leave}</code>): {safe_escape(str(e))}. Bot is not a member.", parse_mode=ParseMode.HTML)
+                    try: await context.bot.send_message(chat_id=reply_to_chat_id_for_error, text=f"❌ Failed to send farewell to <b>{safe_chat_title_to_leave}</b> [<code>{target_chat_id_to_leave}</code>]: {safe_escape(str(e))}. Bot is not a member.", parse_mode=ParseMode.HTML)
                     except Exception as send_err: logger.error(f"Failed to send error about farewell to {reply_to_chat_id_for_error}: {send_err}")
                 return 
         except Exception as e:
@@ -422,13 +422,13 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             logger.info(f"Successfully left chat {target_chat_id_to_leave} ('{chat_title_to_leave}')")
             if confirmation_target_chat_id:
                 await context.bot.send_message(chat_id=confirmation_target_chat_id, 
-                                               text=f"✅ Successfully left chat: <b>{safe_chat_title_to_leave}</b> (<code>{target_chat_id_to_leave}</code>)", 
+                                               text=f"✅ Successfully left chat: <b>{safe_chat_title_to_leave}</b> [<code>{target_chat_id_to_leave}</code>]", 
                                                parse_mode=ParseMode.HTML)
         else:
             logger.warning(f"leave_chat returned False for {target_chat_id_to_leave}. Bot might not have been a member.")
             if confirmation_target_chat_id:
                 await context.bot.send_message(chat_id=confirmation_target_chat_id,
-                                               text=f"🤔 Attempted to leave <b>{safe_chat_title_to_leave}</b> (<code>{target_chat_id_to_leave}</code>), but the operation indicated I might not have been there or lacked permission.", 
+                                               text=f"🤔 Attempted to leave <b>{safe_chat_title_to_leave}</b> [<code>{target_chat_id_to_leave}</code>], but the operation indicated I might not have been there or lacked permission.", 
                                                parse_mode=ParseMode.HTML)
     except TelegramError as e:
         logger.error(f"Failed to leave chat {target_chat_id_to_leave}: {e}")
@@ -438,7 +438,7 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             else: confirmation_target_chat_id = None
         if confirmation_target_chat_id:
             await context.bot.send_message(chat_id=confirmation_target_chat_id,
-                                           text=f"❌ Failed to leave chat <b>{safe_chat_title_to_leave}</b> (<code>{target_chat_id_to_leave}</code>): {safe_escape(str(e))}", 
+                                           text=f"❌ Failed to leave chat <b>{safe_chat_title_to_leave}</b> [<code>{target_chat_id_to_leave}</code>]: {safe_escape(str(e))}", 
                                            parse_mode=ParseMode.HTML)
     except Exception as e:
          logger.error(f"Unexpected error during leave process for {target_chat_id_to_leave}: {e}", exc_info=True)
@@ -448,7 +448,7 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             else: confirmation_target_chat_id = None
          if confirmation_target_chat_id:
             await context.bot.send_message(chat_id=confirmation_target_chat_id,
-                                           text=f"💥 Unexpected error leaving chat <b>{safe_chat_title_to_leave}</b> (<code>{target_chat_id_to_leave}</code>). Check logs.", 
+                                           text=f"💥 Unexpected error leaving chat <b>{safe_chat_title_to_leave}</b> [<code>{target_chat_id_to_leave}</code>]. Check logs.", 
                                            parse_mode=ParseMode.HTML)
 
 @check_module_enabled("core")
@@ -554,7 +554,7 @@ async def list_sudo_users_command(update: Update, context: ContextTypes.DEFAULT_
             if chat_info.username: name_parts.append(f"(@{safe_escape(chat_info.username)})")
             
             if name_parts:
-                user_display_name = " ".join(name_parts) + f" (<code>{user_id}</code>)"
+                user_display_name = " ".join(name_parts) + f" [<code>{user_id}</code>]"
         except Exception:
             user_obj_from_db = get_user_from_db_by_username(str(user_id))
             if user_obj_from_db:
@@ -563,7 +563,7 @@ async def list_sudo_users_command(update: Update, context: ContextTypes.DEFAULT_
                 if user_obj_from_db.last_name: display_name_parts.append(safe_escape(user_obj_from_db.last_name))
                 if user_obj_from_db.username: display_name_parts.append(f"(@{safe_escape(user_obj_from_db.username)})")
                 if display_name_parts:
-                    user_display_name = " ".join(display_name_parts) + f" (<code>{user_id}</code>)"
+                    user_display_name = " ".join(display_name_parts) + f" [<code>{user_id}</code>]"
 
         formatted_added_time = timestamp_str
         try:
@@ -608,7 +608,7 @@ async def listsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             if chat_info.username: name_parts.append(f"(@{safe_escape(chat_info.username)})")
             
             if name_parts:
-                user_display_name = " ".join(name_parts) + f" (<code>{user_id}</code>)"
+                user_display_name = " ".join(name_parts) + f" [<code>{user_id}</code>]"
         except Exception:
             user_obj_from_db = get_user_from_db_by_username(str(user_id))
             if user_obj_from_db:
@@ -617,7 +617,7 @@ async def listsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE
                 if user_obj_from_db.last_name: display_name_parts.append(safe_escape(user_obj_from_db.last_name))
                 if user_obj_from_db.username: display_name_parts.append(f"(@{safe_escape(user_obj_from_db.username)})")
                 if display_name_parts:
-                    user_display_name = " ".join(display_name_parts) + f" (<code>{user_id}</code>)"
+                    user_display_name = " ".join(display_name_parts) + f" [<code>{user_id}</code>]"
 
         formatted_added_time = timestamp_str
         try:
@@ -657,7 +657,7 @@ async def listwhitelist_command(update: Update, context: ContextTypes.DEFAULT_TY
             if chat_info.username: name_parts.append(f"(@{safe_escape(chat_info.username)})")
             
             if name_parts:
-                user_display_name = " ".join(name_parts) + f" (<code>{user_id}</code>)"
+                user_display_name = " ".join(name_parts) + f" [<code>{user_id}</code>]"
         except Exception:
             user_obj_from_db = get_user_from_db_by_username(str(user_id))
             if user_obj_from_db:
@@ -666,7 +666,7 @@ async def listwhitelist_command(update: Update, context: ContextTypes.DEFAULT_TY
                 if user_obj_from_db.last_name: display_name_parts.append(safe_escape(user_obj_from_db.last_name))
                 if user_obj_from_db.username: display_name_parts.append(f"(@{safe_escape(user_obj_from_db.username)})")
                 if display_name_parts:
-                    user_display_name = " ".join(display_name_parts) + f" (<code>{user_id}</code>)"
+                    user_display_name = " ".join(display_name_parts) + f" [<code>{user_id}</code>]"
 
         formatted_added_time = timestamp_str
         try:
@@ -705,7 +705,7 @@ async def listdevs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             if chat_info.username: name_parts.append(f"(@{safe_escape(chat_info.username)})")
             
             if name_parts:
-                user_display_name = " ".join(name_parts) + f" (<code>{user_id}</code>)"
+                user_display_name = " ".join(name_parts) + f" [<code>{user_id}</code>]"
         except Exception:
             user_obj_from_db = get_user_from_db_by_username(str(user_id))
             if user_obj_from_db:
@@ -714,7 +714,7 @@ async def listdevs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 if user_obj_from_db.last_name: display_name_parts.append(safe_escape(user_obj_from_db.last_name))
                 if user_obj_from_db.username: display_name_parts.append(f"(@{safe_escape(user_obj_from_db.username)})")
                 if display_name_parts:
-                    user_display_name = " ".join(display_name_parts) + f" (<code>{user_id}</code>)"
+                    user_display_name = " ".join(display_name_parts) + f" [<code>{user_id}</code>]"
 
         formatted_added_time = timestamp_str
         try:
@@ -753,7 +753,7 @@ async def list_groups_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             formatted_added_time = added_at_str[:16] if added_at_str else "N/A"
 
         response_lines.append(
-            f"• <b>{display_title}</b> (<code>{chat_id}</code>)\n"
+            f"• <b>{display_title}</b> [<code>{chat_id}</code>]\n"
             f"<b>Added:</b> <code>{formatted_added_time}</code>\n\n"
         )
 
