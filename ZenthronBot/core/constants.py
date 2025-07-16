@@ -203,6 +203,8 @@ FUN_COMMANDS = """
 /cowsay &lt;text&gt; - Generate ascii cow with optional text.
 /skull - Send ascii skull in chat.
 /ascii &lt;text&gt; - Generate ascii text.
+/gamble - Perform gambling.
+/decide - Ask about the bot's decisions.
 """
 
 ADMIN_NOTE_TEXT = """
