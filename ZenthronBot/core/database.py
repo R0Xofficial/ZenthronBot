@@ -152,7 +152,7 @@ def init_db():
                 chat_id INTEGER NOT NULL,
                 keyword TEXT NOT NULL,
                 reply_text TEXT,
-                reply_type TEXT NOT NULL DEFAULT 'text', -- 'text', 'photo', 'sticker', 'document', 'animation', 'video', 'voice'
+                reply_type TEXT NOT NULL DEFAULT 'text', -- 'text', 'photo', 'sticker', 'audio', 'document', 'animation', 'video', 'voice'
                 file_id TEXT,
                 filter_type TEXT NOT NULL DEFAULT 'keyword', -- 'keyword', 'wildcard', 'regex'
                 buttons TEXT,
