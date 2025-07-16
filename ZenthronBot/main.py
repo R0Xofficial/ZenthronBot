@@ -211,9 +211,9 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
     chat_info = "N/A"
     user_info = "N/A"
     if isinstance(update, Update) and update.effective_chat:
-        chat_info = f"{update.effective_chat.title} (<code>{update.effective_chat.id}</code>)"
+        chat_info = f"{update.effective_chat.title} [<code>{update.effective_chat.id}</code>]"
     if isinstance(update, Update) and update.effective_user:
-        user_info = f"{update.effective_user.mention_html()} (<code>{update.effective_user.id}</code>)"
+        user_info = f"{update.effective_user.mention_html()} [<code>{update.effective_user.id}</code>]"
 
     short_message = (
         f"<b>🚨 Bot Error Detected!</b>\n\n"
