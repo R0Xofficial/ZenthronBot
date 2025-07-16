@@ -67,7 +67,7 @@ async def get_themed_gif(context: ContextTypes.DEFAULT_TYPE, search_terms: list[
         "q": search_term, 
         "key": TENOR_API_KEY, 
         "client_key": "zenthron_project_py", 
-        "limit": 50, 
+        "limit": 15, 
         "media_filter": "gif", 
         "contentfilter": "high"
     }
