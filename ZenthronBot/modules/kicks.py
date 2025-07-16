@@ -79,7 +79,7 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await context.bot.unban_chat_member(chat_id=chat.id, user_id=target_user.id, only_if_banned=True)
 
         user_display_name = create_user_html_link(target_user)
-        response_lines = ["Success: User Kicked", f"<b>• User:</b> {user_display_name} (<code>{target_user.id}</code>)", f"<b>• Reason:</b> {safe_escape(reason)}"]
+        response_lines = ["Success: User Kicked", f"<b>• User:</b> {user_display_name} [<code>{target_user.id}</code>]", f"<b>• Reason:</b> {safe_escape(reason)}"]
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
     except TelegramError as e:
         await send_safe_reply(update, context, text=f"Failed to kick user: {safe_escape(str(e))}")
