@@ -47,7 +47,7 @@ async def sudo_commands_command(update: Update, context: ContextTypes.DEFAULT_TY
         bot_username = context.bot.username
         deep_link_url = f"https://t.me/{bot_username}?start=sudocmds"
         keyboard = InlineKeyboardMarkup(
-            [[InlineKeyboardButton(text="🛡️ Get Privileged Commands (PM)", url=deep_link_url)]]
+            [[InlineKeyboardButton(text="🛡️ Get Privileged Commands", url=deep_link_url)]]
         )
         await send_safe_reply(update, context, text="The list of privileged commands has been sent to your private chat.", reply_markup=keyboard)
 
