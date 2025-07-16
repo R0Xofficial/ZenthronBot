@@ -62,9 +62,9 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     report_message = (
         f"📢 <b>Report for @admins</b>\n\n"
-        f"<b>Reported User:</b> {target_display} (<code>{target_entity.id}</code>)\n"
+        f"<b>Reported User:</b> {target_display} [<code>{target_entity.id}</code>]\n"
         f"<b>Reason:</b> {safe_escape(reason)}\n"
-        f"<b>Reported by:</b> {reporter_mention}"
+        f"<b>Reported by:</b> {reporter_mention} [<code>{reporter.id}</code>]"
     )
 
     await context.bot.send_message(chat_id=chat.id, text=report_message, parse_mode=ParseMode.HTML)
