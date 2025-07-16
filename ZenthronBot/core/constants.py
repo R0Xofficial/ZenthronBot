@@ -45,6 +45,7 @@ MODERATION_COMMANDS = """
 /warn &lt;ID/@user/reply&gt; [Reason] - Warn a user.
 /warnings &lt;ID/@user/reply&gt; - Check a user's warnings.
 /resetwarns &lt;ID/@user/reply&gt; - Reset user's warnings.
+/setwarnlimit &lt;number&gt; - Set the warning limit for this chat.
 """
 
 ADMIN_TOOLS = """
@@ -155,7 +156,8 @@ Uses powerful regular expressions for advanced matching.
   <code>{first}</code> - User's first name
   <code>{last}</code> - User's last name
   <code>{fullname}</code> - User's full name
-  <code>{username}</code> - User's @username or mention
+  <code>{username}</code> - User's @username
+  <code>{mention}</code> - User's mention
   <code>{id}</code> - User's ID
   <code>{chatname}</code> - Name of the current chat
 """
@@ -168,6 +170,7 @@ NOTES = """
 """
 
 CHAT_SETTINGS = """
+<b>🔹 Welcome & Goodbye</b>
 /welcomehelp - Get help with text formatting and placeholders.
 /welcome &lt;on/off&gt; - Enable or disable welcome messages.
 /setwelcome &lt;text&gt; - Set a custom welcome message.
@@ -175,8 +178,9 @@ CHAT_SETTINGS = """
 /goodbye &lt;on/off&gt; - Enable or disable goodbye messages.
 /setgoodbye &lt;text&gt; - Set a custom goodbye message.
 /resetgoodbye - Reset the goodbye message to default.
-/setwarnlimit &lt;number&gt; - Set the warning limit for this chat.
 /cleanservice &lt;on/off&gt; - Enable or disable cleaning of service messages.
+
+<b>🔹 Rules</b>
 /rules - Check group rules.
 /setrules &lt;Text&gt; - Set rules on the group.
 /clearrules - Clear rules in a group.
