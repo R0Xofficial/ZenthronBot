@@ -2,6 +2,7 @@ import logging
 import re
 import json
 import time
+import emoji
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, User, Chat
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from telegram.constants import ParseMode, ChatType
@@ -21,7 +22,8 @@ def fill_reply_template(text: str | None, user: User, chat: Chat) -> str:
     return text.replace('{first}', safe_escape(user.first_name))\
                .replace('{last}', safe_escape(user.last_name or ""))\
                .replace('{fullname}', safe_escape(user.full_name))\
-               .replace('{username}', f"@{user.username}" if user.username else user.mention_html())\
+               .replace('{username}', f"@{user.username}" if user.username else "")\
+               .replace('{mention}', user.mention_html())\
                .replace('{id}', str(user.id))\
                .replace('{chatname}', safe_escape(chat.title or "this chat"))
 
@@ -54,6 +56,8 @@ async def send_filter_reply(update: Update, context: ContextTypes.DEFAULT_TYPE, 
             await target_message.reply_html(reply_text, reply_markup=reply_markup, disable_web_page_preview=True)
         elif reply_type == 'photo':
             await target_message.reply_photo(file_id, caption=reply_text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+        elif reply_type == 'audio':
+            await target_message.reply_audio(file_id, caption=reply_text, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
         elif reply_type == 'sticker':
             await target_message.reply_sticker(file_id, reply_markup=reply_markup)
         elif reply_type == 'animation':
@@ -177,6 +181,8 @@ async def add_filter_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
             filter_data['reply_type'], filter_data['file_id'] = 'animation', replied_msg.animation.file_id
         elif replied_msg.video:
             filter_data['reply_type'], filter_data['file_id'] = 'video', replied_msg.video.file_id
+        elif replied_msg.audio:
+            filter_data['reply_type'], filter_data['file_id'] = 'audio', replied_msg.audio.file_id
         elif replied_msg.voice:
             filter_data['reply_type'], filter_data['file_id'] = 'voice', replied_msg.voice.file_id
         elif replied_msg.document:
@@ -185,13 +191,16 @@ async def add_filter_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
             filter_data['reply_type'] = 'text'
     else:
         try:
-            filter_data['reply_text'] = full_args_text.split(f"'{keyword}'", 1)[1].strip()
-            filter_data['reply_type'] = 'text'
-            if not filter_data['reply_text']:
-                 raise IndexError
+            reply_text = full_args_text.split(f"'{keyword}'", 1)[1].strip()
         except IndexError:
-            await msg.reply_html("You must provide a reply text after the keyword, or reply to a message.")
+            reply_text = None
+
+        if not reply_text:
+            await msg.reply_html("You must provide a reply (like text or an emoji) after the keyword.")
             return
+            
+        filter_data['reply_type'] = 'text'
+        filter_data['reply_text'] = reply_text
 
     if add_or_update_filter(msg.chat_id, keyword, filter_data):
         context.chat_data.pop('filters_cache', None)
