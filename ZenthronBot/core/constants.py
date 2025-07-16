@@ -98,6 +98,8 @@ You can disable/enable commands for non-admins in this chat.
 /cowsay - Generate ascii cow with optional text.
 /skull - Send ascii skull in chat.
 /ascii - Generate ascii text.
+/gamble - Perform gambling.
+/decide - Ask about the bot's decisions.
 
 <b>🔹 Module: notes</b>
 /notes - See all notes in this chat.
