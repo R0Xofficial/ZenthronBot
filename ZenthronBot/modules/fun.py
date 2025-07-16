@@ -1,6 +1,7 @@
 import logging
 import random
 import cowsay
+import random
 from pyfiglet import figlet_format
 from telegram import Update, Dice
 from telegram.constants import ParseMode
@@ -154,16 +155,43 @@ async def gamble_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     ]
 
     try:
-        await message.reply_dice(emoji=Dice.SLOT_MACHINE)
-        await message.reply_dice(emoji=Dice.DICE)
-        await message.reply_dice(emoji=Dice.DARTS)
-        await message.reply_dice(emoji=Dice.BASKETBALL)
-        await message.reply_dice(emoji=Dice.FOOTBALL)
-        await message.reply_dice(emoji=Dice.BOWLING)
+        random_emoji = random.choice(dice_emojis)
+        await message.reply_dice(emoji=random_emoji)
 
     except Exception as e:
         logger.error(f"Failed to send dice emoji in gamble command: {e}")
         await message.reply_text("Oops, the dice seem to be broken!")
+
+@check_module_enabled("fun")
+@command_control("fun")
+async def decide_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    
+    answers = [
+        "Yes, definitely.",
+        "No, absolutely not.",
+        "Maybe. The spirits are unsure.",
+        "Without a doubt.",
+        "My sources say no.",
+        "You can rely on it.",
+        "Don't count on it.",
+        "Outlook good.",
+        "I wouldn't bet on it.",
+        "Signs point to yes.",
+        "The answer is hazy, try again.",
+        "Just do it!",
+        "Why are you asking a bot?",
+        "Probably.",
+        "Seems unlikely.",
+        "Yes.",
+        "No."
+    ]
+    
+    decision = random.choice(answers)
+    
+    if update.message.reply_to_message:
+        await update.message.reply_to_message.reply_text(f"🤔... <b>{decision}</b>", parse_mode=ParseMode.HTML)
+    else:
+        await update.message.reply_text(f"🤔... <b>{decision}</b>", parse_mode=ParseMode.HTML)
 
 
 # --- HANDLER LOADER ---
@@ -177,3 +205,5 @@ def load_handlers(application: Application):
     application.add_handler(CommandHandler("cowsay", cowsay_command))
     application.add_handler(CommandHandler("ascii", ascii_command))
     application.add_handler(CommandHandler("skull", skull_command))
+    application.add_handler(CommandHandler("gamble", gamble_command))
+    application.add_handler(CommandHandler("decide", decide_command))
