@@ -95,7 +95,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         display_name = create_user_html_link(target_entity) if is_user else safe_escape(target_entity.title)
         
         response_lines = ["Success: User Banned"]
-        response_lines.append(f"<b>• User:</b> {display_name} (<code>{target_entity.id}</code>)")
+        response_lines.append(f"<b>• User:</b> {display_name} [<code>{target_entity.id}</code>]")
         response_lines.append(f"<b>• Reason:</b> {safe_escape(reason)}")
         
         if is_user:
@@ -164,7 +164,7 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             display_name = safe_escape(target_entity.title or f"Channel {target_entity.id}")
 
         response_lines = ["Success: User Unbanned"]
-        response_lines.append(f"<b>• User:</b> {display_name} (<code>{target_entity.id}</code>)")
+        response_lines.append(f"<b>• User:</b> {display_name} [<code>{target_entity.id}</code>]")
         
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
         
@@ -181,7 +181,7 @@ async def handle_bot_banned(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             update_data.new_chat_member.status == ChatMemberStatus.BANNED):
         
         chat = update_data.chat
-        logger.warning(f"Bot was banned from chat {chat.title} ({chat.id}). Removing from DB.")
+        logger.warning(f"Bot was banned from chat {chat.title} [{chat.id}]. Removing from DB.")
         remove_chat_from_db(chat.id)
 
 
