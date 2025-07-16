@@ -94,7 +94,7 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         user_display_name = create_user_html_link(target_user)
 
         response_lines = ["Success: User Muted"]
-        response_lines.append(f"<b>• User:</b> {user_display_name} (<code>{target_user.id}</code>)")
+        response_lines.append(f"<b>• User:</b> {user_display_name} [<code>{target_user.id}</code>]")
         response_lines.append(f"<b>• Reason:</b> {safe_escape(reason)}")
         if duration_str and until_date_dt:
             response_lines.append(f"<b>• Duration:</b> <code>{duration_str}</code> (until <code>{until_date_dt.strftime('%Y-%m-%d %H:%M:%S %Z')}</code>)")
@@ -153,7 +153,7 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     try:
         await context.bot.restrict_chat_member(chat_id=chat.id, user_id=target_user.id, permissions=permissions_to_restore, use_independent_chat_permissions=True)
         user_display_name = create_user_html_link(target_user)
-        response_lines = ["Success: User Unmuted", f"<b>• User:</b> {user_display_name} (<code>{target_user.id}</code>)"]
+        response_lines = ["Success: User Unmuted", f"<b>• User:</b> {user_display_name} [<code>{target_user.id}</code>]"]
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
     except TelegramError as e:
         await send_safe_reply(update, context, text=f"Failed to unmute user: {safe_escape(str(e))}")
@@ -174,7 +174,7 @@ async def handle_bot_permission_changes(update: Update, context: ContextTypes.DE
         try:
             log_text = (
                 f"<b>#AUTOLEAVE</b>\n\n"
-                f"Bot automatically left the chat <b>{safe_escape(chat.title)}</b> (<code>{chat.id}</code>) "
+                f"Bot automatically left the chat <b>{safe_escape(chat.title)}</b> [<code>{chat.id}</code>] "
                 f"because it lost the permission to send messages (Muted)."
             )
             await send_critical_log(context, log_text)
