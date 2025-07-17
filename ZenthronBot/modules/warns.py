@@ -7,12 +7,14 @@ from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQuer
 from ..core.database import add_warning, remove_warning_by_id, get_warnings, reset_warnings, set_warn_limit, get_warn_limit
 from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, create_user_html_link, send_safe_reply, safe_escape
 from ..core.decorators import check_module_enabled, command_control
+from ..core.handlers import custom_handler
 
 logger = logging.getLogger(__name__)
 
 
 # --- WARNINGS COMMAND AND HANDLER FUNCTIONS ---
 @check_module_enabled("warns")
+@custom_handler("warn")
 async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     warner = update.effective_user
@@ -115,6 +117,7 @@ async def undo_warn_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 @check_module_enabled("warns")
 @command_control("warns")
+@custom_handler(["warnings", "warns"])
 async def warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -160,6 +163,7 @@ async def warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     await update.message.reply_html("\n".join(message_lines))
 
 @check_module_enabled("warns")
+@custom_handler("resetwarns")
 async def reset_warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     user = update.effective_user
@@ -189,6 +193,7 @@ async def reset_warnings_command(update: Update, context: ContextTypes.DEFAULT_T
         await update.message.reply_text("Failed to reset warnings (or user had no warnings).")
 
 @check_module_enabled("warns")
+@custom_handler("setwarnlimit")
 async def set_warn_limit_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
