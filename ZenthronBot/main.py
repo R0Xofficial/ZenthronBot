@@ -281,11 +281,11 @@ async def main() -> None:
             if hasattr(module, "load_handlers"):
                 try:
                     module.load_handlers(application)
-                    logger.info(f"Successfully registered handlers from module: {module_name}")
+                    logger.info(f"Successfully loaded module: {module_name}")
                 except Exception as e:
                     logger.error(f"Error registering handlers from {module_name}: {e}")
         
-        logger.info("--- All handlers registered ---")
+        logger.info("--- All modules registered ---")
 
         application.bot_data["telethon_client"] = telethon_client
         logger.info("Telethon client has been injected into bot_data.")
