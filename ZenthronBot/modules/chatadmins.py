@@ -8,6 +8,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..core.utils import safe_escape
 from ..core.decorators import check_module_enabled, command_control
+from ..core.handlers import custom_handler
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 # --- LIST ADMINS COMMAND FUNCTION ---
 @check_module_enabled("chatadmins")
 @command_control("chatadmins")
+@custom_handler("chatadmins")
 async def list_admins_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
