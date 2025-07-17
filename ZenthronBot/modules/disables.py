@@ -32,7 +32,7 @@ async def disable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     
     if not command_to_disable or command_to_disable not in manageable_commands:
         await update.message.reply_html(
-            f"<b>Usage:</b> /disable &lt;command name&gt;\n"
+            f"Usage: /disable &lt;command name&gt;\n"
             f"This command/commands doesn't exist or cannot be managed."
         )
         return
@@ -64,7 +64,7 @@ async def enable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     command_to_enable = context.args[0].lower().lstrip('') if context.args else ""
     
     if not command_to_enable or command_to_enable not in manageable_commands:
-        await update.message.reply_html("<b>Usage:</b> /enable &lt;command name&gt;\nThat command doesn't exist or isn't managed.")
+        await update.message.reply_html("Usage: /enable &lt;command name&gt;\nThat command doesn't exist or isn't managed.")
         return
         
     if enable_command_in_chat(update.effective_chat.id, command_to_enable):
