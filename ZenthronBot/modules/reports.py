@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 # --- REPORT COMMAND FUNCTION ---
 @check_module_enabled("reports")
 @command_control("reports")
+@custom_handler("report")
 async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     reporter = update.effective_user
