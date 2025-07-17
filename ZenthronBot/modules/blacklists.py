@@ -41,7 +41,7 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
 
     if not target_entity:
-        await message.reply_html("<b>Usage:</b> /blist &lt;ID/@username/reply&gt; [reason]")
+        await message.reply_html("Usage: /blist &lt;ID/@username/reply&gt; [reason]")
         return
 
     if not reason:
@@ -108,7 +108,7 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
 
     if not target_entity:
-        await message.reply_html("<b>Usage:</b> /unblist &lt;ID/@username/reply&gt;")
+        await message.reply_html("Usage: /unblist &lt;ID/@username/reply&gt;")
         return
     
     if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
