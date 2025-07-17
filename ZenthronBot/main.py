@@ -242,7 +242,6 @@ async def main() -> None:
         
         # --- GLOBAL LAYER: TRACEBACKS - MODULE LOADER ---
         application.add_error_handler(error_handler)
-        discover_and_register_handlers(application)
 
         # --- LAYER 1: TOP PRIORITY - SECURITY AND IGNORANCE ---
         application.add_handler(ChatMemberHandler(handle_bot_permission_changes, ChatMemberHandler.MY_CHAT_MEMBER), group=-100)
