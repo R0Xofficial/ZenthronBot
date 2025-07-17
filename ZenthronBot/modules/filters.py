@@ -9,6 +9,7 @@ from telegram.constants import ParseMode, ChatType
 from ..core.database import add_or_update_filter, remove_filter, get_all_filters_for_chat
 from ..core.utils import _can_user_perform_action, safe_escape
 from ..core.decorators import check_module_enabled, command_control
+from ..core.handlers import custom_handler
 from ..core.constants import FILTERS_HELP_TEXT
 
 logger = logging.getLogger(__name__)
@@ -121,6 +122,7 @@ async def check_message_for_filters(update: Update, context: ContextTypes.DEFAUL
             return
 
 @check_module_enabled("filters")
+@custom_handler(["addfilter", "filter"])
 async def add_filter_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -208,6 +210,7 @@ async def add_filter_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await msg.reply_text("An error occurred while saving the filter.")
 
 @check_module_enabled("filters")
+@custom_handler(["delfilter", "stop"])
 async def remove_filter_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -234,6 +237,7 @@ async def remove_filter_command(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text("This filter doesn't exist or an error occurred while removing it.")
 
 @check_module_enabled("filters")
+@custom_handler("filters")
 async def list_filters_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -268,6 +272,7 @@ async def list_filters_command(update: Update, context: ContextTypes.DEFAULT_TYP
 
 @check_module_enabled("filters")
 @command_control("filterhelp")
+@custom_handler("filterhelp")
 async def filter_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_html(FILTERS_HELP_TEXT)
 
