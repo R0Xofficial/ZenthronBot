@@ -2,7 +2,7 @@ from telegram import Update
 from telegram.ext import MessageHandler, ContextTypes, filters
 
 CUSTOM_COMMANDS = {}
-PREFIXES = ['!'] 
+PREFIXES = ['!', '?'] 
 
 def custom_handler(name: str | list[str]):
     def decorator(func):
