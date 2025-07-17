@@ -6,6 +6,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 from ..core.database import set_rules, get_rules, clear_rules
 from ..core.utils import _can_user_perform_action
 from ..core.decorators import check_module_enabled, command_control
+from ..core.handlers import custom_handler
 
 logger = logging.getLogger(__name__)
 
