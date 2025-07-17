@@ -8,6 +8,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..core.utils import _can_user_perform_action, safe_escape
 from ..core.decorators import check_module_enabled
+from ..core.handlers import custom_handler
 
 logger = logging.getLogger(__name__)
 
