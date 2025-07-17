@@ -11,6 +11,7 @@ from ..config import OWNER_ID
 from ..core.utils import get_themed_gif, check_target_protection, check_username_protection, send_safe_reply, safe_escape
 from ..core.constants import KILL_TEXTS, SLAP_TEXTS, PUNCH_TEXTS, PAT_TEXTS, BONK_TEXTS, CANT_TARGET_OWNER_TEXTS, CANT_TARGET_SELF_TEXTS
 from ..core.decorators import check_module_enabled, command_control
+from ..core.handlers import custom_handler
 
 logger = logging.getLogger(__name__)
 
@@ -41,26 +42,32 @@ async def _handle_action_command(update, context, texts, gifs, name, req_target=
 
 @check_module_enabled("fun")
 @command_control("fun")
+@custom_handler("kill")
 async def kill(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, KILL_TEXTS, ["gun", "gun shoting", "anime gun"], "kill", True, "Who to 'kill'?")
 
 @check_module_enabled("fun")
 @command_control("fun")
+@custom_handler("punch")
 async def punch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, PUNCH_TEXTS, ["punch", "hit", "anime punch"], "punch", True, "Who to 'punch'?")
 
 @check_module_enabled("fun")
 @command_control("fun")
+@custom_handler("slap")
 async def slap(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, SLAP_TEXTS, ["huge slap", "smack", "anime slap"], "slap", True, "Who to slap?")
 
 @check_module_enabled("fun")
 @command_control("fun")
+@custom_handler("pat")
 async def pat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, PAT_TEXTS, ["pat", "pat anime", "anime pat"], "pat", True, "Who to pat?")
 
 @check_module_enabled("fun")
 @command_control("fun")
+@custom_handler("bonk")
 async def bonk(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await _handle_action_command(update, context, BONK_TEXTS, ["bonk", "anime bonk"], "bonk", True, "Who to bonk?")
 
 @check_module_enabled("fun")
 @command_control("fun")
+@custom_handler("touch")
 async def damnbroski(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     special_message = "💀Bro..."
     
@@ -76,6 +83,7 @@ async def damnbroski(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 @check_module_enabled("fun")
 @command_control("fun")
+@custom_handler("cowsay")
 async def cowsay_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not context.args:
         text_to_say = "Mooooo!"
@@ -96,6 +104,7 @@ async def cowsay_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 @check_module_enabled("fun")
 @command_control("fun")
+@custom_handler("ascii")
 async def ascii_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not context.args:
         await send_safe_reply(update, context, text="Usage: /ascii <your text>")
@@ -137,11 +146,13 @@ SKULL_ASCII = """
 
 @check_module_enabled("fun")
 @command_control("fun")
+@custom_handler("skull")
 async def skull_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await send_safe_reply(update, context, text=SKULL_ASCII, parse_mode=ParseMode.HTML)
 
 @check_module_enabled("fun")
 @command_control("fun")
+@custom_handler("gamble")
 async def gamble_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.effective_message
     
@@ -164,6 +175,7 @@ async def gamble_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 @check_module_enabled("fun")
 @command_control("fun")
+@custom_handler("decide")
 async def decide_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
     answers = [
