@@ -6,12 +6,14 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, create_user_html_link, safe_escape
 from ..core.decorators import check_module_enabled
+from ..core.handlers import custom_handler
 
 logger = logging.getLogger(__name__)
 
 
 # --- PROMOTION/DEMOTION COMMAND FUNCTIONS ---
 @check_module_enabled("promotes")
+@custom_handler("promote")
 async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     message = update.message
@@ -96,6 +98,7 @@ async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await message.reply_text(f"Error: Failed to promote user: {safe_escape(str(e))}. Check if the user has not been promoted by another Admin or if I have permissions to perform this action.")
 
 @check_module_enabled("promotes")
+@custom_handler("demote")
 async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     message = update.message
