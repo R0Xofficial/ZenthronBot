@@ -7,6 +7,7 @@ from telegram.constants import ParseMode, ChatType
 from ..core.database import get_chat_join_settings, update_chat_join_settings
 from ..core.utils import _can_user_perform_action, safe_escape, create_user_html_link, send_safe_reply
 from ..core.decorators import check_module_enabled
+from ..core.handlers import custom_handler
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,7 @@ async def check_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 break
 
 @check_module_enabled("joinfilters")
+@custom_handler("addjoinfilter")
 async def add_filter_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -94,6 +96,7 @@ async def add_filter_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text("This filter already exists.")
 
 @check_module_enabled("joinfilters")
+@custom_handler("deljoinfilter")
 async def remove_filter_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -118,6 +121,7 @@ async def remove_filter_command(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text("This filter doesn't exist.")
 
 @check_module_enabled("joinfilters")
+@custom_handler("joinfilters")
 async def list_filters_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -143,6 +147,7 @@ async def list_filters_command(update: Update, context: ContextTypes.DEFAULT_TYP
     await update.message.reply_html(message)
 
 @check_module_enabled("joinfilters")
+@custom_handler("setjoinaction")
 async def set_action_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
