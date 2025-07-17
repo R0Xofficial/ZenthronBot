@@ -141,7 +141,7 @@ async def add_filter_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     if len(args) < 2:
         await msg.reply_html(
-            "<b>Usage:</b>\n"
+            "Usage:\n"
             "• <code>/addfilter 'keyword' Your reply text</code>\n"
             "• <code>/addfilter type:wildcard 'key*' Reply</code>\n"
             "• Reply to a message/media with <code>/addfilter 'keyword'</code>"
@@ -227,7 +227,7 @@ async def remove_filter_command(update: Update, context: ContextTypes.DEFAULT_TY
     try:
         keyword_to_remove = update.message.text.split("'", 2)[1]
     except IndexError:
-        await update.message.reply_html("<b>Usage:</b> /delfilter 'keyword'")
+        await update.message.reply_html("Usage: /delfilter 'keyword'")
         return
         
     if remove_filter(update.effective_chat.id, keyword_to_remove):
