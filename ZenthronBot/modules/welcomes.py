@@ -14,12 +14,14 @@ from ..core.database import (
 from ..core.utils import _can_user_perform_action, send_safe_reply, safe_escape, format_message_text, send_critical_log
 from ..core.constants import OWNER_WELCOME_TEXTS, DEV_WELCOME_TEXTS, SUDO_WELCOME_TEXTS, SUPPORT_WELCOME_TEXTS, GENERIC_WELCOME_TEXTS, GENERIC_GOODBYE_TEXTS
 from ..core.decorators import check_module_enabled, command_control
+from ..core.handlers import custom_handler
 
 logger = logging.getLogger(__name__)
 
 
 # --- WELCOME/GOODBYE COMMAND AND HANDLER FUNCTIONS ---
 @check_module_enabled("welcomes")
+@custom_handler("welcome")
 async def welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -66,6 +68,7 @@ async def welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_html(message)
 
 @check_module_enabled("welcomes")
+@custom_handler("setwelcome")
 async def set_welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -87,6 +90,7 @@ async def set_welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("Failed to set welcome message.")
 
 @check_module_enabled("welcomes")
+@custom_handler("resetwelcome")
 async def reset_welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -103,6 +107,7 @@ async def reset_welcome_command(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text("Failed to reset welcome message.")
 
 @check_module_enabled("welcomes")
+@custom_handler("goodbye")
 async def goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -144,6 +149,7 @@ async def goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_html(message)
 
 @check_module_enabled("welcomes")
+@custom_handler("setgoodbye")
 async def set_goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -165,6 +171,7 @@ async def set_goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("Failed to set goodbye message.")
 
 @check_module_enabled("welcomes")
+@custom_handler("resetgoodbye")
 async def reset_goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -182,6 +189,7 @@ async def reset_goodbye_command(update: Update, context: ContextTypes.DEFAULT_TY
 
 @check_module_enabled("welcomes")
 @command_control("welcomehelp")
+@custom_handler("welcomehelp")
 async def welcome_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     help_text = """
 <b>Welcome Message Help</b>
@@ -205,6 +213,7 @@ Welcome messages support html, so you can make any elements bold (&lt;b&gt;,&lt;
     await update.message.reply_html(help_text, disable_web_page_preview=True)
 
 @check_module_enabled("welcomes")
+@custom_handler("cleanservice")
 async def set_clean_service_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
