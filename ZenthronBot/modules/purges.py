@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 # --- PURGE COMMAND FUNCTION ---
 @check_module_enabled("purges")
+@custom_handler("purge")
 async def purge_messages_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     user_who_purges = update.effective_user
