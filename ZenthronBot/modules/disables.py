@@ -8,10 +8,12 @@ from ..core.constants import DISABLES_HELP_TEXT
 from ..core.database import disable_command_in_chat, enable_command_in_chat, get_disabled_commands_in_chat
 from ..core.utils import safe_escape, _can_user_perform_action, send_safe_reply
 from ..core.decorators import check_module_enabled, command_control
+from ..core.handlers import custom_handler
 
 logger = logging.getLogger(__name__)
 
 @check_module_enabled("disables")
+@custom_handler("disable")
 async def disable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -44,6 +46,7 @@ async def disable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text("This command was already disabled or an error occurred.")
 
 @check_module_enabled("disables")
+@custom_handler("enable")
 async def enable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -73,6 +76,7 @@ async def enable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text("This command was already enabled or an error occurred.")
 
 @check_module_enabled("disables")
+@custom_handler("settings")
 async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
@@ -102,6 +106,7 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 @check_module_enabled("disables")
 @command_control("disableshelp")
+@custom_handler("disableshelp")
 async def disables_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_html(DISABLES_HELP_TEXT)
 
