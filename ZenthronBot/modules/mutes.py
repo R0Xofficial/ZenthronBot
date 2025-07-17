@@ -7,12 +7,14 @@ from telegram.ext import Application, CommandHandler, ContextTypes, ChatMemberHa
 
 from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, parse_duration_to_timedelta, create_user_html_link, send_safe_reply, safe_escape, send_critical_log
 from ..core.decorators import check_module_enabled
+from ..core.handlers import custom_handler
 
 logger = logging.getLogger(__name__)
 
 
 # --- MUTE COMMAND FUNCTIONS ---
 @check_module_enabled("mutes")
+@custom_handler("mute")
 async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     user_who_mutes = update.effective_user
@@ -105,6 +107,7 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await send_safe_reply(update, context, text=f"Failed to mute user: {safe_escape(str(e))}")
 
 @check_module_enabled("mutes")
+@custom_handler("unmute")
 async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     message = update.message
