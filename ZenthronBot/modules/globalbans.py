@@ -10,6 +10,7 @@ from ..config import APPEAL_CHAT_USERNAME, DB_NAME
 from ..core.database import is_gban_enforced, get_gban_reason, add_to_gban, remove_from_gban, is_whitelisted, add_chat_to_db
 from ..core.utils import is_privileged_user, resolve_user_with_telethon, create_user_html_link, safe_escape, send_operational_log, propagate_unban
 from ..core.decorators import check_module_enabled
+from ..core.handlers import custom_handler
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,7 @@ async def check_gban_on_message(update: Update, context: ContextTypes.DEFAULT_TY
             logger.error(f"Failed to take gban action on message for user {user.id} in chat {chat.id}: {e}")
 
 @check_module_enabled("globalbans")
+@custom_handler("gban")
 async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_who_gbans = update.effective_user
     chat = update.effective_chat
@@ -175,6 +177,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await message.reply_text("Failed to add user to global ban list.")
 
 @check_module_enabled("globalbans")
+@custom_handler("ungban")
 async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_who_ungbans = update.effective_user
     chat = update.effective_chat
@@ -244,6 +247,7 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await message.reply_text("Failed to remove from global ban list.")
 
 @check_module_enabled("globalbans")
+@custom_handler("enforcegban")
 async def enforce_gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     user = update.effective_user
