@@ -16,6 +16,7 @@ from telethon import TelegramClient
 from .config import SESSION_NAME, API_ID, API_HASH, LOG_CHAT_ID, OWNER_ID, BOT_TOKEN, ADMIN_LOG_CHAT_ID, DB_NAME
 from .core.database import init_db, disable_module, enable_module, get_disabled_modules
 from .core.utils import is_owner_or_dev, safe_escape, send_critical_log
+from .core.handlers import get_custom_command_handler, custom_handler
 
 from .modules.mutes import handle_bot_permission_changes
 from .modules.bans import handle_bot_banned
@@ -105,6 +106,7 @@ def _get_available_modules():
         logger.error(f"Could not scan for available modules: {e}")
         return []
 
+@custom_handler("disablemodule")
 async def disable_module_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     
@@ -126,6 +128,7 @@ async def disable_module_command(update: Update, context: ContextTypes.DEFAULT_T
     else:
         await update.message.reply_text(f"Module '<code>{safe_escape(module_name)}</code>' was already disabled or an error occurred.", parse_mode=ParseMode.HTML)
 
+@custom_handler("enablemodule")
 async def enable_module_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
 
@@ -143,6 +146,7 @@ async def enable_module_command(update: Update, context: ContextTypes.DEFAULT_TY
     else:
         await update.message.reply_text(f"Module '<code>{safe_escape(module_name)}</code>' was already enabled or an error occurred.", parse_mode=ParseMode.HTML)
 
+@custom_handler("listmodules")
 async def list_modules_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     
@@ -160,6 +164,7 @@ async def list_modules_command(update: Update, context: ContextTypes.DEFAULT_TYP
         
     await update.message.reply_html(message)
 
+@custom_handler("backupdb")
 async def backup_db_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
 
@@ -273,6 +278,7 @@ async def main() -> None:
         application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND) & (filters.REPLY | filters.Entity(constants.MessageEntityType.MENTION) | filters.Entity(constants.MessageEntityType.TEXT_MENTION)), afk_reply_handler), group=-4)
 
         # --- LAYER 4: MAIN LOGIC - COMMANDS AND INTERACTIONS ---
+        application.add_handler(get_custom_command_handler(), group=-1)
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_note_trigger), group=0)
         application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND) & filters.ChatType.GROUPS, check_message_for_filters), group=3)
 
