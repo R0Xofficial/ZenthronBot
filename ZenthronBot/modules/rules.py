@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 # --- RULES COMMAND FUNCTIONS ---
 @check_module_enabled("rules")
+@custom_handler("setrules")
 async def set_rules_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     message = update.effective_message
@@ -43,6 +44,7 @@ async def set_rules_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         await message.reply_text("A database error occurred while setting the rules.")
 
 @check_module_enabled("rules")
+@custom_handler("clearrules")
 async def clear_rules_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     message = update.effective_message
@@ -62,6 +64,7 @@ async def clear_rules_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 @check_module_enabled("rules")
 @command_control("rules")
+@custom_handler("rules")
 async def rules_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     message = update.effective_message
