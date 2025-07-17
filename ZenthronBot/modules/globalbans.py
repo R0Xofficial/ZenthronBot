@@ -115,7 +115,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
         
     if not target_entity:
-        await message.reply_html("<b>Usage:</b> /gban &lt;ID/@username/reply&gt; [reason]")
+        await message.reply_html("Usage: /gban &lt;ID/@username/reply&gt; [reason]")
         return
 
     if not reason:
@@ -198,7 +198,7 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
 
     if not target_entity:
-        await message.reply_html("<b>Usage:</b> /ungban &lt;ID/@username/reply&gt;")
+        await message.reply_html("Usage: /ungban &lt;ID/@username/reply&gt;")
         return
         
     if not target_entity:
