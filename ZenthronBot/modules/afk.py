@@ -8,6 +8,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from ..core.database import set_afk, get_afk_status, clear_afk, get_user_from_db_by_username
 from ..core.utils import send_safe_reply, get_readable_time_delta, create_user_html_link, safe_escape
 from ..core.decorators import check_module_enabled, command_control
+from ..core.handlers import custom_handler
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 # --- AFK COMMAND AND HANDLER FUNCTIONS ---
 @check_module_enabled("afk")
 @command_control("afk")
+@custom_handler("afk")
 async def afk_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.effective_message
