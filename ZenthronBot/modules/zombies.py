@@ -7,6 +7,7 @@ from telethon import TelegramClient
 
 from ..core.utils import _can_user_perform_action, send_safe_reply, safe_escape
 from ..core.decorators import check_module_enabled
+from ..core.handlers import custom_handler
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,7 @@ async def _find_and_process_zombies(update: Update, context: ContextTypes.DEFAUL
         await status_message.edit_text("\n".join(report), parse_mode=ParseMode.HTML)
 
 @check_module_enabled("zombies")
+@custom_handler("zombies")
 async def zombies_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
 
