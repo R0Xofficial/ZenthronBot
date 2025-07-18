@@ -36,18 +36,22 @@ async def blacklist_chat_command(update: Update, context: ContextTypes.DEFAULT_T
       logger.warning(f"Unauthorized /blchat attempt by user {user.id}.")
       return
 
-    chat_id_to_bl = update.effective_chat.id
+    chat_to_bl = update.effective_chat
     if context.args:
         try:
             chat_id_to_bl = int(context.args[0])
-        except ValueError:
-            await update.message.reply_text("Invalid chat ID.")
+            chat_to_bl = await context.bot.get_chat(chat_id_to_bl)
+        except (ValueError, TelegramError) as e:
+            await update.message.reply_text(f"Could not find or get info for chat ID {context.args[0]}: {e}")
             return
 
-    if blacklist_chat(chat_id_to_bl):
-        await update.message.reply_html(f"✅ Chat <code>{chat_id_to_bl}</code> has been blacklisted.")
+    chat_id = chat_to_bl.id
+    chat_name = chat_to_bl.title or chat_to_bl.first_name or f"Unknown Chat"
+
+    if blacklist_chat(chat_id, chat_name):
+        await update.message.reply_html(f"✅ Chat '<b>{safe_escape(chat_name)}</b>' (<code>{chat_id}</code>) has been blacklisted.")
         try:
-            await context.bot.leave_chat(chat_id_to_bl)
+            await context.bot.leave_chat(chat_id)
             await update.message.reply_text("I was in that chat, so I left it.")
         except TelegramError:
             pass
@@ -89,9 +93,18 @@ async def list_blacklisted_chats_command(update: Update, context: ContextTypes.D
         return
         
     message = "<b>Blacklisted Chats:</b>\n\n"
-    for chat_id in blacklisted:
-        message += f"• <code>{chat_id}</code>\n"
-    await update.message.reply_html(message)
+    for chat_id, chat_name, timestamp in blacklisted:
+        date_added = datetime.fromisoformat(timestamp).strftime('%Y-%m-%d %H:%M')
+        message += f"• <b>{safe_escape(chat_name)}</b> [<code>{chat_id}</code>]\n"
+        message += f"Added: <code>{date_added}</code>\n\n"
+
+    if len(message) > 4096:
+        import io
+        with io.BytesIO(str.encode(message.replace("<b>", "").replace("</b>", "").replace("<code>", "").replace("</code>", ""))) as file:
+            file.name = "blacklisted_chats.txt"
+            await update.message.reply_document(document=file)
+    else:
+        await update.message.reply_html(message)
 
 
 def load_handlers(application: Application):
