@@ -483,6 +483,7 @@ async def propagate_unban(context: ContextTypes.DEFAULT_TYPE) -> None:
     target_user_id = job_data['target_user_id']
     command_chat_id = job_data['command_chat_id']
     user_display = job_data['user_display']
+    message = update.message
 
     chats_to_scan = []
     try:
