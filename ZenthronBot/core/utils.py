@@ -521,8 +521,6 @@ async def propagate_unban(context: ContextTypes.DEFAULT_TYPE) -> None:
 
     logger.info(f"Unban propagation finished for {target_user_id}. Succeeded in {successful_unbans} chats.")
     
-    final_message = f"✅ Correctly unbanned <code>{target_user_id}</code> on {successful_unbans} chats."
-    
     await context.bot.send_message(
         chat_id=command_chat_id,
         text=final_message,
