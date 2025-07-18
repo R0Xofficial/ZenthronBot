@@ -222,7 +222,7 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await message.reply_html(prepare_message)
     
         if context.job_queue:
-            context.job_queue.run_once(propagate_unban, 1, data={'target_user_id': target_entity.id, 'command_chat_id': chat.id, 'user_display': user_display})
+            context.job_queue.run_once(propagate_unban, 1, data={'target_user_id': target_entity.id, 'command_chat_id': chat.id, 'user_display': user_display, 'command_message_id': message.message_id})
 
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
