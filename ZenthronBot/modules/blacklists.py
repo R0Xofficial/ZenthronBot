@@ -63,14 +63,15 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
     existing_blist_reason = get_blacklist_reason(target_entity.id)
     if existing_blist_reason:
         await message.reply_html(
-            f"ℹ️ User {user_display} [<code>{target_entity.id}</code>] is <b>already on the blacklist</b>.\n"
+            f"ℹ️ User {user_display} [<code>{target_entity.id}</code>] is already <b>blacklisted</b>.\n"
             f"<b>Reason:</b> {safe_escape(existing_blist_reason)}"
         )
         return
 
     if add_to_blacklist(target_entity.id, user.id, reason):
-        success_message = f"✅ User {user_display} [<code>{target_entity.id}</code>] has been <b>added to the blacklist</b>.\n<b>Reason:</b> {safe_escape(reason)}"
-        await message.reply_html(success_message, disable_web_page_preview=True)
+        await message.reply_html(f"OK!")
+        success_message = f"✅ Done! {user_display} [<code>{target_entity.id}</code>] has been <b>blacklisted</b>.\n<b>Reason:</b> {safe_escape(reason)}"
+        await message.reply_html(success_message)
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
