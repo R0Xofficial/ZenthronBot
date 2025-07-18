@@ -482,6 +482,7 @@ async def propagate_unban(context: ContextTypes.DEFAULT_TYPE) -> None:
     job_data = context.job.data
     target_user_id = job_data['target_user_id']
     command_chat_id = job_data['command_chat_id']
+    user_display = job_data['user_display']
 
     chats_to_scan = []
     try:
@@ -520,6 +521,9 @@ async def propagate_unban(context: ContextTypes.DEFAULT_TYPE) -> None:
         await asyncio.sleep(0.2)
 
     logger.info(f"Unban propagation finished for {target_user_id}. Succeeded in {successful_unbans} chats.")
+
+    success_message = f"✅ Done! {user_display} [<code>{target_user_id}</code>] has been <b>globally unbanned</b>."
+    await message.reply_html(success_message)
     
     await context.bot.send_message(
         chat_id=command_chat_id,
