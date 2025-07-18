@@ -1628,10 +1628,11 @@ async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         await message.reply_html(f"ℹ️ User {user_display} [<code>{target_user.id}</code>] is already <b>whitelisted</b>.")
         return
 
+    prepare_message = f"Keep this user safe!"
+    await message.reply_html(prepare_message)
+    await asyncio.sleep(1.0)
+
     if add_to_whitelist(target_user.id, user.id):
-        prepare_message = f"Keep this user safe!"
-        await message.reply_html(prepare_message)
-        await asyncio.sleep(1.0)
         await message.reply_html(f"✅ Done! {user_display} [<code>{target_user.id}</code>] has been <b>whitelisted</b>.")
         
         try:
@@ -1682,12 +1683,13 @@ async def unwhitelist_user_command(update: Update, context: ContextTypes.DEFAULT
     if not is_whitelisted(target_user.id):
         await update.message.reply_html(f"User {target_user.mention_html()} is not <b>whitelisted</b>.")
         return
-        
+
+    prepare_message = f"Let him be like everyone else!"
+    await message.reply_html(prepare_message)
+    await asyncio.sleep(1.0)
+
+    user_display = create_user_html_link(target_user)
     if remove_from_whitelist(target_user.id):
-        user_display = create_user_html_link(target_user)
-        prepare_message = f"Let him be like everyone else!"
-        await message.reply_html(prepare_message)
-        await asyncio.sleep(1.0)
         await update.message.reply_html(f"✅ Done! {user_display} [<code>{target_user.id}</code>] has been <b>unwhitelisted</b>.")
 
         try:
