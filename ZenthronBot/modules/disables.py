@@ -39,7 +39,7 @@ async def disable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     if disable_command_in_chat(update.effective_chat.id, command_to_disable):
         await update.message.reply_text(
-            f"✅ <code>{safe_escape(command_to_disable)}</code> Command/Commands is now disabled for non-admins in this chat.",
+            f"✅ <code>{safe_escape(command_to_disable)}</code> is now disabled for non-admins in this chat.",
             parse_mode=ParseMode.HTML
         )
     else:
@@ -69,7 +69,7 @@ async def enable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         
     if enable_command_in_chat(update.effective_chat.id, command_to_enable):
         await update.message.reply_text(
-            f"✅ <code>{safe_escape(command_to_enable)}</code> Command/Commands is now enabled for everyone in this chat.",
+            f"✅ <code>{safe_escape(command_to_enable)}</code> is now enabled for everyone in this chat.",
             parse_mode=ParseMode.HTML
         )
     else:
