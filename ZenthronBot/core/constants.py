@@ -901,4 +901,5 @@ CANT_TARGET_SELF_TEXTS = [
     "Error: Target is too critical to the system to be targeted (it's me).",
     "Command requires `target != self`.",
     "Error: Cannot establish action connection with self.",
+    "DO NOT TARGET ME - REEEEEEEEEEEEEEEEEEE!",
 ]
