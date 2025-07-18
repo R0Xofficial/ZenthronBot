@@ -28,7 +28,7 @@ from ..core.database import (
 )
 from ..core.utils import (
     is_owner_or_dev, get_readable_time_delta, safe_escape, resolve_user_with_telethon,
-    create_user_html_link, send_operational_log, run_speed_test_blocking, is_privileged_user, run_speed_test_async
+    create_user_html_link, send_operational_log, is_privileged_user, run_speed_test_async
 )
 from ..core.constants import LEAVE_TEXTS
 from ..core.decorators import check_module_enabled
@@ -325,7 +325,7 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 @custom_handler("leave")
 async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    if user.id != OWNER_ID:
+    if not is_owner_or_dev(user.id):
         logger.warning(f"Unauthorized /leave attempt by user {user.id}.")
         return
 
@@ -357,12 +357,7 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         await update.message.reply_text("Could not determine which chat to leave.")
         return
 
-    owner_mention_for_farewell = f"<code>{OWNER_ID}</code>"
-    try:
-        owner_chat_info = await context.bot.get_chat(OWNER_ID)
-        owner_mention_for_farewell = owner_chat_info.mention_html()
-    except Exception as e:
-        logger.warning(f"Could not fetch owner mention for /leave farewell message: {e}")
+    admin_mention_for_farewell = create_user_html_link(user)
 
     chat_title_to_leave = f"Chat ID {target_chat_id_to_leave}"
     safe_chat_title_to_leave = chat_title_to_leave
@@ -374,7 +369,7 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     except TelegramError as e:
         logger.error(f"Could not get chat info for {target_chat_id_to_leave} before leaving: {e}")
         reply_to_chat_id_for_error = chat_where_command_was_called_id
-        if is_leaving_current_chat and OWNER_ID: reply_to_chat_id_for_error = OWNER_ID
+        if is_leaving_current_chat: reply_to_chat_id_for_error = user.id
         
         error_message_text = f"❌ Cannot interact with chat <b>{safe_chat_title_to_leave}</b> [<code>{target_chat_id_to_leave}</code>]: {safe_escape(str(e))}. I might not be a member there."
         if "bot is not a member" in str(e).lower() or "chat not found" in str(e).lower():
@@ -390,13 +385,13 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     except Exception as e:
          logger.error(f"Unexpected error getting chat info for {target_chat_id_to_leave}: {e}", exc_info=True)
          reply_to_chat_id_for_error = chat_where_command_was_called_id
-         if is_leaving_current_chat and OWNER_ID: reply_to_chat_id_for_error = OWNER_ID
+         if is_leaving_current_chat: reply_to_chat_id_for_error = user.id
          if reply_to_chat_id_for_error:
              try: await context.bot.send_message(chat_id=reply_to_chat_id_for_error, text=f"⚠️ Unexpected error getting chat info for <code>{target_chat_id_to_leave}</code>. Will attempt to leave anyway.", parse_mode=ParseMode.HTML)
              except Exception as send_err: logger.error(f"Failed to send error about get_chat to {reply_to_chat_id_for_error}: {send_err}")
 
     if LEAVE_TEXTS:
-        farewell_message = random.choice(LEAVE_TEXTS).format(owner_mention=owner_mention_for_farewell, chat_title=f"<b>{safe_chat_title_to_leave}</b>")
+        farewell_message = random.choice(LEAVE_TEXTS).format(admin_mention=admin_mention_for_farewell, chat_title=f"<b>{safe_chat_title_to_leave}</b>")
         try:
             await context.bot.send_message(chat_id=target_chat_id_to_leave, text=farewell_message, parse_mode=ParseMode.HTML)
             logger.info(f"Sent farewell message to {target_chat_id_to_leave}")
@@ -405,7 +400,7 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             if "forbidden: bot is not a member" in str(e).lower() or "chat not found" in str(e).lower():
                 logger.warning(f"Bot is not a member of {target_chat_id_to_leave} or chat not found. Cannot send farewell.")
                 reply_to_chat_id_for_error = chat_where_command_was_called_id
-                if is_leaving_current_chat and OWNER_ID: reply_to_chat_id_for_error = OWNER_ID
+                if is_leaving_current_chat: reply_to_chat_id_for_error = user.id
                 if reply_to_chat_id_for_error:
                     try: await context.bot.send_message(chat_id=reply_to_chat_id_for_error, text=f"❌ Failed to send farewell to <b>{safe_chat_title_to_leave}</b> [<code>{target_chat_id_to_leave}</code>]: {safe_escape(str(e))}. Bot is not a member.", parse_mode=ParseMode.HTML)
                     except Exception as send_err: logger.error(f"Failed to send error about farewell to {reply_to_chat_id_for_error}: {send_err}")
@@ -420,10 +415,7 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         
         confirmation_target_chat_id = chat_where_command_was_called_id
         if is_leaving_current_chat:
-            if OWNER_ID:
-                confirmation_target_chat_id = OWNER_ID
-            else:
-                confirmation_target_chat_id = None 
+            confirmation_target_chat_id = user.id
 
         if success:
             logger.info(f"Successfully left chat {target_chat_id_to_leave} ('{chat_title_to_leave}')")
@@ -441,8 +433,7 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         logger.error(f"Failed to leave chat {target_chat_id_to_leave}: {e}")
         confirmation_target_chat_id = chat_where_command_was_called_id
         if is_leaving_current_chat:
-            if OWNER_ID: confirmation_target_chat_id = OWNER_ID
-            else: confirmation_target_chat_id = None
+            confirmation_target_chat_id = user.id
         if confirmation_target_chat_id:
             await context.bot.send_message(chat_id=confirmation_target_chat_id,
                                            text=f"❌ Failed to leave chat <b>{safe_chat_title_to_leave}</b> [<code>{target_chat_id_to_leave}</code>]: {safe_escape(str(e))}", 
@@ -451,8 +442,7 @@ async def leave_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
          logger.error(f"Unexpected error during leave process for {target_chat_id_to_leave}: {e}", exc_info=True)
          confirmation_target_chat_id = chat_where_command_was_called_id
          if is_leaving_current_chat:
-            if OWNER_ID: confirmation_target_chat_id = OWNER_ID
-            else: confirmation_target_chat_id = None
+            confirmation_target_chat_id = user.id
          if confirmation_target_chat_id:
             await context.bot.send_message(chat_id=confirmation_target_chat_id,
                                            text=f"💥 Unexpected error leaving chat <b>{safe_chat_title_to_leave}</b> [<code>{target_chat_id_to_leave}</code>]. Check logs.", 
