@@ -9,7 +9,7 @@ from ..config import OWNER_ID, DB_NAME, APPEAL_CHAT_USERNAME
 from ..core.database import (
     set_welcome_setting, get_welcome_settings, set_goodbye_setting, get_goodbye_settings,
     set_clean_service, should_clean_service, add_chat_to_db, remove_chat_from_db,
-    is_dev_user, is_sudo_user, is_support_user
+    is_dev_user, is_sudo_user, is_support_user, is_chat_blacklisted
 )
 from ..core.utils import _can_user_perform_action, send_safe_reply, safe_escape, format_message_text, send_critical_log
 from ..core.constants import OWNER_WELCOME_TEXTS, DEV_WELCOME_TEXTS, SUDO_WELCOME_TEXTS, SUPPORT_WELCOME_TEXTS, GENERIC_WELCOME_TEXTS, GENERIC_GOODBYE_TEXTS
@@ -258,6 +258,9 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
     if not update.message or not update.message.new_chat_members:
         return
     chat = update.effective_chat
+
+    if is_chat_blacklisted(chat.id):
+        return
     
     if any(member.id == context.bot.id for member in update.message.new_chat_members):
         logger.info(f"Bot joined chat: {chat.title} ({chat.id})")
