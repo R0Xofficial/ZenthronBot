@@ -71,6 +71,7 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
     if add_to_blacklist(target_entity.id, user.id, reason):
         prepare_message = f"OK!"
         await message.reply_html(prepare_message)
+        await asyncio.sleep(1.0)
         success_message = f"✅ Done! {user_display} [<code>{target_entity.id}</code>] has been <b>blacklisted</b>.\n<b>Reason:</b> {safe_escape(reason)}"
         await message.reply_html(success_message)
         
@@ -127,6 +128,7 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
     if remove_from_blacklist(target_entity.id):
         prepare_message = f"Let’s give him next chance!"
         await message.reply_html(prepare_message)
+        await asyncio.sleep(1.0)
         success_message = f"✅ Done! {user_display} [<code>{target_entity.id}</code>] has been <b>unblacklisted</b>."
         await message.reply_html(success_message)
         
