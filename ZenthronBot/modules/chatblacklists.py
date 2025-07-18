@@ -1,7 +1,7 @@
 import logging
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ChatMemberHandler, ContextTypes
-from telegram.constants import ParseMode
+from telegram.constants import ParseMode, ChatType
 from telegram.error import TelegramError
 
 from ..core.database import blacklist_chat, unblacklist_chat, get_blacklisted_chats, is_chat_blacklisted
@@ -37,19 +37,29 @@ async def blacklist_chat_command(update: Update, context: ContextTypes.DEFAULT_T
       return
 
     chat_to_bl = update.effective_chat
-    if context.args:
+    chat_id_to_bl_str = context.args[0] if context.args else None
+
+    if chat_id_to_bl_str:
         try:
-            chat_id_to_bl = int(context.args[0])
+            chat_id_to_bl = int(chat_id_to_bl_str)
+            if chat_id_to_bl > 0:
+                await update.message.reply_text("You can't blacklist a private chat/user.")
+                return
+            
             chat_to_bl = await context.bot.get_chat(chat_id_to_bl)
         except (ValueError, TelegramError) as e:
-            await update.message.reply_text(f"Could not find or get info for chat ID {context.args[0]}: {e}")
+            await update.message.reply_text(f"Could not find or get info for chat ID {chat_id_to_bl_str}: {e}")
+            return
+    else:
+        if chat_to_bl.type == ChatType.PRIVATE:
+            await update.message.reply_text("You can't blacklist a private chat.")
             return
 
     chat_id = chat_to_bl.id
     chat_name = chat_to_bl.title or chat_to_bl.first_name or f"Unknown Chat"
 
-    if blacklist_chat(chat_id, chat_name):
-        await update.message.reply_html(f"✅ Chat '<b>{safe_escape(chat_name)}</b>' (<code>{chat_id}</code>) has been blacklisted.")
+    if blacklist_chat(chat_id):
+        await update.message.reply_html(f"✅ Done! Chat <code>{chat_id}</code> has been blacklisted.")
         try:
             await context.bot.leave_chat(chat_id)
             await update.message.reply_text("I was in that chat, so I left it.")
@@ -75,7 +85,7 @@ async def unblacklist_chat_command(update: Update, context: ContextTypes.DEFAULT
             return
 
     if unblacklist_chat(chat_id_to_unbl):
-        await update.message.reply_html(f"✅ Chat <code>{chat_id_to_unbl}</code> has been unblacklisted.")
+        await update.message.reply_html(f"✅ Done! Chat <code>{chat_id_to_unbl}</code> has been unblacklisted.")
     else:
         await update.message.reply_html("This chat was not on the blacklist.")
 
