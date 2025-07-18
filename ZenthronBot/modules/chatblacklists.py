@@ -4,7 +4,7 @@ from telegram.ext import Application, CommandHandler, ChatMemberHandler, Context
 from telegram.constants import ParseMode, ChatType
 from telegram.error import TelegramError
 
-from ..core.database import blacklist_chat, unblacklist_chat, get_blacklisted_chats, is_chat_blacklisted
+from ..core.database import blacklist_chat, unblacklist_chat, get_blacklisted_chats, is_chat_blacklisted, remove_chat_from_db
 from ..core.utils import is_owner_or_dev, safe_escape
 from ..core.decorators import check_module_enabled
 from ..core.handlers import custom_handler
@@ -25,6 +25,7 @@ async def check_blacklisted_chat_on_join(update: Update, context: ContextTypes.D
         logger.warning(f"Bot was added to a blacklisted chat: {chat.title} ({chat.id}). Leaving immediately.")
         try:
             await context.bot.leave_chat(chat.id)
+            remove_chat_from_db(chat.id)
         except Exception as e:
             logger.error(f"Failed to leave blacklisted chat {chat.id}: {e}")
 
