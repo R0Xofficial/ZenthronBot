@@ -214,13 +214,14 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     user_display = create_user_html_link(target_entity)
 
     if not get_gban_reason(target_entity.id):
-        await message.reply_html(f"User {user_display} [<code>{target_entity.id}</code>] is <b>not globally banned</b>.")
+        await message.reply_html(f"ℹ️ User {user_display} [<code>{target_entity.id}</code>] is not <b>globally banned</b>.")
         return
 
+    prepare_message = f"Let’s give him next chance!"
+    await message.reply_html(prepare_message)
+    await asyncio.sleep(1.0)
+
     if remove_from_gban(target_entity.id):
-        prepare_message = f"Let’s give him next chance!"
-        await message.reply_html(prepare_message)
-        await asyncio.sleep(1.0)
         success_message = f"✅ Done! {user_display} [<code>{target_entity.id}</code>] has been globally unbanned.\n<i>Propagating unban...</i>"
         await message.reply_html(success_message, disable_web_page_preview=True)
     
