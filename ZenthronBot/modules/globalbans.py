@@ -136,7 +136,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     existing_gban_reason = get_gban_reason(target_entity.id)
     if existing_gban_reason:
         await message.reply_html(
-            f"ℹ️ User {user_display} [<code>{target_entity.id}</code>] is <b>already globally banned</b>.\n"
+            f"ℹ️ User {user_display} [<code>{target_entity.id}</code>] is already <b>globally banned</b>.\n"
             f"<b>Reason:</b> {safe_escape(existing_gban_reason)}"
         )
         return
@@ -148,7 +148,10 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             except Exception as e:
                 logger.warning(f"Could not enforce local ban for gban: {e}")
 
-        success_message = f"✅ User {user_display} [<code>{target_entity.id}</code>] has been <b>globally banned</b>.\n<b>Reason:</b> {safe_escape(reason)}"
+        prepare_message = f"OK!"
+        await message.reply_html(prepare_message)
+        await asyncio.sleep(1.0)
+        success_message = f"✅ Done! {user_display} [<code>{target_entity.id}</code>] has been <b>globally banned</b>.\n<b>Reason:</b> {safe_escape(reason)}"
         await message.reply_html(success_message, disable_web_page_preview=True)
     
         try:
@@ -214,7 +217,10 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     if remove_from_gban(target_entity.id):
-        success_message = f"✅ User {user_display} [<code>{target_entity.id}</code>] has been globally unbanned.\n<i>Propagating unban...</i>"
+        prepare_message = f"Let’s give him next chance!"
+        await message.reply_html(prepare_message)
+        await asyncio.sleep(1.0)
+        success_message = f"✅ Done! {user_display} [<code>{target_entity.id}</code>] has been globally unbanned.\n<i>Propagating unban...</i>"
         await message.reply_html(success_message, disable_web_page_preview=True)
     
         if context.job_queue:
