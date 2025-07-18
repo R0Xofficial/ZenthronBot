@@ -48,7 +48,7 @@ async def blacklist_chat_command(update: Update, context: ContextTypes.DEFAULT_T
         await update.message.reply_html(f"✅ Chat <code>{chat_id_to_bl}</code> has been blacklisted.")
         try:
             await context.bot.leave_chat(chat_id_to_bl)
-            await update.message.reply_text("Bot was in that chat and has now left.")
+            await update.message.reply_text("I was in that chat, so I left it.")
         except TelegramError:
             pass
     else:
