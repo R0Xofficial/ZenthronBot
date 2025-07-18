@@ -159,9 +159,15 @@ def init_db():
                 UNIQUE (chat_id, keyword)
             )
         """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS chat_blacklist (
+                chat_id INTEGER PRIMARY KEY
+            )
+        """)
         
         conn.commit()
-        logger.info(f"Database '{DB_NAME}' initialized successfully (tables users, blacklist, whitelist_users, support_users, sudo_users, dev_users, global_bans, bot_chats, notes, warnings, afk_users, disable_modules, disabled_commands_per_chat, chat_join_settings, chat_filters ensured).")
+        logger.info(f"Database '{DB_NAME}' initialized successfully.")
     except sqlite3.Error as e:
         logger.error(f"SQLite error during DB initialization: {e}", exc_info=True)
     finally:
@@ -1063,4 +1069,35 @@ def get_all_filters_for_chat(chat_id: int) -> list[dict]:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM chat_filters WHERE chat_id = ?", (chat_id,))
             return [dict(row) for row in cursor.fetchall()]
+    except sqlite3.Error: return []
+
+# --- BLACKLIST CHAT ---
+def blacklist_chat(chat_id: int) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            conn.execute("INSERT OR IGNORE INTO chat_blacklist (chat_id) VALUES (?)", (chat_id,))
+            return conn.total_changes > 0
+    except sqlite3.Error: return False
+
+def unblacklist_chat(chat_id: int) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            conn.execute("DELETE FROM chat_blacklist WHERE chat_id = ?", (chat_id,))
+            return conn.total_changes > 0
+    except sqlite3.Error: return False
+
+def is_chat_blacklisted(chat_id: int) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM chat_blacklist WHERE chat_id = ?", (chat_id,))
+            return cursor.fetchone() is not None
+    except sqlite3.Error: return False
+
+def get_blacklisted_chats() -> list[int]:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT chat_id FROM chat_blacklist")
+            return [row[0] for row in cursor.fetchall()]
     except sqlite3.Error: return []
