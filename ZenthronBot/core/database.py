@@ -162,7 +162,9 @@ def init_db():
 
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS chat_blacklist (
-                chat_id INTEGER PRIMARY KEY
+                chat_id INTEGER PRIMARY KEY,
+                chat_name TEXT,
+                timestamp TEXT
             )
         """)
         
@@ -1072,10 +1074,14 @@ def get_all_filters_for_chat(chat_id: int) -> list[dict]:
     except sqlite3.Error: return []
 
 # --- BLACKLIST CHAT ---
-def blacklist_chat(chat_id: int) -> bool:
+def blacklist_chat(chat_id: int, chat_name: str) -> bool:
     try:
         with sqlite3.connect(DB_NAME) as conn:
-            conn.execute("INSERT OR IGNORE INTO chat_blacklist (chat_id) VALUES (?)", (chat_id,))
+            current_timestamp = datetime.now(timezone.utc).isoformat()
+            conn.execute(
+                "INSERT OR IGNORE INTO chat_blacklist (chat_id, chat_name, timestamp) VALUES (?, ?, ?)",
+                (chat_id, chat_name, current_timestamp)
+            )
             return conn.total_changes > 0
     except sqlite3.Error: return False
 
@@ -1094,10 +1100,10 @@ def is_chat_blacklisted(chat_id: int) -> bool:
             return cursor.fetchone() is not None
     except sqlite3.Error: return False
 
-def get_blacklisted_chats() -> list[int]:
+def get_blacklisted_chats() -> list[tuple[int, str, str]]:
     try:
         with sqlite3.connect(DB_NAME) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT chat_id FROM chat_blacklist")
-            return [row[0] for row in cursor.fetchall()]
+            cursor.execute("SELECT chat_id, chat_name, timestamp FROM chat_blacklist ORDER BY timestamp DESC")
+            return cursor.fetchall()
     except sqlite3.Error: return []
