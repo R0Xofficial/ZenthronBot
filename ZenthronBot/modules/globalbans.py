@@ -153,7 +153,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                 logger.warning(f"Could not enforce local ban for gban: {e}")
 
         success_message = f"✅ Done! {user_display} [<code>{target_entity.id}</code>] has been <b>globally banned</b>.\n<b>Reason:</b> {safe_escape(reason)}"
-        await message.reply_html(success_message, disable_web_page_preview=True)
+        await message.reply_html(success_message)
     
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -217,16 +217,12 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await message.reply_html(f"ℹ️ User {user_display} [<code>{target_entity.id}</code>] is not <b>globally banned</b>.")
         return
 
-    prepare_message = f"Let’s give him next chance!"
-    await message.reply_html(prepare_message)
-    await asyncio.sleep(1.0)
-
     if remove_from_gban(target_entity.id):
-        success_message = f"✅ Done! {user_display} [<code>{target_entity.id}</code>] has been globally unbanned.\n<i>Propagating unban...</i>"
-        await message.reply_html(success_message, disable_web_page_preview=True)
+        prepare_message = f"Let’s give him next chance!"
+        await message.reply_html(prepare_message)
     
         if context.job_queue:
-            context.job_queue.run_once(propagate_unban, 1, data={'target_user_id': target_entity.id, 'command_chat_id': chat.id})
+            context.job_queue.run_once(propagate_unban, 1, data={'target_user_id': target_entity.id, 'command_chat_id': chat.id, 'user_display': user_display})
 
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
