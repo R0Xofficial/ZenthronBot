@@ -148,7 +148,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             except Exception as e:
                 logger.warning(f"Could not enforce local ban for gban: {e}")
 
-        prepare_message = f"OK!"
+        prepare_message = f"Ok!"
         await message.reply_html(prepare_message)
         await asyncio.sleep(1.0)
         success_message = f"✅ Done! {user_display} [<code>{target_entity.id}</code>] has been <b>globally banned</b>.\n<b>Reason:</b> {safe_escape(reason)}"
