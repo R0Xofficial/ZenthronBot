@@ -114,6 +114,7 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     sudo_users_count = "N/A"
     support_users_count = "N/A"
     whitelist_users_count = "N/A"
+    blacklisted_chats_count = "N/A"
     gban_count = "N/A"
     chat_count = "N/A"
 
@@ -139,6 +140,9 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             cursor.execute("SELECT COUNT(*) FROM whitelist_users")
             whitelist_users_count = str(cursor.fetchone()[0])
 
+            cursor.execute("SELECT COUNT(*) FROM chat_blacklist")
+            blacklisted_chats_count = str(cursor.fetchone()[0])
+
             cursor.execute("SELECT COUNT(*) FROM global_bans")
             gban_count = str(cursor.fetchone()[0])
                 
@@ -148,12 +152,13 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     except sqlite3.Error as e:
         logger.error(f"SQLite error fetching counts for /stats: {e}", exc_info=True)
         (known_users_count, blacklisted_count, developer_users_count, sudo_users_count, 
-         support_users_count, whitelist_users_count, gban_count, chat_count) = ("DB Error",) * 7
+         support_users_count, whitelist_users_count, blacklisted_chats_count, gban_count, chat_count) = ("DB Error",) * 7
 
     stats_lines = [
         "<b>📊 Bot Database Stats:</b>\n",
         f" <b>• 💬 Chats:</b> <code>{chat_count}</code>",
         f" <b>• 👀 Known Users:</b> <code>{known_users_count}</code>",
+        f" <b>• 🛑 Blacklisted Chats:</b> <code>{blacklisted_chats_count}</code>",
         f" <b>• 🛃 Developer Users:</b> <code>{developer_users_count}</code>",
         f" <b>• 🛡 Sudo Users:</b> <code>{sudo_users_count}</code>",
         f" <b>• 👷‍♂️ Support Users:</b> <code>{support_users_count}</code>",
