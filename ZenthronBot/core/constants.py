@@ -231,6 +231,7 @@ SUDO_COMMANDS_TEXT = """
 """
 
 DEVELOPER_COMMANDS_TEXT = """
+/leave &lt;Optional chat ID&gt; - Make the bot leave a chat.
 /speedtest - Perform an internet speed test.
 /setai &lt;enable/disable&gt; - Turn on or off ai access for all users. <i>(Does not apply to privileged users)</i>
 /listgroups - List all known by bot groups.
@@ -249,7 +250,6 @@ DEVELOPER_COMMANDS_TEXT = """
 """
 
 OWNER_COMMANDS_TEXT = """
-/leave &lt;Optional chat ID&gt; - Make the bot leave a chat.
 /adddev &lt;ID/@user/reply&gt; - Grant Developer permissions to a user.
 /deldev &lt;ID/@user/reply&gt; - Revoke Developer permissions from a user.
 /enablemodule &lt;module name&gt; - Enable Bot module.
