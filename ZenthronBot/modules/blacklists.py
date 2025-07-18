@@ -69,7 +69,8 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         return
 
     if add_to_blacklist(target_entity.id, user.id, reason):
-        await message.reply_html(f"OK!")
+        prepare_message = f"OK!"
+        await message.reply_html(prepare_message)
         success_message = f"✅ Done! {user_display} [<code>{target_entity.id}</code>] has been <b>blacklisted</b>.\n<b>Reason:</b> {safe_escape(reason)}"
         await message.reply_html(success_message)
         
@@ -120,12 +121,14 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
     user_display = create_user_html_link(target_entity)
 
     if not is_user_blacklisted(target_entity.id):
-        await message.reply_html(f"ℹ️ User {user_display} [<code>{target_entity.id}</code>] is <b>not on the blacklist</b>.")
+        await message.reply_html(f"ℹ️ User {user_display} [<code>{target_entity.id}</code>] is not <b>blacklisted</b>.")
         return
 
     if remove_from_blacklist(target_entity.id):
-        success_message = f"✅ User {user_display} [<code>{target_entity.id}</code>] has been <b>removed from the blacklist</b>."
-        await message.reply_html(success_message, disable_web_page_preview=True)
+        prepare_message = f"Let’s give him next chance!"
+        await message.reply_html(prepare_message)
+        success_message = f"✅ Done! {user_display} [<code>{target_entity.id}</code>] has been <b>unblacklisted</b>."
+        await message.reply_html(success_message)
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
