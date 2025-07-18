@@ -59,7 +59,7 @@ async def blacklist_chat_command(update: Update, context: ContextTypes.DEFAULT_T
     chat_id = chat_to_bl.id
     chat_name = chat_to_bl.title or chat_to_bl.first_name or f"Unknown Chat"
 
-    if blacklist_chat(chat_id):
+    if blacklist_chat(chat_id, chat_name):
         await update.message.reply_html(f"✅ Done! Chat <code>{chat_id}</code> has been blacklisted.")
         try:
             await context.bot.leave_chat(chat_id)
