@@ -483,6 +483,7 @@ async def propagate_unban(context: ContextTypes.DEFAULT_TYPE) -> None:
     target_user_id = job_data['target_user_id']
     command_chat_id = job_data['command_chat_id']
     user_display = job_data['user_display']
+    command_message_id = job_data['command_message_id']
 
     chats_to_scan = []
     try:
@@ -524,8 +525,20 @@ async def propagate_unban(context: ContextTypes.DEFAULT_TYPE) -> None:
 
     success_message = f"✅ Done! {user_display} [<code>{target_user_id}</code>] has been <b>globally unbanned</b>."
     
-    await context.bot.send_message(
-        chat_id=command_chat_id,
-        text=success_message,
-        parse_mode=ParseMode.HTML
-    )
+    try:
+        await context.bot.send_message(
+            chat_id=command_chat_id,
+            text=success_message,
+            parse_mode=ParseMode.HTML,
+            reply_to_message_id=command_message_id
+        )
+    except Exception as e:
+        logger.warning(f"Failed to send messages as reply: {e}.")
+        try:
+            await context.bot.send_message(
+                chat_id=command_chat_id,
+                text=success_message,
+                parse_mode=ParseMode.HTML
+            )
+        except Exception as e2:
+            logger.warning(f"Failed to send as normal message: {e2}.")
