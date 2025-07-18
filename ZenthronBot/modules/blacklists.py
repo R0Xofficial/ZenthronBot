@@ -49,7 +49,7 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         await message.reply_text("You must provide a reason for this action.")
         return
 
-    if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
+    if not isinstance(target_entity, User):
         await message.reply_text("🧐 This action can only be applied to users.")
         return
     if is_privileged_user(target_entity.id) or target_entity.id == context.bot.id:
