@@ -247,6 +247,9 @@ DEVELOPER_COMMANDS_TEXT = """
 /setrank &lt;ID/@user/reply&gt; [support/sudo/dev] - Change the rank of a privileged user.
 /broadcast &lt;message to send&gt; - Send message to all Bot groups.
 /listmodules - List all Bot modules.
+/blchat &lt;Chat ID&gt; - Blacklists the current chat or a specified chat ID. The bot will immediately leave if present.
+/unblchat &lt;Chat ID&gt; - Unblacklists a chat.
+/blchats - Lists all blacklisted chat IDs.
 """
 
 OWNER_COMMANDS_TEXT = """
