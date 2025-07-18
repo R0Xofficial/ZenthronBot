@@ -1074,7 +1074,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     if add_sudo_user(target_user.id, user.id):
-        await message.reply_html(f"✅ User {user_display} [<code>{target_user.id}</code>] has been granted <b>Sudo</b> powers.")
+        await message.reply_html(f"✅ Done! {user_display} [<code>{target_user.id}</code>] has been granted <b>Sudo</b> powers.")
         
         try:
             await context.bot.send_message(target_user.id, "You have been granted Sudo privileges.")
@@ -1142,11 +1142,11 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     user_display = create_user_html_link(target_user)
 
     if not is_sudo_user(target_user.id):
-        await message.reply_html(f"User {user_display} [<code>{target_user.id}</code>] does not have sudo powers.")
+        await message.reply_html(f"ℹ️ User {user_display} [<code>{target_user.id}</code>] does not have <b>Sudo</b> powers.")
         return
 
     if remove_sudo_user(target_user.id):
-        await message.reply_html(f"✅ <b>Sudo</b> powers for user {user_display} [<code>{target_user.id}</code>] have been revoked.")
+        await message.reply_html(f"✅ Done! <b>Sudo</b> powers for user {user_display} [<code>{target_user.id}</code>] have been revoked.")
         
         try:
             await context.bot.send_message(target_user.id, "Your sudo privileges have been revoked.")
@@ -1257,7 +1257,7 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         user_display = create_user_html_link(target_user)
         admin_link = create_user_html_link(user)
         
-        feedback_message = f"✅ User {user_display} [<code>{target_user.id}</code>] rank has been changed from <b>{current_role_full_name}</b> to <b>{new_role_full_name}</b>."
+        feedback_message = f"✅ Done! {user_display} [<code>{target_user.id}</code>] rank has been changed from <b>{current_role_full_name}</b> to <b>{new_role_full_name}</b>."
         await message.reply_html(feedback_message)
 
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -1339,7 +1339,7 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     if add_support_user(target_user.id, user.id):
-        await message.reply_html(f"✅ User {user_display} [<code>{target_user.id}</code>] has been granted <b>Support</b> powers.")
+        await message.reply_html(f"✅ Done! {user_display} [<code>{target_user.id}</code>] has been granted <b>Support</b> powers.")
         
         try:
             await context.bot.send_message(target_user.id, "You have been added to the Support team.")
@@ -1400,7 +1400,7 @@ async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     if remove_support_user(target_user.id):
-        await message.reply_html(f"✅ <b>Support</b> role for user {user_display} [<code>{target_user.id}</code>] has been revoked.")
+        await message.reply_html(f"✅ Done! <b>Support</b> role for user {user_display} [<code>{target_user.id}</code>] has been revoked.")
         
         try:
             await context.bot.send_message(target_user.id, "You have been removed from the Support team.")
@@ -1489,7 +1489,7 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     if add_dev_user(target_user.id, user.id):
-        await message.reply_html(f"✅ User {user_display} [<code>{target_user.id}</code>] has been granted <b>Developer</b> powers.")
+        await message.reply_html(f"✅ Done! {user_display} [<code>{target_user.id}</code>] has been granted <b>Developer</b> powers.")
         
         try:
             await context.bot.send_message(target_user.id, "You have been promoted to Developer by the Bot Owner.")
@@ -1543,11 +1543,11 @@ async def deldev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     user_display = create_user_html_link(target_user)
 
     if not is_dev_user(target_user.id):
-        await message.reply_html(f"User {user_display} [<code>{target_user.id}</code>] is not a Developer.")
+        await message.reply_html(f"ℹ️ User {user_display} [<code>{target_user.id}</code>] is not a Developer.")
         return
 
     if remove_dev_user(target_user.id):
-        await message.reply_html(f"✅ <b>Developer</b> role for user {user_display} [<code>{target_user.id}</code>] has been revoked.")
+        await message.reply_html(f"✅ Done! <b>Developer</b> role for user {user_display} [<code>{target_user.id}</code>] has been revoked.")
         
         try:
             await context.bot.send_message(target_user.id, "Your Developer role has been revoked by the Bot Owner.")
@@ -1625,11 +1625,14 @@ async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         return
 
     if is_whitelisted(target_user.id):
-        await message.reply_html(f"ℹ️ User {user_display} [<code>{target_user.id}</code>] is <b>already on the whitelist</b>.")
+        await message.reply_html(f"ℹ️ User {user_display} [<code>{target_user.id}</code>] is already <b>whitelisted</b>.")
         return
 
     if add_to_whitelist(target_user.id, user.id):
-        await message.reply_html(f"✅ User {user_display} [<code>{target_user.id}</code>] has been <b>added to the whitelist</b>.")
+        prepare_message = f"Keep this user safe!"
+        await message.reply_html(prepare_message)
+        await asyncio.sleep(1.0)
+        await message.reply_html(f"✅ Done! {user_display} [<code>{target_user.id}</code>] has been <b>whitelisted</b>.")
         
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -1677,12 +1680,15 @@ async def unwhitelist_user_command(update: Update, context: ContextTypes.DEFAULT
         return
 
     if not is_whitelisted(target_user.id):
-        await update.message.reply_html(f"User {target_user.mention_html()} is not on the whitelist.")
+        await update.message.reply_html(f"User {target_user.mention_html()} is not <b>whitelisted</b>.")
         return
         
     if remove_from_whitelist(target_user.id):
         user_display = create_user_html_link(target_user)
-        await update.message.reply_html(f"✅ User {user_display} [<code>{target_user.id}</code>] has been removed from the whitelist.")
+        prepare_message = f"Let him be like everyone else!"
+        await message.reply_html(prepare_message)
+        await asyncio.sleep(1.0)
+        await update.message.reply_html(f"✅ Done! {user_display} [<code>{target_user.id}</code>] has been <b>unwhitelisted</b>.")
 
         try:
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
