@@ -18,6 +18,7 @@ from .core.database import init_db, disable_module, enable_module, get_disabled_
 from .core.utils import is_owner_or_dev, safe_escape, send_critical_log
 from .core.handlers import get_custom_command_handler, custom_handler
 
+from .modules.chatblacklists import check_blacklisted_chat_on_join
 from .modules.mutes import handle_bot_permission_changes
 from .modules.bans import handle_bot_banned
 from .modules.blacklists import check_blacklist_handler
@@ -262,6 +263,7 @@ async def main() -> None:
         discover_and_register_handlers(application)
 
         # --- LAYER 1: TOP PRIORITY - SECURITY AND IGNORANCE ---
+        application.add_handler(ChatMemberHandler(check_blacklisted_chat_on_join, ChatMemberHandler.MY_CHAT_MEMBER), group=-200)
         application.add_handler(ChatMemberHandler(handle_bot_permission_changes, ChatMemberHandler.MY_CHAT_MEMBER), group=-100)
         application.add_handler(ChatMemberHandler(handle_bot_banned, ChatMemberHandler.MY_CHAT_MEMBER), group=-100)
         application.add_handler(MessageHandler(filters.UpdateType.EDITED_MESSAGE & filters.COMMAND, ignore_edited_commands), group=-50)
