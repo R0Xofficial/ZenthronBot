@@ -8,7 +8,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 
 from ..config import APPEAL_CHAT_USERNAME, DB_NAME
 from ..core.database import is_gban_enforced, get_gban_reason, add_to_gban, remove_from_gban, is_whitelisted, add_chat_to_db
-from ..core.utils import send_safe_reply, is_privileged_user, resolve_user_with_telethon, create_user_html_link, safe_escape, send_operational_log, propagate_unban, verify_entity_is_user
+from ..core.utils import is_privileged_user, resolve_user_with_telethon, create_user_html_link, safe_escape, send_operational_log, propagate_unban
 from ..core.decorators import check_module_enabled
 from ..core.handlers import custom_handler
 
@@ -122,10 +122,8 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await message.reply_text("You must provide a reason for this action.")
         return
 
-    is_valid_user, error_message = verify_entity_is_user(target_entity)
-    
-    if not is_valid_user:
-        await send_safe_reply(update, context, text=error_message)
+    if not isinstance(target_entity, User):
+        await message.reply_text("🧐 This action can only be applied to users.")
         return
     if is_privileged_user(target_entity.id) or target_entity.id == context.bot.id:
         await message.reply_text("LoL, looks like... Someone tried global ban privileged user. Nice Try.")
@@ -210,12 +208,9 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not target_entity:
         await message.reply_text("Skrrrt... I can't find the user."); return
 
-    is_valid_user, error_message = verify_entity_is_user(target_entity)
-    
-    if not is_valid_user:
-        await send_safe_reply(update, context, text=error_message)
-        return
-        
+    if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
+        await message.reply_text("🧐 This action can only be applied to users."); return
+
     user_display = create_user_html_link(target_entity)
 
     if not get_gban_reason(target_entity.id):
