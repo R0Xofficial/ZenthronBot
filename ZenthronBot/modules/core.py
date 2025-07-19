@@ -156,15 +156,15 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     stats_lines = [
         "<b>📊 Bot Database Stats:</b>\n",
-        f" <b>• 💬 Chats:</b> <code>{chat_count}</code>",
-        f" <b>• 👀 Known Users:</b> <code>{known_users_count}</code>",
-        f" <b>• 🛑 Blacklisted Chats:</b> <code>{blacklisted_chats_count}</code>",
-        f" <b>• 🛃 Developer Users:</b> <code>{developer_users_count}</code>",
-        f" <b>• 🛡 Sudo Users:</b> <code>{sudo_users_count}</code>",
-        f" <b>• 👷‍♂️ Support Users:</b> <code>{support_users_count}</code>",
-        f" <b>• 🔰 Whitelist Users:</b> <code>{whitelist_users_count}</code>",
-        f" <b>• 🚫 Blacklisted Users:</b> <code>{blacklisted_count}</code>",
-        f" <b>• 🌍 Globally Banned Users:</b> <code>{gban_count}</code>"
+        f"<b>• 💬 Chats:</b> <code>{chat_count}</code>",
+        f"<b>• 👀 Known Users:</b> <code>{known_users_count}</code>",
+        f"<b>• 🛑 Blacklisted Chats:</b> <code>{blacklisted_chats_count}</code>",
+        f"<b>• 🛃 Developer Users:</b> <code>{developer_users_count}</code>",
+        f"<b>• 🛡 Sudo Users:</b> <code>{sudo_users_count}</code>",
+        f"<b>• 👷‍♂️ Support Users:</b> <code>{support_users_count}</code>",
+        f"<b>• 🔰 Whitelist Users:</b> <code>{whitelist_users_count}</code>",
+        f"<b>• 🚫 Blacklisted Users:</b> <code>{blacklisted_count}</code>",
+        f"<b>• 🌍 Globally Banned Users:</b> <code>{gban_count}</code>"
     ]
 
     stats_msg = "\n".join(stats_lines)
