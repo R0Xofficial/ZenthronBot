@@ -9,7 +9,7 @@ from ..config import OWNER_ID, DB_NAME, APPEAL_CHAT_USERNAME
 from ..core.database import (
     set_welcome_setting, get_welcome_settings, set_goodbye_setting, get_goodbye_settings,
     set_clean_service, should_clean_service, add_chat_to_db, remove_chat_from_db,
-    is_dev_user, is_sudo_user, is_support_user, is_chat_blacklisted
+    is_dev_user, is_sudo_user, is_support_user, is_chat_blacklisted, update_user_in_db
 )
 from ..core.utils import _can_user_perform_action, send_safe_reply, safe_escape, format_message_text, send_critical_log
 from ..core.constants import OWNER_WELCOME_TEXTS, DEV_WELCOME_TEXTS, SUDO_WELCOME_TEXTS, SUPPORT_WELCOME_TEXTS, GENERIC_WELCOME_TEXTS, GENERIC_GOODBYE_TEXTS
@@ -299,6 +299,7 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
     welcome_enabled, custom_text = get_welcome_settings(chat.id)
 
     for member in update.message.new_chat_members:
+        update_user_in_db(member)
         base_text = ""
         is_privileged_join = True
 
@@ -376,6 +377,7 @@ async def handle_left_group_member(update: Update, context: ContextTypes.DEFAULT
     
     chat = update.effective_chat
     left_member = update.message.left_chat_member
+    update_user_in_db(left_member)
 
     if left_member.id == context.bot.id:
         logger.info(f"Bot removed from group cache {chat.id}.")
