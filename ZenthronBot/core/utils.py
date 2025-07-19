@@ -542,3 +542,15 @@ async def propagate_unban(context: ContextTypes.DEFAULT_TYPE) -> None:
             )
         except Exception as e2:
             logger.warning(f"Failed to send as normal message: {e2}.")
+
+def verify_entity_is_user(entity: Chat | User | None) -> tuple[bool, str | None]:
+    if not entity or not hasattr(entity, 'type'):
+        return (False, "Failed to verify ID: the entity could not be found or has no type.")
+
+    if entity.type in ['group', 'supergroup', 'channel']:
+        return (False, "🧐 This action can only be applied to users, not groups or channels.")
+
+    if entity.type == 'private':
+        return (True, None)
+
+    return (False, f"Failed to verify ID: encountered an unknown entity type ('{entity.type}').")
