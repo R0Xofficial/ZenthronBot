@@ -8,7 +8,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 
 from ..config import APPEAL_CHAT_USERNAME, DB_NAME
 from ..core.database import is_gban_enforced, get_gban_reason, add_to_gban, remove_from_gban, is_whitelisted, add_chat_to_db
-from ..core.utils import is_privileged_user, resolve_user_with_telethon, create_user_html_link, safe_escape, send_operational_log, propagate_unban, verify_entity_is_user
+from ..core.utils import send_safe_reply, is_privileged_user, resolve_user_with_telethon, create_user_html_link, safe_escape, send_operational_log, propagate_unban, verify_entity_is_user
 from ..core.decorators import check_module_enabled
 from ..core.handlers import custom_handler
 
