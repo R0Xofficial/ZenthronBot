@@ -60,7 +60,7 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     reason: str = " ".join(args_after_target) or "No reason provided."
 
-    if not is_entity_a_user(target_entity):
+    if not is_entity_a_user(target_user):
         await send_safe_reply(update, context, text="🧐 Kick can only be applied to users.")
         return
 
