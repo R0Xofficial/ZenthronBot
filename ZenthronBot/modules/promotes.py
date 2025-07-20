@@ -44,7 +44,7 @@ async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         except ValueError:
             pass
 
-        if not target_entity and is_numeric_id:
+        if not target_user and is_numeric_id:
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await message.reply_text("Usage: /promote <ID/@username/reply> [optional admin title]")
@@ -130,7 +130,7 @@ async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         except ValueError:
             pass
 
-        if not target_entity and is_numeric_id:
+        if not target_user and is_numeric_id:
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await message.reply_text("Usage: /demote <ID/@username/reply>")
