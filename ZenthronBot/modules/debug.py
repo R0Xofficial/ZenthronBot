@@ -30,7 +30,7 @@ async def test_resolve_command(update: Update, context: ContextTypes.DEFAULT_TYP
     debug_message += f"<b>Input:</b> <code>{target_input}</code>\n"
     debug_message += f"<b>Typ obiektu:</b> <code>{type(target_entity).__name__}</code>\n\n"
     
-    debug_message += f"<b>Sprawdzenie `isinstance`:</b\n"
+    debug_message += f"<b>Sprawdzenie `isinstance`:</b>\n"
     debug_message += f" • isinstance(target, User): <code>{isinstance(target_entity, User)}</code>\n"
     debug_message += f" • isinstance(target, Chat): <code>{isinstance(target_entity, Chat)}</code>\n\n"
     
