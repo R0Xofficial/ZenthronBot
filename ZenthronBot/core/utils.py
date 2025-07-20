@@ -179,6 +179,7 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
         pass
 
     if isinstance(identifier, int):
+        logger.info(f"Resolving '{target_input}' using DB...")
         entity_from_db = get_user_from_db_by_id(identifier)
     else:
         entity_from_db = get_user_from_db_by_username(identifier)
