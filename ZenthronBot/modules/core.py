@@ -1019,7 +1019,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         except ValueError:
             pass
 
-        if not target_entity and is_numeric_id:
+        if not target_user and is_numeric_id:
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await message.reply_text("Usage: /addsudo <ID/@username/reply>")
@@ -1122,7 +1122,7 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         except ValueError:
             pass
 
-        if not target_entity and is_numeric_id:
+        if not target_user and is_numeric_id:
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await message.reply_text("Usage: /delsudo <ID/@username/reply>")
@@ -1197,7 +1197,7 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         except ValueError:
             pass
 
-        if not target_entity and is_numeric_id:
+        if not target_user and is_numeric_id:
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
         args_for_role = context.args[1:]
     
@@ -1305,7 +1305,7 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         except ValueError:
             pass
 
-        if not target_entity and is_numeric_id:
+        if not target_user and is_numeric_id:
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await message.reply_text("Usage: /addsupport <ID/@username/reply>")
@@ -1401,7 +1401,7 @@ async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         except ValueError:
             pass
 
-        if not target_entity and is_numeric_id:
+        if not target_user and is_numeric_id:
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await message.reply_text("Usage: /delsupport <ID/@username/reply>")
@@ -1469,7 +1469,7 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         except ValueError:
             pass
 
-        if not target_entity and is_numeric_id:
+        if not target_user and is_numeric_id:
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await message.reply_text("Usage: /adddev <ID/@username/reply>")
@@ -1562,7 +1562,7 @@ async def deldev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         except ValueError:
             pass
 
-        if not target_entity and is_numeric_id:
+        if not target_user and is_numeric_id:
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await message.reply_text("Usage: /deldev <ID/@username/reply>")
@@ -1626,7 +1626,7 @@ async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         except ValueError:
             pass
 
-        if not target_entity and is_numeric_id:
+        if not target_user and is_numeric_id:
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await message.reply_text("Usage: /addsupport <ID/@username/reply>")
@@ -1716,7 +1716,7 @@ async def unwhitelist_user_command(update: Update, context: ContextTypes.DEFAULT
         except ValueError:
             pass
 
-        if not target_entity and is_numeric_id:
+        if not target_user and is_numeric_id:
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await message.reply_text("Usage: /unwhitelist <ID/@username/reply>")
