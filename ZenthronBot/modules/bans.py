@@ -45,7 +45,6 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         
         is_numeric_id = False
         try:
-            int(target_entity)
             is_numeric_id = True
         except ValueError:
             pass
@@ -146,7 +145,6 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         
         is_numeric_id = False
         try:
-            int(target_entity)
             is_numeric_id = True
         except ValueError:
             pass
