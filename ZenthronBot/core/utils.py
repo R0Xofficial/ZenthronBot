@@ -232,6 +232,12 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
         logger.error(f"All methods failed for '{target_input}'. Final Telethon error: {e}")
 
     return None
+
+def is_entity_a_user(entity: Chat | User | None) -> bool:
+    if not entity: return False
+    if isinstance(entity, User): return True
+    if isinstance(entity, Chat) and entity.type == 'private': return True
+    return False
     
 def get_readable_time_delta(delta: timedelta) -> str:
     total_seconds = int(delta.total_seconds())
