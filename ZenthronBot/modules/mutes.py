@@ -44,12 +44,12 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         
         is_numeric_id = False
         try:
-            int(target_input)
+            int(target_user)
             is_numeric_id = True
         except ValueError:
             pass
 
-        if not target_entity and is_numeric_id:
+        if not target_user and is_numeric_id:
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await send_safe_reply(update, context, text="Usage: /mute <ID/@username/reply> [duration] [reason]")
@@ -133,12 +133,12 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         
         is_numeric_id = False
         try:
-            int(target_input)
+            int(target_user)
             is_numeric_id = True
         except ValueError:
             pass
 
-        if not target_entity and is_numeric_id:
+        if not target_user and is_numeric_id:
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await send_safe_reply(update, context, text="Usage: /unmute <ID/@username/reply>")
