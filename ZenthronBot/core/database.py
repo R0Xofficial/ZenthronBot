@@ -642,6 +642,16 @@ def update_user_in_db(user: User | None):
         if conn:
             conn.close()
 
+def delete_user_from_db(user_id: int) -> bool:
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
+            return cursor.rowcount > 0
+    except sqlite3.Error as e:
+        logger.error(f"Error deleting user {user_id} from DB: {e}")
+        return False
+
 def get_user_from_db_by_username(username_query: str) -> User | None:
     if not username_query:
         return None
