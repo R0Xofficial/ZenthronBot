@@ -7,7 +7,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 
 from ..config import OWNER_ID, APPEAL_CHAT_ID
 from ..core.database import add_to_blacklist, remove_from_blacklist, get_blacklist_reason, is_user_blacklisted, is_whitelisted, is_sudo_user 
-from ..core.utils import is_privileged_user, is_owner_or_dev, resolve_user_with_telethon, create_user_html_link, safe_escape, send_operational_log, is_entity_a_user
+from ..core.utils import is_privileged_user, is_owner_or_dev, resolve_user_with_telethon, create_user_html_link, safe_escape, send_operational_log
 from ..core.decorators import check_module_enabled
 from ..core.handlers import custom_handler
 
@@ -38,14 +38,7 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         if len(context.args) > 1:
             reason = " ".join(context.args[1:])
         target_entity = await resolve_user_with_telethon(context, target_input, update)
-        is_numeric_id = False
-        try:
-            int(target_input)
-            is_numeric_id = True
-        except ValueError:
-            pass
-
-        if not target_entity and is_numeric_id:
+        if not target_entity and target_input.isdigit():
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
 
     if not target_entity:
@@ -56,7 +49,7 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         await message.reply_text("You must provide a reason for this action.")
         return
 
-    if not is_entity_a_user(target_entity):
+    if not isinstance(target_entity, User):
         await message.reply_text("🧐 This action can only be applied to users.")
         return
     if is_privileged_user(target_entity.id) or target_entity.id == context.bot.id:
@@ -116,21 +109,14 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
     elif context.args:
         target_input = context.args[0]
         target_entity = await resolve_user_with_telethon(context, target_input, update)
-        is_numeric_id = False
-        try:
-            int(target_input)
-            is_numeric_id = True
-        except ValueError:
-            pass
-
-        if not target_entity and is_numeric_id:
+        if not target_entity and target_input.isdigit():
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
 
     if not target_entity:
         await message.reply_html("Usage: /unblist &lt;ID/@username/reply&gt;")
         return
     
-    if not is_entity_a_user(target_entity):
+    if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
         await message.reply_text("🧐 This action can only be applied to users."); return
     if target_entity.id == OWNER_ID:
         await message.reply_text("WHAT? The Owner is never on the blacklist."); return
