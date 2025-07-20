@@ -150,7 +150,7 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             pass
 
         if not target_entity and is_numeric_id:
-            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+            target_entity = User(id=int(target_arg), first_name="", is_bot=False)
 
     else:
         await send_safe_reply(update, context, text="Usage: /unban <ID/@username/reply>")
