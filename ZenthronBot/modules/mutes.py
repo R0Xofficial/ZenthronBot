@@ -59,7 +59,7 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await send_safe_reply(update, context, text=f"Skrrrt... I can't find the user.")
         return
 
-    if not is_entity_a_user(target_entity):
+    if not is_entity_a_user(target_user):
         await send_safe_reply(update, context, text="🧐 Mute can only be applied to users.")
         return
         
@@ -148,7 +148,7 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await send_safe_reply(update, context, text=f"Skrrrt... I can't find the user.")
         return
 
-    if not is_entity_a_user(target_entity):
+    if not is_entity_a_user(target_user):
         await send_safe_reply(update, context, text="🧐 Unmute can only be applied to users.")
         return
 
