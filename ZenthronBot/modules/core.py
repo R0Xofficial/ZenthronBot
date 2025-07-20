@@ -1713,7 +1713,7 @@ async def remove_cached_user_command(update: Update, context: ContextTypes.DEFAU
         return
 
     if not context.args:
-        await update.message.reply_text("Usage: /rmcacheduser <user_id>")
+        await update.message.reply_text("Usage: /rmcacheduser <User ID>")
         return
 
     try:
