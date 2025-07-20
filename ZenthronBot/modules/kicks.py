@@ -43,7 +43,7 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         
         is_numeric_id = False
         try:
-            int(target_input)
+            int(target_user)
             is_numeric_id = True
         except ValueError:
             pass
