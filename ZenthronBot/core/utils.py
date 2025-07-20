@@ -186,6 +186,8 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
     
     if entity_from_db:
         return entity_from_db
+    else:
+        logger.warning(f"DB failed for '{target_input}': User not found.")
 
     try:
         logger.info(f"Resolving '{target_input}' using PTB...")
