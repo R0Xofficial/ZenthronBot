@@ -43,12 +43,15 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         
         target_entity = await resolve_user_with_telethon(context, target_input, update)
         
-        if not target_entity and (target_input.isdigit() or (target_input.startswith('-') and target_input[1:].isdigit())):
-            try:
-                target_entity = await context.bot.get_chat(int(target_input))
-            except:
-                if target_input.isdigit():
-                    target_entity = User(id=int(target_input), first_name="", is_bot=False)
+        is_numeric_id = False
+        try:
+            int(target_input)
+            is_numeric_id = True
+        except ValueError:
+            pass
+
+        if not target_entity and is_numeric_id:
+            target_entity = User(id=int(target_input), first_name="", is_bot=False)
     
     if not target_entity:
         await send_safe_reply(update, context, text="Usage: /ban <ID/@username/reply> [duration] [reason]")
@@ -71,8 +74,16 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if target_entity.id == context.bot.id or target_entity.id == user_who_bans.id:
         await send_safe_reply(update, context, text="Nuh uh... This user cannot be banned."); return
 
-    is_user = isinstance(target_entity, User) or (isinstance(target_entity, Chat) and target_entity.type == ChatType.PRIVATE)
-    is_channel = isinstance(target_entity, Chat) and target_entity.type == ChatType.CHANNEL
+    is_user = False
+    is_channel = False
+
+    if hasattr(target_entity, 'type') and getattr(target_entity, 'type') == 'private':
+        is_user = True
+    elif isinstance(target_entity, User):
+        is_user = True
+
+    if hasattr(target_entity, 'type') and getattr(target_entity, 'type') == 'channel':
+        is_channel = True
 
     if not (is_user or is_channel):
         await send_safe_reply(update, context, text="🧐 This action can only be applied to users or by reply channel message.")
@@ -133,12 +144,15 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         target_arg = context.args[0]
         target_entity = await resolve_user_with_telethon(context, target_arg, update)
         
-        if not target_entity and (target_arg.isdigit() or (target_arg.startswith('-') and target_arg[1:].isdigit())):
-            try:
-                target_entity = await context.bot.get_chat(int(target_arg))
-            except:
-                if target_arg.isdigit():
-                    target_entity = User(id=int(target_arg), first_name="", is_bot=False)
+        is_numeric_id = False
+        try:
+            int(target_input)
+            is_numeric_id = True
+        except ValueError:
+            pass
+
+        if not target_entity and is_numeric_id:
+            target_entity = User(id=int(target_input), first_name="", is_bot=False)
 
     else:
         await send_safe_reply(update, context, text="Usage: /unban <ID/@username/reply>")
@@ -148,8 +162,16 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await send_safe_reply(update, context, text=f"Skrrrt... I can't find the user.")
         return
         
-    is_user = isinstance(target_entity, User) or (isinstance(target_entity, Chat) and target_entity.type == ChatType.PRIVATE)
-    is_channel = isinstance(target_entity, Chat) and target_entity.type == ChatType.CHANNEL
+    is_user = False
+    is_channel = False
+
+    if hasattr(target_entity, 'type') and getattr(target_entity, 'type') == 'private':
+        is_user = True
+    elif isinstance(target_entity, User):
+        is_user = True
+
+    if hasattr(target_entity, 'type') and getattr(target_entity, 'type') == 'channel':
+        is_channel = True
 
     if not (is_user or is_channel):
         await send_safe_reply(update, context, text="🧐 This action can only be applied to users or by reply channel message.")
