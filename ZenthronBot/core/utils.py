@@ -148,28 +148,18 @@ def markdown_to_html(text: str) -> str:
     return text
 
 # --- UTILITY ---
-def _convert_telethon_entity_to_ptb(entity) -> User | Chat | None:
-    if isinstance(entity, TelethonUser):
-        return User(
-            id=entity.id,
-            first_name=entity.first_name or "",
-            is_bot=entity.bot or False,
-            last_name=entity.last_name,
-            username=entity.username,
-            language_code=getattr(entity, 'lang_code', None)
-        )
+def telethon_entity_to_ptb_user(entity: 'TelethonUser') -> User | None:
+    if not isinstance(entity, TelethonUser):
+        return None
     
-    elif hasattr(entity, 'id') and hasattr(entity, 'type'):
-        return Chat(
-            id=entity.id,
-            type=entity.type,
-            first_name=getattr(entity, 'first_name', None),
-            title=getattr(entity, 'title', None),
-            username=getattr(entity, 'username', None),
-            is_bot=getattr(entity, 'bot', False)
-        )
-        
-    return None
+    return User(
+        id=entity.id,
+        first_name=entity.first_name or "",
+        is_bot=entity.bot or False,
+        last_name=entity.last_name,
+        username=entity.username,
+        language_code=getattr(entity, 'lang_code', None)
+    )
 
 async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_input: str, update: Update) -> User | Chat | None:
     if update.message and update.message.entities:
@@ -221,29 +211,16 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
         logger.info(f"Resolving '{target_input}' using Telethon...")
         entity_from_telethon = await telethon_client.get_entity(target_input)
         
-        converted_entity = _convert_telethon_entity_to_ptb(entity_from_telethon)
-        
-        if converted_entity:
-            if isinstance(converted_entity, User):
-                update_user_in_db(converted_entity)
-            return converted_entity
+        if isinstance(entity_from_telethon, TelethonUser):
+            ptb_user = telethon_entity_to_ptb_user(entity_from_telethon)
+            if ptb_user:
+                update_user_in_db(ptb_user)
+                return ptb_user
         
     except Exception as e:
         logger.error(f"All methods failed for '{target_input}'. Final Telethon error: {e}")
 
     return None
-
-def is_entity_a_user(entity: object | None) -> bool:
-    if not entity:
-        return False
-        
-    if not hasattr(entity, 'type'):
-        return False
-        
-    if getattr(entity, 'type') == 'private':
-        return True
-        
-    return False
     
 def get_readable_time_delta(delta: timedelta) -> str:
     total_seconds = int(delta.total_seconds())
