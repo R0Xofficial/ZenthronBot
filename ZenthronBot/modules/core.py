@@ -24,7 +24,7 @@ from ..core.database import (
     get_all_whitelist_users_from_db, add_to_whitelist, remove_from_whitelist,
     is_dev_user, is_sudo_user, is_support_user,
     is_whitelisted, get_gban_reason, get_blacklist_reason,
-    get_user_from_db_by_username
+    get_user_from_db_by_username, delete_user_from_db
 )
 from ..core.utils import (
     is_owner_or_dev, get_readable_time_delta, safe_escape, resolve_user_with_telethon,
@@ -1703,6 +1703,35 @@ async def unwhitelist_user_command(update: Update, context: ContextTypes.DEFAULT
     else:
         await update.message.reply_text("Failed to remove user from the whitelist.")
 
+@check_module_enabled("core")
+@custom_handler("rmcacheduser")
+async def remove_cached_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    
+    if not is_owner_or_dev(user.id):
+        logger.warning(f"Unauthorized /rmcacheduser attempt by user {user.id}.")
+        return
+
+    if not context.args:
+        await update.message.reply_text("Usage: /rmcacheduser <user_id>")
+        return
+
+    try:
+        user_id_to_delete = int(context.args[0])
+    except ValueError:
+        await update.message.reply_text("Please provide a valid user ID.")
+        return
+
+    if delete_user_from_db(user_id_to_delete):
+        await update.message.reply_html(
+            f"✅ User <b>{user_id_to_delete}</b> has been cleared from the local database cache.\n"
+            "The next command used on this user will fetch fresh data from Telegram."
+        )
+    else:
+        await update.message.reply_html(
+            f"ℹ️ User <b>{user_id_to_delete}</b> was not found in the local database cache, so no action was taken."
+        )
+
 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
@@ -1732,3 +1761,4 @@ def load_handlers(application: Application):
     application.add_handler(CommandHandler("broadcast", broadcast_command))
     application.add_handler(CommandHandler(["shell", "sh"], shell_command))
     application.add_handler(CommandHandler(["execute", "exe"], execute_script_command))
+    application.add_handler(CommandHandler("rmcacheduser", remove_cached_user_command))
