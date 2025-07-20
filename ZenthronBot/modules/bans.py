@@ -94,7 +94,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             await send_safe_reply(update, context, text=f"❌ Failed to ban this entity. Error: {safe_escape(str(e))}")
             return
             
-    response_lines = ["✅ <b>User Banned</b>"]
+    response_lines = ["Success: User Banned"]
     response_lines.append(f"<b>• User:</b> {display_name} [<code>{target_entity.id}</code>]")
     response_lines.append(f"<b>• Reason:</b> {safe_escape(reason)}")
     
@@ -163,7 +163,7 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             await send_safe_reply(update, context, text=f"❌ Failed to unban: {safe_escape(str(e))}")
             return
 
-    response_lines = ["✅ <b>User Unbanned</b>"]
+    response_lines = ["Success: User Unbanned"]
     response_lines.append(f"<b>• User:</b> {display_name} [<code>{target_entity.id}</code>]")
     
     await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
