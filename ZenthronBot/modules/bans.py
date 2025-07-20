@@ -6,7 +6,7 @@ from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes, ChatMemberHandler
 
 from ..core.database import remove_chat_from_db
-from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, parse_duration_to_timedelta, create_user_html_link, send_safe_reply, safe_escape
+from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, parse_duration_to_timedelta, create_user_html_link, send_safe_reply, safe_escape, is_entity_a_user
 from ..core.decorators import check_module_enabled
 from ..core.handlers import custom_handler
 
@@ -45,12 +45,13 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         
         is_numeric_id = False
         try:
+            int(target_input)
             is_numeric_id = True
         except ValueError:
             pass
 
         if not target_entity and is_numeric_id:
-            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+            target_entity = User(id=int(target_input), first_name="Unknown", is_bot=False)
     
     if not target_entity:
         await send_safe_reply(update, context, text="Usage: /ban <ID/@username/reply> [duration] [reason]")
@@ -73,53 +74,47 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if target_entity.id == context.bot.id or target_entity.id == user_who_bans.id:
         await send_safe_reply(update, context, text="Nuh uh... This user cannot be banned."); return
 
-    is_user = False
-    is_channel = False
-
-    if hasattr(target_entity, 'type') and getattr(target_entity, 'type') == 'private':
-        is_user = True
-    elif isinstance(target_entity, User):
-        is_user = True
-
-    if hasattr(target_entity, 'type') and getattr(target_entity, 'type') == 'channel':
-        is_channel = True
-
-    if not (is_user or is_channel):
-        await send_safe_reply(update, context, text="🧐 This action can only be applied to users or by reply channel message.")
-        return
-
-    if is_user:
+    if is_entity_a_user(target_entity):
         try:
             target_member = await context.bot.get_chat_member(chat.id, target_entity.id)
             if target_member.status in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
-                await send_safe_reply(update, context, text="Chat Creator and Administrators cannot be banned.")
+                await send_safe_reply(update, context, text="Chat admins and owners cannot be banned.")
                 return
         except TelegramError as e:
             if "user not found" not in str(e).lower():
                 logger.warning(f"Could not get member status for /ban: {e}")
-    
-    try:
-        if is_user:
+        
+        try:
             await context.bot.ban_chat_member(chat_id=chat.id, user_id=target_entity.id, until_date=until_date_for_api)
-        elif is_channel:
-            await context.bot.ban_chat_sender_chat(chat_id=chat.id, sender_chat_id=target_entity.id)
-        
-        display_name = create_user_html_link(target_entity) if is_user else safe_escape(target_entity.title)
-        
-        response_lines = ["Success: User Banned"]
-        response_lines.append(f"<b>• User:</b> {display_name} [<code>{target_entity.id}</code>]")
-        response_lines.append(f"<b>• Reason:</b> {safe_escape(reason)}")
-        
-        if is_user:
+            
+            display_name = create_user_html_link(target_entity)
+            response_lines = ["✅ <b>User Banned</b>"]
+            response_lines.append(f"<b>• User:</b> {display_name} [<code>{target_entity.id}</code>]")
+            response_lines.append(f"<b>• Reason:</b> {safe_escape(reason)}")
             if duration_str and until_date_for_api:
-                response_lines.append(f"<b>• Duration:</b> <code>{duration_str}</code> (until <code>{until_date_for_api.strftime('%Y-%m-%d %H:%M:%S %Z')}</code>)")
+                response_lines.append(f"<b>• Duration:</b> <code>{duration_str}</code>")
             else:
                 response_lines.append(f"<b>• Duration:</b> <code>Permanent</code>")
-        
-        await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
-        
-    except Exception as e:
-        await send_safe_reply(update, context, text=f"Error: Failed to ban user: {safe_escape(str(e))}")
+            
+            await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
+        except Exception as e:
+            await send_safe_reply(update, context, text=f"❌ Error: Failed to ban user: {safe_escape(str(e))}")
+
+    elif hasattr(target_entity, 'type') and target_entity.type == ChatType.CHANNEL:
+        try:
+            await context.bot.ban_chat_sender_chat(chat_id=chat.id, sender_chat_id=target_entity.id)
+            
+            display_name = safe_escape(target_entity.title)
+            response_lines = ["✅ <b>Channel Banned</b>"]
+            response_lines.append(f"<b>• Channel:</b> {display_name} [<code>{target_entity.id}</code>]")
+            response_lines.append(f"<b>• Reason:</b> {safe_escape(reason)}")
+            
+            await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
+        except Exception as e:
+            await send_safe_reply(update, context, text=f"❌ Error: Failed to ban channel: {safe_escape(str(e))}")
+
+    else:
+        await send_safe_reply(update, context, text="🧐 This action can only be applied to users or channels, not groups.")
 
 @check_module_enabled("bans")
 @custom_handler("unban")
@@ -145,12 +140,13 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         
         is_numeric_id = False
         try:
+            int(target_arg)
             is_numeric_id = True
         except ValueError:
             pass
 
         if not target_entity and is_numeric_id:
-            target_entity = User(id=int(target_arg), first_name="", is_bot=False)
+            target_entity = User(id=int(target_arg), first_name="Unknown", is_bot=False)
 
     else:
         await send_safe_reply(update, context, text="Usage: /unban <ID/@username/reply>")
@@ -160,39 +156,33 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await send_safe_reply(update, context, text=f"Skrrrt... I can't find the user.")
         return
         
-    is_user = False
-    is_channel = False
-
-    if hasattr(target_entity, 'type') and getattr(target_entity, 'type') == 'private':
-        is_user = True
-    elif isinstance(target_entity, User):
-        is_user = True
-
-    if hasattr(target_entity, 'type') and getattr(target_entity, 'type') == 'channel':
-        is_channel = True
-
-    if not (is_user or is_channel):
-        await send_safe_reply(update, context, text="🧐 This action can only be applied to users or by reply channel message.")
-        return
+    is_user = is_entity_a_user(target_entity)
+    is_channel = hasattr(target_entity, 'type') and target_entity.type == ChatType.CHANNEL
 
     try:
         if is_user:
             await context.bot.unban_chat_member(chat_id=chat.id, user_id=target_entity.id, only_if_banned=True)
+            
+            display_name = create_user_html_link(target_entity)
+            response_lines = ["✅ <b>User Unbanned</b>"]
+            response_lines.append(f"<b>• User:</b> {display_name} [<code>{target_entity.id}</code>]")
+            
+            await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
+
         elif is_channel:
             await context.bot.unban_chat_sender_chat(chat_id=chat.id, sender_chat_id=target_entity.id)
-        
-        if is_user:
-            display_name = create_user_html_link(target_entity)
-        else:
+            
             display_name = safe_escape(target_entity.title or f"Channel {target_entity.id}")
-
-        response_lines = ["Success: User Unbanned"]
-        response_lines.append(f"<b>• User:</b> {display_name} [<code>{target_entity.id}</code>]")
-        
-        await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
+            response_lines = ["✅ <b>Channel Unbanned</b>"]
+            response_lines.append(f"<b>• Channel:</b> {display_name} [<code>{target_entity.id}</code>]")
+            
+            await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
+            
+        else:
+            await send_safe_reply(update, context, text="🧐 This action can only be applied to users or channels.")
         
     except Exception as e:
-        await send_safe_reply(update, context, text=f"Failed to unban user: {safe_escape(str(e))}")
+        await send_safe_reply(update, context, text=f"❌ Failed to unban: {safe_escape(str(e))}")
 
 @check_module_enabled("bans")
 async def handle_bot_banned(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
