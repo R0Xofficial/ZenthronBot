@@ -233,10 +233,16 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
 
     return None
 
-def is_entity_a_user(entity: Chat | User | None) -> bool:
-    if not entity: return False
-    if isinstance(entity, User): return True
-    if isinstance(entity, Chat) and entity.type == 'private': return True
+def is_entity_a_user(entity: object | None) -> bool:
+    if not entity:
+        return False
+        
+    if not hasattr(entity, 'type'):
+        return False
+        
+    if getattr(entity, 'type') == 'private':
+        return True
+        
     return False
     
 def get_readable_time_delta(delta: timedelta) -> str:
