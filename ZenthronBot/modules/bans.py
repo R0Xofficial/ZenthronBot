@@ -89,7 +89,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     except TelegramError:
         try:
             await context.bot.ban_chat_sender_chat(chat_id=chat.id, sender_chat_id=target_entity.id)
-            display_name = safe_escape(target_entity.title or f"Entity {target_entity.id}")
+            display_name = safe_escape(target_entity.title or f"{target_entity.id}")
         except Exception as e:
             await send_safe_reply(update, context, text=f"❌ Failed to ban this entity. Error: {safe_escape(str(e))}")
             return
@@ -147,15 +147,20 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await send_safe_reply(update, context, text=f"Skrrrt... I can't find the user.")
         return
         
+    unbanned = False
+    display_name = ""
+
     try:
         await context.bot.unban_chat_member(chat_id=chat.id, user_id=target_entity.id, only_if_banned=True)
-        display_name = create_user_html_link(target_entity) if is_entity_a_user(target_entity) else safe_escape(getattr(target_entity, 'title', f"Entity {target_entity.id}"))
-    
+        display_name = create_user_html_link(target_entity) if is_entity_a_user(target_entity) else safe_escape(getattr(target_entity, 'title', f"{target_entity.id}"))
+        unbanned = True
+
     except TelegramError as e:
-        if "user not found" in str(e).lower() or "user_id_invalid" in str(e).lower():
+        if "user not found" in str(e).lower() or "user_id_invalid" in str(e).lower() or "member not found" in str(e).lower():
             try:
                 await context.bot.unban_chat_sender_chat(chat_id=chat.id, sender_chat_id=target_entity.id)
-                display_name = safe_escape(target_entity.title or f"Entity {target_entity.id}")
+                display_name = safe_escape(getattr(target_entity, 'title', f"{target_entity.id}"))
+                unbanned = True
             except Exception as final_e:
                 await send_safe_reply(update, context, text=f"❌ Failed to unban this entity. Error: {safe_escape(str(final_e))}")
                 return
@@ -163,10 +168,12 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             await send_safe_reply(update, context, text=f"❌ Failed to unban: {safe_escape(str(e))}")
             return
 
-    response_lines = ["Success: User Unbanned"]
-    response_lines.append(f"<b>• User:</b> {display_name} [<code>{target_entity.id}</code>]")
-    
-    await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
+    if unbanned:
+        response_lines = ["Success: User Unbanned"]
+        response_lines.append(f"<b>• User:</b> {display_name} [<code>{target_entity.id}</code>]")
+        await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
+    else:
+        await send_safe_reply(update, context, text="Could not unban the entity. They may not have been banned to begin with.")
 
 @check_module_enabled("bans")
 async def handle_bot_banned(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
