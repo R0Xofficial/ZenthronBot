@@ -28,7 +28,7 @@ from ..core.database import (
 )
 from ..core.utils import (
     is_owner_or_dev, get_readable_time_delta, safe_escape, resolve_user_with_telethon,
-    create_user_html_link, send_operational_log, is_privileged_user, run_speed_test_async, is_entity_a_user
+    create_user_html_link, send_operational_log, is_privileged_user, run_speed_test_async
 )
 from ..core.constants import LEAVE_TEXTS
 from ..core.decorators import check_module_enabled
@@ -1012,15 +1012,12 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         
         target_user = await resolve_user_with_telethon(context, target_input, update)
         
-        is_numeric_id = False
-        try:
-            int(target_input)
-            is_numeric_id = True
-        except ValueError:
-            pass
-
-        if not target_user and is_numeric_id:
-            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+        if not target_user and target_input.isdigit():
+            try:
+                target_user = await context.bot.get_chat(int(target_input))
+            except:
+                logger.warning(f"Could not resolve full profile for ID {target_input} in ADDSUDO. Creating a minimal User object.")
+                target_user = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await message.reply_text("Usage: /addsudo <ID/@username/reply>")
         return
@@ -1034,7 +1031,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await message.reply_html(f"ℹ️ User {user_display} [<code>{target_user.id}</code>] already has a privileged role. Use /setrank if want change it.")
         return
     
-    if not is_entity_a_user(target_user):
+    if not isinstance(target_user, User):
         await message.reply_text("🧐 Sudo can only be granted to users.")
         return
 
@@ -1115,15 +1112,12 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         
         target_user = await resolve_user_with_telethon(context, target_input, update)
         
-        is_numeric_id = False
-        try:
-            int(target_input)
-            is_numeric_id = True
-        except ValueError:
-            pass
-
-        if not target_user and is_numeric_id:
-            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+        if not target_user and target_input.isdigit():
+            try:
+                target_user = await context.bot.get_chat(int(target_input))
+            except:
+                logger.warning(f"Could not resolve full profile for ID {target_input} in DELSUDO. Creating a minimal User object.")
+                target_user = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await message.reply_text("Usage: /delsudo <ID/@username/reply>")
         return
@@ -1132,7 +1126,7 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await message.reply_text("Skrrrt... I can't find the user..")
         return
 
-    if not is_entity_a_user(target_user):
+    if not isinstance(target_user, User):
         await message.reply_text("🧐 Sudo can only be revoked from users.")
         return
 
@@ -1190,15 +1184,8 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     elif context.args:
         target_input = context.args[0]
         target_user = await resolve_user_with_telethon(context, target_input, update)
-        is_numeric_id = False
-        try:
-            int(target_input)
-            is_numeric_id = True
-        except ValueError:
-            pass
-
-        if not target_user and is_numeric_id:
-            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
         args_for_role = context.args[1:]
     
     if not target_user or not args_for_role:
@@ -1298,15 +1285,8 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     elif context.args:
         target_input = context.args[0]
         target_user = await resolve_user_with_telethon(context, target_input, update)
-        is_numeric_id = False
-        try:
-            int(target_input)
-            is_numeric_id = True
-        except ValueError:
-            pass
-
-        if not target_user and is_numeric_id:
-            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await message.reply_text("Usage: /addsupport <ID/@username/reply>")
         return
@@ -1320,7 +1300,7 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await message.reply_html(f"ℹ️ User {user_display} [<code>{target_user.id}</code>] already has a privileged role. Use /setrank if want change it.")
         return
     
-    if not is_entity_a_user(target_user):
+    if not isinstance(target_user, User):
         await message.reply_text("🧐 This role can only be granted to users.")
         return
 
@@ -1394,15 +1374,8 @@ async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     elif context.args:
         target_input = context.args[0]
         target_user = await resolve_user_with_telethon(context, target_input, update)
-        is_numeric_id = False
-        try:
-            int(target_input)
-            is_numeric_id = True
-        except ValueError:
-            pass
-
-        if not target_user and is_numeric_id:
-            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await message.reply_text("Usage: /delsupport <ID/@username/reply>")
         return
@@ -1411,7 +1384,7 @@ async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await message.reply_text("Skrrrt... I can't find the user.")
         return
 
-    if not is_entity_a_user(target_user):
+    if not isinstance(target_user, User):
         await message.reply_text("🧐 This role can only be revoked from users.")
         return
     
@@ -1462,15 +1435,8 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     elif context.args:
         target_input = context.args[0]
         target_user = await resolve_user_with_telethon(context, target_input, update)
-        is_numeric_id = False
-        try:
-            int(target_input)
-            is_numeric_id = True
-        except ValueError:
-            pass
-
-        if not target_user and is_numeric_id:
-            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await message.reply_text("Usage: /adddev <ID/@username/reply>")
         return
@@ -1484,7 +1450,7 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await message.reply_html(f"ℹ️ User {user_display} [<code>{target_user.id}</code>] already has a privileged role. Use /setrank if want change it.")
         return
     
-    if not is_entity_a_user(target_user):
+    if not isinstance(target_user, User):
         await message.reply_text("🧐 This role can only be granted to users.")
         return
 
@@ -1555,15 +1521,8 @@ async def deldev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     elif context.args:
         target_input = context.args[0]
         target_user = await resolve_user_with_telethon(context, target_input, update)
-        is_numeric_id = False
-        try:
-            int(target_input)
-            is_numeric_id = True
-        except ValueError:
-            pass
-
-        if not target_user and is_numeric_id:
-            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await message.reply_text("Usage: /deldev <ID/@username/reply>")
         return
@@ -1572,7 +1531,7 @@ async def deldev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await message.reply_text("Skrrrt... I can't find the user.")
         return
 
-    if not is_entity_a_user(target_user):
+    if not isinstance(target_user, User):
         await message.reply_text("🧐 This role can only be revoked from users.")
         return
     
@@ -1619,15 +1578,8 @@ async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_T
     elif context.args:
         target_input = context.args[0]
         target_user = await resolve_user_with_telethon(context, target_input, update)
-        is_numeric_id = False
-        try:
-            int(target_input)
-            is_numeric_id = True
-        except ValueError:
-            pass
-
-        if not target_user and is_numeric_id:
-            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await message.reply_text("Usage: /addsupport <ID/@username/reply>")
         return
@@ -1636,7 +1588,7 @@ async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         await message.reply_text("Skrrrt... I can't find the user.")
         return
         
-    if not is_entity_a_user(target_user):
+    if not isinstance(target_user, User):
         await message.reply_text("🧐 Added to Whitelist can only be users.")
         return
 
@@ -1709,15 +1661,8 @@ async def unwhitelist_user_command(update: Update, context: ContextTypes.DEFAULT
     elif context.args:
         target_input = context.args[0]
         target_user = await resolve_user_with_telethon(context, target_input, update)
-        is_numeric_id = False
-        try:
-            int(target_input)
-            is_numeric_id = True
-        except ValueError:
-            pass
-
-        if not target_user and is_numeric_id:
-            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+        if not target_user and target_input.isdigit():
+            target_user = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await message.reply_text("Usage: /unwhitelist <ID/@username/reply>")
         return
@@ -1726,7 +1671,7 @@ async def unwhitelist_user_command(update: Update, context: ContextTypes.DEFAULT
         await message.reply_text("Skrrrt... I can't find the user.")
         return
 
-    if not is_entity_a_user(target_user):
+    if not isinstance(target_user, User):
         await message.reply_text("🧐 Deleted from Whitelist can only be users.")
         return
 

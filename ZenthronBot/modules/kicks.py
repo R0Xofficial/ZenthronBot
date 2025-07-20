@@ -4,7 +4,7 @@ from telegram.constants import ChatType, ChatMemberStatus, ParseMode
 from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, create_user_html_link, send_safe_reply, safe_escape, is_entity_a_user
+from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, create_user_html_link, send_safe_reply, safe_escape
 from ..core.decorators import check_module_enabled, command_control
 from ..core.handlers import custom_handler
 
@@ -41,15 +41,12 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         
         target_user = await resolve_user_with_telethon(context, target_input, update)
         
-        is_numeric_id = False
-        try:
-            int(target_input)
-            is_numeric_id = True
-        except ValueError:
-            pass
-
-        if not target_user and is_numeric_id:
-            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+        if not target_user and target_input.isdigit():
+            try:
+                target_user = await context.bot.get_chat(int(target_input))
+            except:
+                logger.warning(f"Could not resolve full profile for ID {target_input} in KICK. Proceeding with ID only.")
+                target_user = User(id=int(target_input), first_name="", is_bot=False)
     else:
         await send_safe_reply(update, context, text="Usage: /kick <ID/@username/reply> [reason]")
         return
@@ -60,7 +57,7 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     reason: str = " ".join(args_after_target) or "No reason provided."
 
-    if not is_entity_a_user(target_user):
+    if not isinstance(target_user, User):
         await send_safe_reply(update, context, text="🧐 Kick can only be applied to users.")
         return
 
