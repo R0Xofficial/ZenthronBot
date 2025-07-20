@@ -1,7 +1,7 @@
 import logging
-from telegram import Update, User, Chat, ChatType
+from telegram import Update, User, Chat
 from telegram.ext import Application, CommandHandler, ContextTypes
-from telegram.constants import ParseMode
+from telegram.constants import ParseMode, ChatType
 
 from ..core.utils import resolve_user_with_telethon, is_entity_a_user, is_owner_or_dev
 
