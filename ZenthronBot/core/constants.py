@@ -250,6 +250,7 @@ DEVELOPER_COMMANDS_TEXT = """
 /blchat &lt;Chat ID&gt; - Blacklists the current chat or a specified chat ID. The bot will immediately leave if present.
 /unblchat &lt;Chat ID&gt; - Unblacklists a chat.
 /blchats - Lists all blacklisted chat IDs.
+/rmcacheduser &lt;User ID&gt; - Remove cached user from DB. <i>(Use only when cache is bugged)</i>
 """
 
 OWNER_COMMANDS_TEXT = """
