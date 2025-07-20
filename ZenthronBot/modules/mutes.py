@@ -44,7 +44,7 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         
         is_numeric_id = False
         try:
-            int(target_user)
+            int(target_input)
             is_numeric_id = True
         except ValueError:
             pass
