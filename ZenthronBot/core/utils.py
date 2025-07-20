@@ -148,18 +148,28 @@ def markdown_to_html(text: str) -> str:
     return text
 
 # --- UTILITY ---
-def telethon_entity_to_ptb_user(entity: 'TelethonUser') -> User | None:
-    if not isinstance(entity, TelethonUser):
-        return None
+def _convert_telethon_entity_to_ptb(entity) -> User | Chat | None:
+    if isinstance(entity, TelethonUser):
+        return User(
+            id=entity.id,
+            first_name=entity.first_name or "",
+            is_bot=entity.bot or False,
+            last_name=entity.last_name,
+            username=entity.username,
+            language_code=getattr(entity, 'lang_code', None)
+        )
     
-    return User(
-        id=entity.id,
-        first_name=entity.first_name or "",
-        is_bot=entity.bot or False,
-        last_name=entity.last_name,
-        username=entity.username,
-        language_code=getattr(entity, 'lang_code', None)
-    )
+    elif hasattr(entity, 'id') and hasattr(entity, 'type'):
+        return Chat(
+            id=entity.id,
+            type=entity.type,
+            first_name=getattr(entity, 'first_name', None),
+            title=getattr(entity, 'title', None),
+            username=getattr(entity, 'username', None),
+            is_bot=getattr(entity, 'bot', False)
+        )
+        
+    return None
 
 async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_input: str, update: Update) -> User | Chat | None:
     if update.message and update.message.entities:
@@ -211,11 +221,12 @@ async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_
         logger.info(f"Resolving '{target_input}' using Telethon...")
         entity_from_telethon = await telethon_client.get_entity(target_input)
         
-        if isinstance(entity_from_telethon, TelethonUser):
-            ptb_user = telethon_entity_to_ptb_user(entity_from_telethon)
-            if ptb_user:
-                update_user_in_db(ptb_user)
-                return ptb_user
+        converted_entity = _convert_telethon_entity_to_ptb(entity_from_telethon)
+        
+        if converted_entity:
+            if isinstance(converted_entity, User):
+                update_user_in_db(converted_entity)
+            return converted_entity
         
     except Exception as e:
         logger.error(f"All methods failed for '{target_input}'. Final Telethon error: {e}")
@@ -545,9 +556,3 @@ async def propagate_unban(context: ContextTypes.DEFAULT_TYPE) -> None:
             )
         except Exception as e2:
             logger.warning(f"Failed to send as normal message: {e2}.")
-
-def is_entity_a_user(entity: Chat | User | None) -> bool:
-    if not entity: return False
-    if isinstance(entity, User): return True
-    if isinstance(entity, Chat) and entity.type == 'private': return True
-    return False
