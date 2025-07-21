@@ -118,7 +118,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                 if target_id > 0:
                     target_entity = User(id=target_id, first_name="", is_bot=False)
                 else:
-                    target_entity = Chat(id=target_id, type="supergroup")
+                    target_entity = Chat(id=target_id, type="channel")
                     
             except ValueError:
                 pass
@@ -214,7 +214,7 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 if target_id > 0:
                     target_entity = User(id=target_id, first_name="", is_bot=False)
                 else:
-                    target_entity = Chat(id=target_id, type="supergroup")
+                    target_entity = Chat(id=target_id, type="channel")
                     
             except ValueError:
                 pass
@@ -226,7 +226,7 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not target_entity:
         await message.reply_text("Skrrrt... I can't find the user."); return
 
-    if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
+    if not isinstance(target_entity, User):
         await message.reply_text("🧐 This action can only be applied to users."); return
 
     user_display = create_user_html_link(target_entity)
