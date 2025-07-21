@@ -38,8 +38,17 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         if len(context.args) > 1:
             reason = " ".join(context.args[1:])
         target_entity = await resolve_user_with_telethon(context, target_input, update)
-        if not target_entity and target_input.isdigit():
-            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+        if not target_entity:
+            try:
+                target_id = int(target_input)
+                
+                if target_id > 0:
+                    target_entity = User(id=target_id, first_name="", is_bot=False)
+                else:
+                    target_entity = Chat(id=target_id, type="channel")
+                    
+            except ValueError:
+                pass
 
     if not target_entity:
         await message.reply_html("Usage: /blist &lt;ID/@username/reply&gt; [reason]")
@@ -109,14 +118,23 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
     elif context.args:
         target_input = context.args[0]
         target_entity = await resolve_user_with_telethon(context, target_input, update)
-        if not target_entity and target_input.isdigit():
-            target_entity = User(id=int(target_input), first_name="", is_bot=False)
+        if not target_entity:
+            try:
+                target_id = int(target_input)
+                
+                if target_id > 0:
+                    target_entity = User(id=target_id, first_name="", is_bot=False)
+                else:
+                    target_entity = Chat(id=target_id, type="channel")
+                    
+            except ValueError:
+                pass
 
     if not target_entity:
         await message.reply_html("Usage: /unblist &lt;ID/@username/reply&gt;")
         return
     
-    if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
+    if not isinstance(target_entity, User):
         await message.reply_text("🧐 This action can only be applied to users."); return
     if target_entity.id == OWNER_ID:
         await message.reply_text("WHAT? The Owner is never on the blacklist."); return
