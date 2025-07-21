@@ -99,10 +99,11 @@ async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     except BadRequest as e:
         logger.warning(f"HTML parsing failed for AI response: {e}. Sending as plain text.")
-        await status_message.edit_text(ai_response_markdown)
+        await update.message.reply_text(ai_response_markdown)
+
     except Exception as e:
         logger.error(f"Failed to process /askai request: {e}", exc_info=True)
-        await status_message.edit_text(f"💥 Houston, we have a problem! My AI core malfunctioned: {type(e).__name__}")
+        await update.message.reply_text(f"💥 Houston, we have a problem! My AI core malfunctioned: {type(e).__name__}")
         
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
