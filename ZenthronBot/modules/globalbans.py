@@ -111,7 +111,14 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         if len(context.args) > 1:
             reason = " ".join(context.args[1:])
         target_entity = await resolve_user_with_telethon(context, target_input, update)
-        if not target_entity and target_input.isdigit():
+        is_numeric_id = False
+        try:
+            int(target_input)
+            is_numeric_id = True
+        except ValueError:
+            pass
+
+        if not target_entity and is_numeric_id:
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
         
     if not target_entity:
@@ -198,7 +205,14 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     elif context.args:
         target_input = context.args[0]
         target_entity = await resolve_user_with_telethon(context, target_input, update)
-        if not target_entity and target_input.isdigit():
+        is_numeric_id = False
+        try:
+            int(target_input)
+            is_numeric_id = True
+        except ValueError:
+            pass
+
+        if not target_entity and is_numeric_id:
             target_entity = User(id=int(target_input), first_name="", is_bot=False)
 
     if not target_entity:
