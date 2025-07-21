@@ -56,7 +56,10 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         await message.reply_text("You must provide a reason for this action.")
         return
 
-    if not isinstance(target_entity, User):
+    if not (
+        (hasattr(target_entity, 'type') and target_entity.type == 'private') or 
+        isinstance(target_entity, User)
+    ):
         await message.reply_text("🧐 This action can only be applied to users.")
         return
     if is_privileged_user(target_entity.id) or target_entity.id == context.bot.id:
@@ -130,7 +133,10 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
         await message.reply_html("Usage: /unblist &lt;ID/@username/reply&gt;")
         return
     
-    if isinstance(target_entity, Chat) and target_entity.type != ChatType.PRIVATE:
+    if not (
+        (hasattr(target_entity, 'type') and target_entity.type == 'private') or 
+        isinstance(target_entity, User)
+    ):
         await message.reply_text("🧐 This action can only be applied to users."); return
     if target_entity.id == OWNER_ID:
         await message.reply_text("WHAT? The Owner is never on the blacklist."); return
