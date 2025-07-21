@@ -51,7 +51,7 @@ async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     can_use_ai = False
     if is_privileged_user(user.id):
         can_use_ai = True
-    elif PUBLIC_AI_ENABLED = True
+    elif PUBLIC_AI_ENABLED:
         can_use_ai = True
     
     if not can_use_ai:
