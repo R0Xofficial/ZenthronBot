@@ -7,7 +7,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 
 from ..config import OWNER_ID, APPEAL_CHAT_ID
 from ..core.database import add_to_blacklist, remove_from_blacklist, get_blacklist_reason, is_user_blacklisted, is_whitelisted, is_sudo_user 
-from ..core.utils import is_privileged_user, is_owner_or_dev, resolve_user_with_telethon, create_user_html_link, safe_escape, send_operational_log
+from ..core.utils import is_privileged_user, is_owner_or_dev, resolve_user_with_telethon, create_user_html_link, safe_escape, send_operational_log, is_entity_a_user
 from ..core.decorators import check_module_enabled
 from ..core.handlers import custom_handler
 
@@ -58,7 +58,7 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         await message.reply_text("You must provide a reason for this action.")
         return
 
-    if not isinstance(target_entity, User):
+    if not is_entity_a_user(target_entity):
         await message.reply_text("🧐 This action can only be applied to users.")
         return
     if is_privileged_user(target_entity.id) or target_entity.id == context.bot.id:
@@ -134,7 +134,7 @@ async def unblacklist_user_command(update: Update, context: ContextTypes.DEFAULT
         await message.reply_html("Usage: /unblist &lt;ID/@username/reply&gt;")
         return
     
-    if not isinstance(target_entity, User):
+    if not is_entity_a_user(target_entity):
         await message.reply_text("🧐 This action can only be applied to users."); return
     if target_entity.id == OWNER_ID:
         await message.reply_text("WHAT? The Owner is never on the blacklist."); return
