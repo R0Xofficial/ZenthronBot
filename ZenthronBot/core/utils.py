@@ -148,13 +148,6 @@ def markdown_to_html(text: str) -> str:
     return text
 
 # --- UTILITY ---
-def telethon_entity_to_ptb_user(entity: 'TelethonUser') -> User | None:
-# W pliku ZenthronBot/core/utils.py
-
-# Upewnij się, że masz te importy na górze pliku
-from telegram import User, Chat
-from telethon.tl.types import User as TelethonUser
-
 def telethon_entity_to_ptb_user(entity) -> User | Chat | None:
     if isinstance(entity, TelethonUser):
         return User(
