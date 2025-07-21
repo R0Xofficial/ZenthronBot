@@ -89,6 +89,9 @@ You can disable/enable commands for non-admins in this chat.
 • <code>/enable &lt;command&gt;</code>
 • <code>/settings</code> - Shows current settings.
 
+• <code>/disable all</code> - Disable all commands that are enabled.
+• <code>/enable all</code> - Enable all commands that are disabled.
+
 <b>🔹 Module: fun</b>
 /kill - Metaphorically eliminate someone.
 /punch - Deliver a textual punch.
