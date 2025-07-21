@@ -27,9 +27,24 @@ async def disable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if not can_disable:
         return
 
-    manageable_commands = context.bot_data.get("manageable_commands", set())
     command_to_disable = context.args[0].lower().lstrip('') if context.args else ""
-    
+    if command_to_disable == 'all':
+        manageable_commands = context.bot_data.get("manageable_commands", set())
+        if not manageable_commands:
+            await update.message.reply_text("There are no manageable commands to disable.")
+            return
+
+        disabled_count = 0
+        for command_name in manageable_commands:
+            if disable_command_in_chat(chat.id, command_name):
+                disabled_count += 1
+        
+        await update.message.reply_html(
+            f"✅ Disabled <b>{disabled_count}</b> commands for non-admins in this chat."
+        )
+        return
+
+    manageable_commands = context.bot_data.get("manageable_commands", set())
     if not command_to_disable or command_to_disable not in manageable_commands:
         await update.message.reply_html(
             f"Usage: /disable &lt;command name&gt;\n"
@@ -60,9 +75,24 @@ async def enable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not can_enable:
         return
     
-    manageable_commands = context.bot_data.get("manageable_commands", set())
     command_to_enable = context.args[0].lower().lstrip('') if context.args else ""
+    if command_to_enable == 'all':
+        disabled_in_chat = get_disabled_commands_in_chat(chat.id)
+        if not disabled_in_chat:
+            await update.message.reply_text("All manageable commands are already enabled.")
+            return
+
+        enabled_count = 0
+        for command_name in disabled_in_chat:
+            if enable_command_in_chat(chat.id, command_name):
+                enabled_count += 1
+        
+        await update.message.reply_html(
+            f"✅ Enabled <b>{enabled_count}</b> commands for everyone in this chat."
+        )
+        return
     
+    manageable_commands = context.bot_data.get("manageable_commands", set())
     if not command_to_enable or command_to_enable not in manageable_commands:
         await update.message.reply_html("Usage: /enable &lt;command name&gt;\nThat command doesn't exist or isn't managed.")
         return
