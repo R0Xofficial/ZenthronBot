@@ -131,7 +131,10 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await message.reply_text("You must provide a reason for this action.")
         return
 
-    if not isinstance(target_entity, User):
+    if not (
+        isinstance(target_entity, User) or 
+        (isinstance(target_entity, Chat) and target_entity.type == ChatType.PRIVATE)
+    ):
         await message.reply_text("🧐 This action can only be applied to users.")
         return
     if is_privileged_user(target_entity.id) or target_entity.id == context.bot.id:
@@ -226,7 +229,10 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not target_entity:
         await message.reply_text("Skrrrt... I can't find the user."); return
 
-    if not isinstance(target_entity, User):
+    if not (
+        isinstance(target_entity, User) or 
+        (isinstance(target_entity, Chat) and target_entity.type == ChatType.PRIVATE)
+    ):
         await message.reply_text("🧐 This action can only be applied to users."); return
 
     user_display = create_user_html_link(target_entity)
