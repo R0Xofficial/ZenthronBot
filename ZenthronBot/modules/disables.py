@@ -40,7 +40,7 @@ async def disable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 disabled_count += 1
         
         await update.message.reply_html(
-            f"✅ Disabled <b>{disabled_count}</b> commands for non-admins in this chat."
+            f"✅ Disabled <b>{disabled_count}</b> command(s) for non-admins in this chat."
         )
         return
 
@@ -88,7 +88,7 @@ async def enable_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 enabled_count += 1
         
         await update.message.reply_html(
-            f"✅ Enabled <b>{enabled_count}</b> commands for everyone in this chat."
+            f"✅ Enabled <b>{enabled_count}</b> command(s) for everyone in this chat."
         )
         return
     
