@@ -48,21 +48,15 @@ async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     user = update.effective_user
 
     can_use_ai = False
-    is_regular_user = True
-    
     if is_privileged_user(user.id):
         can_use_ai = True
-        is_regular_user = False
-    elif PUBLIC_AI_ENABLED:
+    elif context.bot_data.get('public_ai_enabled', False):
         can_use_ai = True
     
-    if not can_use_ai and is_regular_user:
+    if not can_use_ai:
         await update.message.reply_html(
-            "🧠 My AI brain is currently <b>DISABLED</b> by my Owner for non-SUDO users 😴\n\n"
-            "Maybe try again later; ask my Owner to enable the feature, or just ask a human? 😉"
+            "🧠 My AI brain is currently <b>DISABLED</b> by my Owner for non-privileged users 😴"
         )
-        return
-    elif not can_use_ai:
         return
 
     if not GEMINI_API_KEY:
@@ -79,27 +73,36 @@ async def ask_ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     try:
         ai_response_markdown = await get_gemini_response(prompt)
-        
         ai_response_html = markdown_to_html(ai_response_markdown)
 
-        if len(ai_response_html) > 4096:
-             for i in range(0, len(ai_response_html), 4096):
-                chunk = ai_response_html[i:i+4096]
-                if i == 0:
-                    await status_message.edit_text(chunk, parse_mode=ParseMode.HTML)
-                else:
-                    await update.message.reply_text(chunk, parse_mode=ParseMode.HTML)
-        else:
-            await status_message.edit_text(ai_response_html, parse_mode=ParseMode.HTML)
+        try:
+            await status_message.delete()
+        except Exception as delete_error:
+            logger.warning(f"Could not delete 'Thinking...' message: {delete_error}")
+
+        MAX_MESSAGE_LENGTH = 4096
+        chunks = [ai_response_html[i:i + MAX_MESSAGE_LENGTH] for i in range(0, len(ai_response_html), MAX_MESSAGE_LENGTH)]
+        
+        if chunks:
+            await update.message.reply_html(chunks[0], disable_web_page_preview=True)
+        
+        if len(chunks) > 1:
+            for chunk in chunks[1:]:
+                await asyncio.sleep(0.5)
+                await context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text=chunk,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True
+                )
 
     except BadRequest as e:
         logger.warning(f"HTML parsing failed for AI response: {e}. Sending as plain text.")
         await status_message.edit_text(ai_response_markdown)
     except Exception as e:
-        logger.error(f"Failed to process /askai request: {e}")
+        logger.error(f"Failed to process /askai request: {e}", exc_info=True)
         await status_message.edit_text(f"💥 Houston, we have a problem! My AI core malfunctioned: {type(e).__name__}")
-
-
+        
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
     application.add_handler(CommandHandler("setai", set_ai_command))
