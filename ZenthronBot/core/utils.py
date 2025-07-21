@@ -545,15 +545,3 @@ async def propagate_unban(context: ContextTypes.DEFAULT_TYPE) -> None:
             )
         except Exception as e2:
             logger.warning(f"Failed to send as normal message: {e2}.")
-
-def is_entity_a_user(entity: object | None) -> bool:
-    if not entity:
-        return False
-        
-    if hasattr(entity, 'type') and getattr(entity, 'type') == 'private':
-        return True
-
-    if isinstance(entity, User):
-        return True
-        
-    return False
