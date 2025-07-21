@@ -18,6 +18,7 @@ from .core.database import init_db, disable_module, enable_module, get_disabled_
 from .core.utils import is_owner_or_dev, safe_escape, send_critical_log
 from .core.handlers import get_custom_command_handler, custom_handler
 
+from .modules.misc import mention_handler
 from .modules.chatblacklists import check_blacklisted_chat_on_join
 from .modules.mutes import handle_bot_permission_changes
 from .modules.bans import handle_bot_banned
@@ -283,6 +284,7 @@ async def main() -> None:
         application.add_handler(get_custom_command_handler(), group=-1)
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_note_trigger), group=0)
         application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND) & filters.ChatType.GROUPS, check_message_for_filters), group=3)
+        application.add_handler(MessageHandler(filters.Entity('mention') & filters.ChatType.GROUPS, mention_handler), group=4)
 
         # --- LAYER 5: GROUP MEMBERS SERVICING ---
         application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_group_members), group=5)
