@@ -149,17 +149,32 @@ def markdown_to_html(text: str) -> str:
 
 # --- UTILITY ---
 def telethon_entity_to_ptb_user(entity: 'TelethonUser') -> User | None:
-    if not isinstance(entity, TelethonUser):
-        return None
+# W pliku ZenthronBot/core/utils.py
+
+# Upewnij się, że masz te importy na górze pliku
+from telegram import User, Chat
+from telethon.tl.types import User as TelethonUser
+
+def telethon_entity_to_ptb_user(entity) -> User | Chat | None:
+    if isinstance(entity, TelethonUser):
+        return User(
+            id=entity.id,
+            first_name=entity.first_name or "",
+            is_bot=entity.bot or False,
+            last_name=entity.last_name,
+            username=entity.username,
+            language_code=getattr(entity, 'lang_code', None)
+        )
     
-    return User(
-        id=entity.id,
-        first_name=entity.first_name or "",
-        is_bot=entity.bot or False,
-        last_name=entity.last_name,
-        username=entity.username,
-        language_code=getattr(entity, 'lang_code', None)
-    )
+    elif hasattr(entity, 'id') and hasattr(entity, 'type'):
+        return Chat(
+            id=entity.id,
+            type=entity.type,
+            first_name=getattr(entity, 'first_name', None),
+            title=getattr(entity, 'title', None),
+            username=getattr(entity, 'username', None)
+        )
+    return None
 
 async def resolve_user_with_telethon(context: ContextTypes.DEFAULT_TYPE, target_input: str, update: Update) -> User | Chat | None:
     if update.message and update.message.entities:
