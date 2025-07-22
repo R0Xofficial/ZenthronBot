@@ -297,6 +297,12 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
             logger.error(f"Failed to send introduction message to new group {chat.id}: {e}")
         return
 
+    if should_clean_service(chat.id):
+        try:
+            await update.message.delete()
+        except Exception:
+            pass
+
     welcome_enabled, custom_text = get_welcome_settings(chat.id)
 
     for member in update.message.new_chat_members:
@@ -367,12 +373,6 @@ async def handle_new_group_members(update: Update, context: ContextTypes.DEFAULT
                 )
             except Exception as e:
                 logger.error(f"Failed to send welcome message for user {member.id} in chat {chat.id}: {e}")
-
-    if should_clean_service(chat.id):
-        try:
-            await update.message.delete()
-        except Exception:
-            pass
 
 @check_module_enabled("welcomes")
 async def handle_left_group_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
