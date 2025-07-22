@@ -75,10 +75,10 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             reason = " ".join(args_after_target)
     if not reason.strip(): reason = "No reason provided."
 
-    if target_entity.id == context.bot.id:
+    if target_user.id == context.bot.id:
         await send_safe_reply(update, context, text="Nuh uh... I can't mute myself."); return
 
-    if target_entity.id == user_who_mutes.id:
+    if target_user.id == user_who_mutes.id:
         await send_safe_reply(update, context, text="Nuh uh... I can't mute yourself."); return
 
     try:
@@ -137,10 +137,10 @@ async def dmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if not is_entity_a_user(target_user):
         await send_safe_reply(update, context, text="This command can only be used on users."); return
     
-    if target_entity.id == context.bot.id:
+    if target_user.id == context.bot.id:
         await send_safe_reply(update, context, text="Nuh uh... I can't dmute myself."); return
 
-    if target_entity.id == user_who_mutes.id:
+    if target_user.id == user_who_mutes.id:
         await send_safe_reply(update, context, text="Nuh uh... I can't dmute yourself."); return
 
     try:
@@ -226,10 +226,10 @@ async def tmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     reason = " ".join(args_after_target[1:]) if len(args_after_target) > 1 else "No reason provided."
     until_date_dt = datetime.now(timezone.utc) + duration_td
 
-    if target_entity.id == context.bot.id:
+    if target_user.id == context.bot.id:
         await send_safe_reply(update, context, text="Nuh uh... I can't tmute myself."); return
 
-    if target_entity.id == user_who_mutes.id:
+    if target_user.id == user_who_mutes.id:
         await send_safe_reply(update, context, text="Nuh uh... I can't tmute yourself."); return
 
     try:
