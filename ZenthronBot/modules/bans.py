@@ -54,7 +54,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 pass
     
     if not target_entity:
-        await send_safe_reply(update, context, text="Usage: /ban <ID/@username/reply> [duration] [reason]")
+        await send_safe_reply(update, context, text="Usage: /ban <ID/@username/reply> [reason]")
         return        
 
     duration_str: str | None = None
