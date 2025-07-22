@@ -5,7 +5,7 @@ from telegram.constants import ChatType, ChatMemberStatus, ParseMode
 from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes, ChatMemberHandler
 
-from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, parse_duration_to_timedelta, create_user_html_link, send_safe_reply, safe_escape, send_critical_log
+from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, parse_duration_to_timedelta, create_user_html_link, send_safe_reply, safe_escape, send_critical_log, is_entity_a_user
 from ..core.decorators import check_module_enabled
 from ..core.handlers import custom_handler
 
@@ -42,12 +42,15 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         
         target_user = await resolve_user_with_telethon(context, target_input, update)
         
-        if not target_user and target_input.isdigit():
+        if not target_user:
             try:
-                target_user = await context.bot.get_chat(int(target_input))
-            except:
-                logger.warning(f"Could not resolve full profile for ID {target_input} in MUTE. Proceeding with ID only.")
-                target_user = User(id=int(target_input), first_name="", is_bot=False)
+                target_id = int(target_input)
+                if target_id > 0:
+                    target_user = User(id=target_id, first_name="", is_bot=False)
+                else:
+                    target_user = Chat(id=target_id, type="channel")
+            except ValueError:
+                pass
     else:
         await send_safe_reply(update, context, text="Usage: /mute <ID/@username/reply> [duration] [reason]")
         return
@@ -56,7 +59,7 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await send_safe_reply(update, context, text=f"Skrrrt... I can't find the user.")
         return
 
-    if not isinstance(target_user, User):
+    if not is_entity_a_user(target_user):
         await send_safe_reply(update, context, text="🧐 Mute can only be applied to users.")
         return
         
@@ -78,7 +81,7 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     try:
         target_chat_member = await context.bot.get_chat_member(chat.id, target_user.id)
         if target_chat_member.status in ["creator", "administrator"]:
-            await send_safe_reply(update, context, text="WHAT? Chat Creator and Administrators cannot be muted.")
+            await send_safe_reply(update, context, text="Chat Creator and Administrators cannot be muted.")
             return
     except TelegramError as e:
         if "user not found" in str(e).lower():
@@ -128,12 +131,15 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         
         target_user = await resolve_user_with_telethon(context, target_input, update)
         
-        if not target_user and target_input.isdigit():
+        if not target_user:
             try:
-                target_user = await context.bot.get_chat(int(target_input))
-            except:
-                logger.warning(f"Could not resolve full profile for ID {target_input} in UNMUTE. Proceeding with ID only.")
-                target_user = User(id=int(target_input), first_name="", is_bot=False)
+                target_id = int(target_input)
+                if target_id > 0:
+                    target_user = User(id=target_id, first_name="", is_bot=False)
+                else:
+                    target_user = Chat(id=target_id, type="channel")
+            except ValueError:
+                pass
     else:
         await send_safe_reply(update, context, text="Usage: /unmute <ID/@username/reply>")
         return
@@ -142,7 +148,7 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await send_safe_reply(update, context, text=f"Skrrrt... I can't find the user.")
         return
 
-    if not isinstance(target_user, User):
+    if not is_entity_a_user(target_user):
         await send_safe_reply(update, context, text="🧐 Unmute can only be applied to users.")
         return
 
