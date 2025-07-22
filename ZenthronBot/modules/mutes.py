@@ -244,7 +244,7 @@ async def tmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await context.bot.restrict_chat_member(chat_id=chat.id, user_id=target_user.id, permissions=permissions_to_set, until_date=until_date_dt)
         
         display_name = create_user_html_link(target_user)
-        response_lines = ["✅ <b>User Temporarily Muted</b>"]
+        response_lines = ["Success: User Muted"]
         response_lines.append(f"<b>• User:</b> {display_name} [<code>{target_user.id}</code>]")
         response_lines.append(f"<b>• Reason:</b> {safe_escape(reason)}")
         response_lines.append(f"<b>• Duration:</b> <code>{duration_str}</code>")
