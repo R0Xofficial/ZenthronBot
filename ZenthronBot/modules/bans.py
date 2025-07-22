@@ -32,7 +32,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     target_entity: User | Chat | None = None
     args_after_target: list[str] = []
 
-    if message.reply_to_message:
+    if message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
         target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
         if context.args:
             args_after_target = context.args
@@ -132,7 +132,7 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
 
     target_entity: User | Chat | None = None
-    if message.reply_to_message:
+    if message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
         target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
     elif context.args:
         target_input = context.args[0]
