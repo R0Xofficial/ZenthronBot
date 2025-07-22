@@ -40,7 +40,7 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
     
     if not is_entity_a_user(target_user):
-        await message.reply_text("This command can only be used on users.")
+        await message.reply_text("🧐 This command can only be used on users.")
         return
         
     reason = " ".join(reason_parts) or "No reason provided."
