@@ -5,7 +5,7 @@ from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler
 
 from ..core.database import add_warning, remove_warning_by_id, get_warnings, reset_warnings, set_warn_limit, get_warn_limit
-from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, create_user_html_link, send_safe_reply, safe_escape
+from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, create_user_html_link, send_safe_reply, safe_escape, is_entity_a_user
 from ..core.decorators import check_module_enabled, command_control
 from ..core.handlers import custom_handler
 
@@ -39,7 +39,7 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await message.reply_text("Usage: /warn <ID/@username/reply> [reason]")
         return
     
-    if not isinstance(target_user, User):
+    if not is_entity_a_user(target_user):
         await message.reply_text("This command can only be used on users.")
         return
         
