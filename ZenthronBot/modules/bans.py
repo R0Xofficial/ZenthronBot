@@ -6,7 +6,7 @@ from telegram.error import TelegramError
 from telegram.ext import Application, CommandHandler, ContextTypes, ChatMemberHandler
 
 from ..core.database import remove_chat_from_db
-from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, parse_duration_to_timedelta, create_user_html_link, send_safe_reply, safe_escape
+from ..core.utils import _can_user_perform_action, resolve_user_with_telethon, parse_duration_to_timedelta, create_user_html_link, send_safe_reply, safe_escape, is_entity_a_user
 from ..core.decorators import check_module_enabled
 from ..core.handlers import custom_handler
 
