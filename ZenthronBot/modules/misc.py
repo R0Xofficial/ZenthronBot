@@ -337,11 +337,8 @@ async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     message = update.effective_message
     target_entity: Chat | User | None = None
     
-    if update.message.reply_to_message:
-        if not message.reply_to_message.forum_topic_created:
-            target_entity = update.message.reply_to_message.sender_chat or update.message.reply_to_message.from_user
-            if context.args:
-                args_after_target = context.args
+    if update.message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
+        target_entity = update.message.reply_to_message.sender_chat or update.message.reply_to_message.from_user
     elif context.args:
         target_input = " ".join(context.args)
         
