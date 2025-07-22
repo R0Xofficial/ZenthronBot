@@ -78,7 +78,7 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if target_entity.id == context.bot.id:
         await send_safe_reply(update, context, text="Nuh uh... I can't mute myself."); return
 
-    if target_entity.id == user_who_bans.id:
+    if target_entity.id == user_who_mutes.id:
         await send_safe_reply(update, context, text="Nuh uh... I can't mute yourself."); return
 
     try:
@@ -140,7 +140,7 @@ async def dmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if target_entity.id == context.bot.id:
         await send_safe_reply(update, context, text="Nuh uh... I can't dmute myself."); return
 
-    if target_entity.id == user_who_bans.id:
+    if target_entity.id == user_who_mutes.id:
         await send_safe_reply(update, context, text="Nuh uh... I can't dmute yourself."); return
 
     try:
@@ -229,7 +229,7 @@ async def tmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if target_entity.id == context.bot.id:
         await send_safe_reply(update, context, text="Nuh uh... I can't tmute myself."); return
 
-    if target_entity.id == user_who_bans.id:
+    if target_entity.id == user_who_mutes.id:
         await send_safe_reply(update, context, text="Nuh uh... I can't tmute yourself."); return
 
     try:
