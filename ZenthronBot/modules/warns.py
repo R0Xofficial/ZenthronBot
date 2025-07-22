@@ -26,7 +26,7 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     target_user: User | None = None
     reason_parts: list[str] = []
     
-    if message.reply_to_message:
+    if message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
         if not message.reply_to_message.sender_chat:
             target_user = message.reply_to_message.from_user
         reason_parts = context.args
