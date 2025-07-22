@@ -114,8 +114,6 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         response_lines.append(f"<b>• Reason:</b> {safe_escape(reason)}")
         if is_entity_a_user(target_entity) and duration_str:
             response_lines.append(f"<b>• Duration:</b> <code>{duration_str}</code> (until: <code>{until_date_for_api.strftime('%Y-%m-%d %H:%M:%S %Z')}</code>)")
-        elif is_entity_a_user(target_entity):
-            response_lines.append(f"<b>• Duration:</b> <code>Permanent</code>")
         
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
 
@@ -193,7 +191,7 @@ async def tban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await send_safe_reply(update, context, text="Huh? You can't use this command in a private chat...")
         return
 
-    if not await _can_user_perform_action(update, context, 'can_restrict_members', "You need 'can_restrict_members' permission to use this command."):
+    if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
 
     target_entity: User | Chat | None = None
@@ -217,7 +215,7 @@ async def tban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                 pass
     
     if not target_entity:
-        await send_safe_reply(update, context, text="Usage: /tban <ID/@username/reply> <duration> [reason]")
+        await send_safe_reply(update, context, text="Usage: /tban <ID/@username/reply> [duration] [reason]")
         return
         
     if not is_entity_a_user(target_entity):
