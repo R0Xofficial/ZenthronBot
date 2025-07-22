@@ -142,10 +142,10 @@ async def dban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     reason = " ".join(context.args) if context.args else "No reason provided."
 
     if target_entity.id == context.bot.id:
-        await send_safe_reply(update, context, text="Nuh uh... I can't ban myself."); return
+        await send_safe_reply(update, context, text="Nuh uh... I can't dban myself."); return
 
     if target_entity.id == user_who_bans.id:
-        await send_safe_reply(update, context, text="Nuh uh... I can't ban yourself."); return
+        await send_safe_reply(update, context, text="Nuh uh... I can't dban yourself."); return
 
     if is_entity_a_user(target_entity):
         try:
@@ -239,10 +239,10 @@ async def tban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     until_date_for_api = datetime.now(timezone.utc) + duration_td
 
     if target_entity.id == context.bot.id:
-        await send_safe_reply(update, context, text="Nuh uh... I can't ban myself."); return
+        await send_safe_reply(update, context, text="Nuh uh... I can't tban myself."); return
 
     if target_entity.id == user_who_bans.id:
-        await send_safe_reply(update, context, text="Nuh uh... You can't ban yourself."); return
+        await send_safe_reply(update, context, text="Nuh uh... You can't tban yourself."); return
 
     try:
         member = await context.bot.get_chat_member(chat.id, target_entity.id)
