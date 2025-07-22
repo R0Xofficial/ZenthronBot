@@ -127,7 +127,7 @@ async def dkick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     try:
         member = await chat.get_member(target_user.id)
-        if member.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR]:
+        if member.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
             await send_safe_reply(update, context, text="Chat Creator and Administrators cannot be kicked.")
             return
     except TelegramError: pass
