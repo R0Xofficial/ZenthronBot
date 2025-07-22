@@ -20,9 +20,10 @@ logger = logging.getLogger(__name__)
 @check_module_enabled("fun")
 @command_control("fun")
 async def _handle_action_command(update, context, texts, gifs, name, req_target=True, msg=""):
+    message = update.effective_message
     target_mention = None
     if req_target:
-        if update.message.reply_to_message:
+        if update.message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
             target = update.message.reply_to_message.from_user
             if await check_target_protection(target.id, context):
                 await update.message.reply_html(random.choice(CANT_TARGET_OWNER_TEXTS if target.id == OWNER_ID else CANT_TARGET_SELF_TEXTS)); return
