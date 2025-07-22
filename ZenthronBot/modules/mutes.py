@@ -31,7 +31,7 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     target_user: User | None = None
     args_after_target: list[str] = []
 
-    if message.reply_to_message:
+    if message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
         target_user = message.reply_to_message.from_user
         if context.args:
             args_after_target = context.args
@@ -124,7 +124,7 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     target_user: User | None = None
-    if message.reply_to_message:
+    if message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
         target_user = message.reply_to_message.from_user
     elif context.args:
         target_input = context.args[0]
