@@ -94,6 +94,7 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 @custom_handler("kickme")
 async def kickme_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
+    message = update.effective_message
     user_to_kick = update.effective_user
 
     if not user_to_kick:
@@ -103,8 +104,9 @@ async def kickme_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text("Huh? You can't kick yourself in private chat...")
         return
 
-    if not is_entity_a_user(user_to_kick):
-        await message.reply_text("🧐 Channels cannot use /kickme command.")
+    sender_chat = message.sender_chat
+    if sender_chat and sender_chat.type == ChatType.CHANNEL:
+        await message.reply_text("🧐 Anonymous admins (channels) cannot use the /kickme command.")
         return
 
     try:
