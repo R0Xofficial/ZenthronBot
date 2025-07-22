@@ -1005,7 +1005,7 @@ async def addsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     target_user: User | None = None
 
-    if message.reply_to_message:
+    if message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
         target_user = message.reply_to_message.from_user
     elif context.args:
         target_input = context.args[0]
@@ -1105,7 +1105,7 @@ async def delsudo_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     target_user: User | None = None
 
-    if message.reply_to_message:
+    if message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
         target_user = message.reply_to_message.from_user
     elif context.args:
         target_input = context.args[0]
@@ -1181,7 +1181,7 @@ async def setrank_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     target_user: User | None = None
     args_for_role: list[str] = []
 
-    if message.reply_to_message:
+    if message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
         target_user = message.reply_to_message.from_user
         args_for_role = context.args
     elif context.args:
@@ -1293,7 +1293,7 @@ async def addsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     target_user: User | None = None
-    if message.reply_to_message:
+    if message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
         target_user = message.reply_to_message.from_user
     elif context.args:
         target_input = context.args[0]
@@ -1389,7 +1389,7 @@ async def delsupport_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     target_user: User | None = None
-    if message.reply_to_message:
+    if message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
         target_user = message.reply_to_message.from_user
     elif context.args:
         target_input = context.args[0]
@@ -1457,7 +1457,7 @@ async def adddev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     target_user: User | None = None
-    if message.reply_to_message:
+    if message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
         target_user = message.reply_to_message.from_user
     elif context.args:
         target_input = context.args[0]
@@ -1550,7 +1550,7 @@ async def deldev_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     target_user: User | None = None
-    if message.reply_to_message:
+    if message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
         target_user = message.reply_to_message.from_user
     elif context.args:
         target_input = context.args[0]
@@ -1614,7 +1614,7 @@ async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         return
 
     target_user: User | None = None
-    if message.reply_to_message:
+    if message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
         target_user = message.reply_to_message.from_user
     elif context.args:
         target_input = context.args[0]
@@ -1704,7 +1704,7 @@ async def unwhitelist_user_command(update: Update, context: ContextTypes.DEFAULT
         return
 
     target_user: User | None = None
-    if message.reply_to_message:
+    if message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
         target_user = message.reply_to_message.from_user
     elif context.args:
         target_input = context.args[0]
