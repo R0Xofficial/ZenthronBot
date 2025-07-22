@@ -334,6 +334,7 @@ def format_entity_info(entity: Chat | User,
 @command_control("info")
 @custom_handler("info")
 async def entity_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
     target_entity: Chat | User | None = None
     
     if update.message.reply_to_message:
