@@ -47,7 +47,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             try:
                 target_id = int(target_input)
                 if target_id > 0:
-                    target_entity = User(id=target_id, first_name="Unknown", is_bot=False)
+                    target_entity = User(id=target_id, first_name="", is_bot=False)
                 else:
                     target_entity = Chat(id=target_id, type="channel")
             except ValueError:
@@ -125,7 +125,7 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if not message: return
 
     if chat.type == ChatType.PRIVATE:
-        await send_safe_reply(update, context, text="Huh? You can't ban in private chat...")
+        await send_safe_reply(update, context, text="Huh? You can't unban in private chat...")
         return
 
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
@@ -142,7 +142,7 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             try:
                 target_id = int(target_input)
                 if target_id > 0:
-                    target_entity = User(id=target_id, first_name="Unknown", is_bot=False)
+                    target_entity = User(id=target_id, first_name="", is_bot=False)
                 else:
                     target_entity = Chat(id=target_id, type="channel")
             except ValueError:
