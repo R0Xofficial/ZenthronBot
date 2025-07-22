@@ -64,13 +64,16 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await send_safe_reply(update, context, text="🧐 Kick can only be applied to users.")
         return
 
-    if target_user.id == context.bot.id or target_user.id == user_who_kicks.id:
-        await send_safe_reply(update, context, text="Nuh uh... This user cannot be kicked."); return
+    if target_user.id == context.bot.id:
+        await send_safe_reply(update, context, text="Nuh uh... I can't kick myself."); return
+
+    if target_user.id == user_who_kicks.id:
+        await send_safe_reply(update, context, text="Nuh uh... I can't kick yourself."); return
 
     try:
         target_chat_member = await context.bot.get_chat_member(chat.id, target_user.id)
         if target_chat_member.status in ["creator", "administrator"]:
-            await send_safe_reply(update, context, text="WHAT? Chat Creator and Administrators cannot be kicked.")
+            await send_safe_reply(update, context, text="Chat Creator and Administrators cannot be kicked.")
             return
     except TelegramError as e:
         if "user not found" in str(e).lower():
@@ -88,6 +91,63 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
     except TelegramError as e:
         await send_safe_reply(update, context, text=f"Failed to kick user: {safe_escape(str(e))}")
+
+@check_module_enabled("kicks")
+@custom_handler("dkick")
+async def dkick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+    user_who_kicks = update.effective_user
+    message = update.message
+    if not message: return
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't dkick in private chat...")
+        return
+
+    can_kick = await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission.")
+    can_del = await _can_user_perform_action(update, context, 'can_delete_messages', "Why should I listen to a person with no privileges for this? You need 'can_delete_messages' permission.")
+    if not (can_kick and can_del):
+        return
+
+    if not message.reply_to_message or message.reply_to_message.forum_topic_created:
+        await send_safe_reply(update, context, text="Usage: Reply to a user's message with /dkick [reason] to delete it and kick them.")
+        return
+        
+    target_user = message.reply_to_message.from_user
+    reason = " ".join(context.args) if context.args else "No reason provided."
+
+    if not is_entity_a_user(target_user):
+        await send_safe_reply(update, context, text="This command can only be used on users."); return
+    
+    if target_user.id == context.bot.id:
+        await send_safe_reply(update, context, text="Nuh uh... I can't dkick myself."); return
+
+    if target_user.id == user_who_kicks.id:
+        await send_safe_reply(update, context, text="Nuh uh... I can't dkick yourself."); return
+
+    try:
+        member = await chat.get_member(target_user.id)
+        if member.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR]:
+            await send_safe_reply(update, context, text="Chat Creator and Administrators cannot be kicked.")
+            return
+    except TelegramError: pass
+    
+
+    try:
+        await message.reply_to_message.delete()
+        
+        await context.bot.ban_chat_member(chat_id=chat.id, user_id=target_user.id)
+        await context.bot.unban_chat_member(chat_id=chat.id, user_id=target_user.id, only_if_banned=True)
+
+        display_name = create_user_html_link(target_user)
+        response_lines = ["Success: User Kicked"]
+        response_lines.append(f"<b>• User:</b> {display_name} [<code>{target_user.id}</code>]")
+        response_lines.append(f"<b>• Reason:</b> {safe_escape(reason)}")
+        
+        await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
+
+    except Exception as e:
+        await send_safe_reply(update, context, text=f"❌ Failed to kick user (but their message was deleted). Error: {safe_escape(str(e))}")
 
 @check_module_enabled("kicks")
 @command_control("kickme")
