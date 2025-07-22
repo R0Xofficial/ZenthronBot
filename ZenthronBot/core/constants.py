@@ -30,15 +30,20 @@ USER_CHAT_INFO = """
 
 MODERATION_COMMANDS = """
 <b>🔹 Bans</b>
-/ban &lt;ID/@user/reply&gt; [Time] [Reason] - Ban a user.
+/ban &lt;ID/@user/reply&gt; [Reason] - Ban a user.
+/tban &lt;ID/@user/reply&gt; [Time] [Reason] - Timeout ban a user.
+/dban &lt;reply&gt; [Reason] - Delete message and ban a user.
 /unban &lt;ID/@user/reply&gt; - Unban a user.
 
 <b>🔹 Mutes</b>
-/mute &lt;ID/@user/reply&gt; [Time] [Reason] - Mute a user.
+/mute &lt;ID/@user/reply&gt; [Reason] - Mute a user.
+/tmute &lt;ID/@user/reply&gt; [Time] [Reason] - Timeout mute a user.
+/dmute &lt;reply&gt; [Reason] - Delete message and mute a user.
 /unmute &lt;ID/@user/reply&gt; - Unmute a user.
 
 <b>🔹 Kicks</b>
 /kick &lt;ID/@user/reply&gt; [Reason] - Kick a user.
+/dkick &lt;reply&gt; [Reason] - Delete message and kick a user.
 /kickme - Kick yourself from the chat.
 
 <b>🔹 Warns</b>
