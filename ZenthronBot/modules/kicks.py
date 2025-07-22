@@ -103,6 +103,10 @@ async def kickme_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text("Huh? You can't kick yourself in private chat...")
         return
 
+    if not is_entity_a_user(user_to_kick):
+        await message.reply_text("🧐 Channels cannot use /kickme command.")
+        return
+
     try:
         bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
         if not (bot_member.status == "administrator" and getattr(bot_member, 'can_restrict_members', False)):
