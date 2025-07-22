@@ -29,7 +29,7 @@ async def blacklist_user_command(update: Update, context: ContextTypes.DEFAULT_T
     target_entity: User | Chat | None = None
     reason: str | None = None
 
-    if message.reply_to_message:
+    if message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
         target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
         if context.args:
             reason = " ".join(context.args)
