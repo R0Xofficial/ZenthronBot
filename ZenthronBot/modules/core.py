@@ -28,7 +28,7 @@ from ..core.database import (
 )
 from ..core.utils import (
     is_owner_or_dev, get_readable_time_delta, safe_escape, resolve_user_with_telethon,
-    create_user_html_link, send_operational_log, is_privileged_user, run_speed_test_async
+    create_user_html_link, send_operational_log, is_privileged_user, run_speed_test_async, is_entity_a_user
 )
 from ..core.constants import LEAVE_TEXTS
 from ..core.decorators import check_module_enabled
