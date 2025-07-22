@@ -402,7 +402,7 @@ async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     
     target_user: User | None = None
     
-    if message.reply_to_message:
+    if message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
         if message.reply_to_message.sender_chat:
             target_chat = message.reply_to_message.sender_chat
             await message.reply_html(f"<b>The ID of {safe_escape(target_chat.title)} is:</b> <code>{target_chat.id}</code>")
