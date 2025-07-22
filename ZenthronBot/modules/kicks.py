@@ -220,4 +220,5 @@ async def kickme_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 # --- HANDLER LOADER ---
 def load_handlers(application: Application):
     application.add_handler(CommandHandler("kick", kick_command))
+    application.add_handler(CommandHandler("dkick", dkick_command))
     application.add_handler(CommandHandler("kickme", kickme_command))
