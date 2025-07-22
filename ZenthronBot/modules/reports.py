@@ -34,7 +34,7 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     target_entity: Chat | User | None = None
     args_for_reason = list(context.args)
 
-    if message.reply_to_message:
+    if message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
         target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
     elif context.args:
         target_input = context.args[0]
