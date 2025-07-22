@@ -102,7 +102,7 @@ async def gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     target_entity: User | Chat | None = None
     reason: str | None = None
 
-    if message.reply_to_message:
+    if message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
         target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
         if context.args:
             reason = " ".join(context.args)
@@ -202,7 +202,7 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     target_entity: User | Chat | None = None
-    if message.reply_to_message:
+    if message.reply_to_message and not update.message.reply_to_message.forum_topic_created:
         target_entity = message.reply_to_message.sender_chat or message.reply_to_message.from_user
     elif context.args:
         target_input = context.args[0]
