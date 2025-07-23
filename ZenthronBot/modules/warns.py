@@ -126,8 +126,7 @@ async def dwarn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await message.reply_text("Usage: Reply to a user's message with /dwarn [reason] to delete it and warn them.")
         return
         
-    if not message.reply_to_message.sender_chat:
-        target_user = message.reply_to_message.from_user
+    target_user = message.reply_to_message.sender_chat or message.reply_to_message.from_user
     reason = " ".join(context.args) or "No reason provided."
 
     if not is_entity_a_user(target_user):
