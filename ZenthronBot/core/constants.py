@@ -177,7 +177,7 @@ NOTES = """
 /notes - See all notes in this chat.
 /addnote &lt;name&gt; [content] - Create a new note.
 /delnote &lt;name&gt; - Delete a note.
-<i>To get a note, simply use #notename in the chat.</i>
+<i>To get a note, use /get notename or #notename in the chat.</i>
 """
 
 CHAT_SETTINGS = """
