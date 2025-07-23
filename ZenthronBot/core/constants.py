@@ -48,6 +48,7 @@ MODERATION_COMMANDS = """
 
 <b>🔹 Warns</b>
 /warn &lt;ID/@user/reply&gt; [Reason] - Warn a user.
+/dwarn &lt;reply&gt; [Reason] - Delete message and warn a user.
 /warnings &lt;ID/@user/reply&gt; - Check a user's warnings.
 /resetwarns &lt;ID/@user/reply&gt; - Reset user's warnings.
 /setwarnlimit &lt;number&gt; - Set the warning limit for this chat.
