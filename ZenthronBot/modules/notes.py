@@ -80,7 +80,7 @@ async def list_notes_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     note_list = [f"<code>{safe_escape(note)}</code>" for note in notes]
-    message = "<b>Notes in this chat:</b>\nUse <code>/get notename</code> or <code>#notename</code> to get note.\n" + "\n".join(note_list)
+    message = "<b>Notes in this chat:</b>\n<i>Use</i> <code>/get notename</code> <i>or</i> <code>#notename</code> <i>to get note.</i>\n\n" + "\n".join(note_list)
     await update.message.reply_html(message)
 
 @check_module_enabled("notes")
