@@ -199,6 +199,7 @@ CHAT_SETTINGS = """
 
 CHAT_SECURITY = """
 /enforcegban &lt;yes/no&gt; - Enable/disable Global Ban enforcement. <i>(Chat Creator only)</i>
+/gbanstat - The same what enforcegban.
 """
 
 AI_COMMANDS = """
