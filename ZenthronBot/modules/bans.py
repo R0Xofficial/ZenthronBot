@@ -246,7 +246,7 @@ async def tban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     try:
         member = await context.bot.get_chat_member(chat.id, target_entity.id)
-        if member.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER, ChatMemberStatus.CREATOR]:
+        if member.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]:
             await send_safe_reply(update, context, text="Chat admins and creators cannot be banned.")
             return
     except TelegramError: pass
