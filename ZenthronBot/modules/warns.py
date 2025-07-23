@@ -88,6 +88,72 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             await message.reply_text(f"Failed to ban user after reaching max warnings: {e}")
 
 @check_module_enabled("warns")
+@custom_handler("dwarn")
+async def dwarn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat = update.effective_chat
+    warner = update.effective_user
+    message = update.message
+    
+    can_warn = await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission.")
+    can_del = await _can_user_perform_action(update, context, 'can_delete_messages', "Why should I listen to a person with no privileges for this? You need 'can_delete_messages' permission.")
+    if not (can_warn and can_del):
+        return
+
+    if not message.reply_to_message or message.reply_to_message.forum_topic_created:
+        await message.reply_text("Usage: Reply to a user's message with /dwarn [reason] to delete it and warn them.")
+        return
+
+    target_user = message.reply_to_message.from_user
+    reason = " ".join(context.args) or "No reason provided."
+
+    if not is_entity_a_user(target_user):
+        await message.reply_text("🧐 This command can only be used on users."); return
+        
+    try:
+        target_member = await context.bot.get_chat_member(chat.id, target_user.id)
+        if target_member.status in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
+            await message.reply_text("Chat Creator and Administrators cannot be warned.")
+            return
+    except TelegramError as e:
+        if "user not found" not in str(e).lower():
+            logger.warning(f"Could not get chat member status for dwarn target {target_user.id}: {e}")
+
+    try:
+        await message.reply_to_message.delete()
+    except TelegramError as e:
+        logger.warning(f"Could not delete message in dwarn: {e}")
+
+    new_warn_id, warn_count = add_warning(chat.id, target_user.id, reason, warner.id)
+    user_display = create_user_html_link(target_user)
+
+    if new_warn_id == -1:
+        await message.reply_text("A database error occurred while adding the warning.")
+        return
+
+    limit = get_warn_limit(chat.id)
+
+    keyboard = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("Delete Warn [Admin Only]", callback_data=f"undo_warn_{new_warn_id}")]]
+    )
+
+    await message.reply_html(
+        f"User {user_display} [<code>{target_user.id}</code>] has been warned & their message deleted. ({warn_count}/{limit})\n"
+        f"<b>Reason:</b> {safe_escape(reason)}",
+        reply_markup=keyboard
+    )
+
+    if warn_count >= limit:
+        try:
+            context.bot_data.setdefault('recently_removed_users', set()).add(target_user.id)
+            await context.bot.ban_chat_member(chat.id, target_user.id)
+            await message.reply_html(
+                f"🚨 User {user_display} has reached {warn_count}/{limit} warnings and has been banned."
+            )
+            reset_warnings(chat.id, target_user.id)
+        except Exception as e:
+            await message.reply_text(f"Failed to ban user after reaching max warnings: {e}")
+
+@check_module_enabled("warns")
 async def undo_warn_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
