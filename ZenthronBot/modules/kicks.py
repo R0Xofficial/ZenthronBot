@@ -113,7 +113,7 @@ async def dkick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await send_safe_reply(update, context, text="Usage: Reply to a user's message with /dkick [reason] to delete it and kick them.")
         return
         
-    target_user = message.reply_to_message.from_user
+    target_user = message.reply_to_message.sender_chat or message.reply_to_message.from_user
     reason = " ".join(context.args) if context.args else "No reason provided."
 
     if not is_entity_a_user(target_user):
