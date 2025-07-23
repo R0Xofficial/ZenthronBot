@@ -61,13 +61,6 @@ def get_back_to_help_keyboard():
 
 # --- MISCELLANEOUS COMMAND FUNCTIONS ---
 @check_module_enabled("misc")
-async def mention_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    message = update.effective_message
-        
-    if message.text.strip() == f"@{context.bot.username}":
-        await message.reply_text("Ayooo! Wassup 😜. If you want help with commands, type /help")
-
-@check_module_enabled("misc")
 @custom_handler("start")
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.effective_message
