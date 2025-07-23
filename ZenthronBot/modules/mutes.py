@@ -184,7 +184,7 @@ async def tmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     args_after_target: list[str] = []
 
     if message.reply_to_message and not message.reply_to_message.forum_topic_created:
-        target_user = message.reply_to_message.from_user
+        target_user = message.reply_to_message.sender_chat or message.reply_to_message.from_user
         args_after_target = context.args
     elif context.args:
         target_input = context.args[0]
