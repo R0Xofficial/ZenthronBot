@@ -28,7 +28,7 @@ async def save_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         
     note_name = ""
     content = ""
-    replied_message = message.reply_to_message
+    replied_message = message.reply_to_message and not message.forum_topic_created
 
     if replied_message:
         if not context.args:
