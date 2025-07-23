@@ -37,6 +37,15 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     elif context.args:
         target_input = context.args[0]
         target_user = await resolve_user_with_telethon(context, target_input, update)
+        if not target_user:
+            try:
+                target_id = int(target_input)
+                if target_id > 0:
+                    target_user = User(id=target_id, first_name="", is_bot=False)
+                else:
+                    target_user = Chat(id=target_id, type="channel")
+            except ValueError:
+                pass
         reason_parts = context.args[1:]
     
     if not target_user:
