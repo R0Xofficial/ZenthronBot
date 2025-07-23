@@ -19,6 +19,10 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     chat = update.effective_chat
     warner = update.effective_user
     message = update.message
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't warn in private chat...")
+        return
     
     if not await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission."):
         return
@@ -42,6 +46,12 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if not is_entity_a_user(target_user):
         await message.reply_text("🧐 This command can only be used on users.")
         return
+
+    if target_user.id == context.bot.id:
+        await send_safe_reply(update, context, text="Nuh uh... I can't warn myself."); return
+
+    if target_user.id == warner.id:
+        await send_safe_reply(update, context, text="Nuh uh... I can't warn yourself."); return
         
     reason = " ".join(reason_parts) or "No reason provided."
 
@@ -93,6 +103,10 @@ async def dwarn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     chat = update.effective_chat
     warner = update.effective_user
     message = update.message
+
+    if chat.type == ChatType.PRIVATE:
+        await send_safe_reply(update, context, text="Huh? You can't dwarn in private chat...")
+        return
     
     can_warn = await _can_user_perform_action(update, context, 'can_restrict_members', "Why should I listen to a person with no privileges for this? You need 'can_restrict_members' permission.")
     can_del = await _can_user_perform_action(update, context, 'can_delete_messages', "Why should I listen to a person with no privileges for this? You need 'can_delete_messages' permission.")
@@ -108,6 +122,12 @@ async def dwarn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     if not is_entity_a_user(target_user):
         await message.reply_text("🧐 This command can only be used on users."); return
+
+    if target_user.id == context.bot.id:
+        await send_safe_reply(update, context, text="Nuh uh... I can't warn myself."); return
+
+    if target_user.id == warner.id:
+        await send_safe_reply(update, context, text="Nuh uh... I can't warn yourself."); return
         
     try:
         target_member = await context.bot.get_chat_member(chat.id, target_user.id)
