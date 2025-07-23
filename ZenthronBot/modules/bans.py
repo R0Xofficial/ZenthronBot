@@ -113,7 +113,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         response_lines.append(f"<b>• {entity_type_str}:</b> {display_name} [<code>{target_entity.id}</code>]")
         response_lines.append(f"<b>• Reason:</b> {safe_escape(reason)}")
         if is_entity_a_user(target_entity) and duration_str:
-            response_lines.append(f"<b>• Duration:</b> <code>{duration_str}</code> (until: <code>{until_date_for_api.strftime('%Y-%m-%d %H:%M:%S %Z')}</code>)")
+            response_lines.append(f"<b>• Duration:</b> <code>{duration_str}</code>")
         
         await send_safe_reply(update, context, text="\n".join(response_lines), parse_mode=ParseMode.HTML)
 
