@@ -219,7 +219,7 @@ FUN_COMMANDS = """
 """
 
 ADMIN_NOTE_TEXT = """
-<i>Note: Commands /ban, /unban, /mute, /unmute, /kick, /pin, /unpin, /purge, /promote, /demote, /zombies can be used by sudo, developer users and owner even if they are not chat administrators. (Use it wisely and don't overuse your power. Otherwise you may lose your privileges)</i>
+<i>Note: Moderation commands can be used by sudo, developer users and owner even if they are not chat administrators. (Use it wisely and don't overuse your power. Otherwise you may lose your privileges)</i>
 """
 
 SUPPORT_COMMANDS_TEXT = """
