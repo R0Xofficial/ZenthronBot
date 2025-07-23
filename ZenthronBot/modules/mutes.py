@@ -135,7 +135,7 @@ async def dmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     reason = " ".join(context.args) if context.args else "No reason provided."
 
     if not is_entity_a_user(target_user):
-        await send_safe_reply(update, context, text="This command can only be used on users."); return
+        await send_safe_reply(update, context, text="🧐 This command can only be used on users."); return
     
     if target_user.id == context.bot.id:
         await send_safe_reply(update, context, text="Nuh uh... I can't dmute myself."); return
