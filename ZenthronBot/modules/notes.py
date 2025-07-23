@@ -28,9 +28,10 @@ async def save_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         
     note_name = ""
     content = ""
-    replied_message = message.reply_to_message
 
-    if replied_message and not message.forum_topic_created:
+    if message.reply_to_message and not message.reply_to_message.forum_topic_created:
+        replied_message = message.reply_to_message
+        
         if not context.args:
             await message.reply_text("You need to provide a name for the note.\nUsage: /addnote <notename> (replying to a message)")
             return
