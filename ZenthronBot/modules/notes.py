@@ -52,8 +52,12 @@ async def save_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             return
             
         note_name = context.args[0]
-        command_entity = message.entities[0]
-        content = message.text_html[command_entity.offset + command_entity.length:].strip()
+        command = message.text.split()[0]
+        note_name_raw = context.args[0]
+        
+        content_offset = len(command) + len(note_name_raw) + 2
+        
+        content = message.text_html[content_offset:]
         
         if not content:
             await message.reply_text("You need to provide some content for the note.")
