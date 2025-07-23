@@ -268,7 +268,7 @@ async def ungban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await message.reply_text("Failed to remove from global ban list.")
 
 @check_module_enabled("globalbans")
-@custom_handler("enforcegban")
+@custom_handler(["enforcegban", "gbanstat"])
 async def enforce_gban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     user = update.effective_user
@@ -360,4 +360,4 @@ async def enforce_gban_command(update: Update, context: ContextTypes.DEFAULT_TYP
 def load_handlers(application: Application):
     application.add_handler(CommandHandler("gban", gban_command))
     application.add_handler(CommandHandler("ungban", ungban_command))
-    application.add_handler(CommandHandler("enforcegban", enforce_gban_command))
+    application.add_handler(CommandHandler(["enforcegban", "gbanstat"], enforce_gban_command))
