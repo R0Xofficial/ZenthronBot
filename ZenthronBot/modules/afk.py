@@ -46,7 +46,9 @@ async def afk_brb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await send_safe_reply(update, context, text="🧐 Channels cannot be AFK.")
         return
 
-    if message.text.lower().startswith('brb'):
+    words = message.text.lower().split()
+
+    if words and words[0] == 'brb':
         parts = message.text.split(' ', 1)
         reason = parts[1] if len(parts) > 1 else "No reason"
         user_display_name = safe_escape(user.full_name or user.first_name)
