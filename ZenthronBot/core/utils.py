@@ -474,6 +474,7 @@ async def get_gemini_response(prompt: str) -> str:
         return f"Sorry, I encountered an error while communicating with the AI: {type(e).__name__}"
 
 # --- SPEEDTEST ---
+@aioify
 def run_speed_test_blocking():
     try:
         logger.info("Starting blocking speed test...")
