@@ -183,13 +183,13 @@ NOTES = """
 CHAT_SETTINGS = """
 <b>🔹 Welcome & Goodbye</b>
 /welcomehelp - Get help with text formatting and placeholders.
-/welcome &lt;on/off&gt; - Enable or disable welcome messages.
+/welcome &lt;yes/on/off/no&gt; - Enable or disable welcome messages.
 /setwelcome &lt;text&gt; - Set a custom welcome message.
 /resetwelcome - Reset the welcome message to default.
-/goodbye &lt;on/off&gt; - Enable or disable goodbye messages.
+/goodbye &lt;yes/on/off/no&gt; - Enable or disable goodbye messages.
 /setgoodbye &lt;text&gt; - Set a custom goodbye message.
 /resetgoodbye - Reset the goodbye message to default.
-/cleanservice &lt;on/off&gt; - Enable or disable cleaning of service messages.
+/cleanservice &lt;yes/on/off/no&gt; - Enable or disable cleaning of service messages.
 
 <b>🔹 Rules</b>
 /rules - Check group rules.
@@ -198,7 +198,7 @@ CHAT_SETTINGS = """
 """
 
 CHAT_SECURITY = """
-/enforcegban &lt;yes/no&gt; - Enable/disable Global Ban enforcement. <i>(Chat Creator only)</i>
+/enforcegban &lt;yes/on/off/no&gt; - Enable/disable Global Ban enforcement. <i>(Chat Creator only)</i>
 /gbanstat - The same what enforcegban.
 """
 
