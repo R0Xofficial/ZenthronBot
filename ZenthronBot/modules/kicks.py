@@ -68,7 +68,7 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await send_safe_reply(update, context, text="Nuh uh... I can't kick myself."); return
 
     if target_user.id == user_who_kicks.id:
-        await send_safe_reply(update, context, text="Nuh uh... I can't kick yourself."); return
+        await send_safe_reply(update, context, text="Nuh uh... You can't kick yourself."); return
 
     try:
         target_chat_member = await context.bot.get_chat_member(chat.id, target_user.id)
