@@ -231,7 +231,7 @@ async def set_clean_service_command(update: Update, context: ContextTypes.DEFAUL
         await update.message.reply_html(f"Automatic cleaning of service messages is currently <b>{status}</b>.")
         return
 
-    if context.args and context.args[0].lower() in ['yes', 'on', 'off', 'no']:
+    if context.args and context.args[0].lower() not in ['yes', 'on', 'off', 'no']:
         await update.message.reply_text("Usage: /cleanservice <yes/on/off/no>")
         return
         
