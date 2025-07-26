@@ -28,6 +28,7 @@ def fill_reply_template(text: str | None, user: User, chat: Chat) -> str:
                .replace('{chatname}', safe_escape(chat.title or "this chat"))
 
 @check_module_enabled("filters")
+@command_control("filters")
 async def send_filter_reply(update: Update, context: ContextTypes.DEFAULT_TYPE, filter_data: dict):
     user = update.effective_user
     chat = update.effective_chat
@@ -75,6 +76,7 @@ async def send_filter_reply(update: Update, context: ContextTypes.DEFAULT_TYPE, 
             await update.effective_message.reply_html(f"<i>(Error sending media for this filter, showing text instead)</i>\n\n{reply_text}")
 
 @check_module_enabled("filters")
+@command_control("filters")
 async def check_message_for_filters(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat = update.effective_chat
     message = update.effective_message
@@ -271,7 +273,7 @@ async def list_filters_command(update: Update, context: ContextTypes.DEFAULT_TYP
     await update.message.reply_html(message)
 
 @check_module_enabled("filters")
-@command_control("filterhelp")
+@command_control("filters")
 @custom_handler("filterhelp")
 async def filter_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_html(FILTERS_HELP_TEXT)
