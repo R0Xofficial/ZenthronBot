@@ -79,7 +79,7 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await send_safe_reply(update, context, text="Nuh uh... I can't mute myself."); return
 
     if target_user.id == user_who_mutes.id:
-        await send_safe_reply(update, context, text="Nuh uh... I can't mute yourself."); return
+        await send_safe_reply(update, context, text="Nuh uh... You can't mute yourself."); return
 
     try:
         member = await chat.get_member(target_user.id)
@@ -141,7 +141,7 @@ async def dmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await send_safe_reply(update, context, text="Nuh uh... I can't dmute myself."); return
 
     if target_user.id == user_who_mutes.id:
-        await send_safe_reply(update, context, text="Nuh uh... I can't dmute yourself."); return
+        await send_safe_reply(update, context, text="Nuh uh... You can't dmute yourself."); return
 
     try:
         member = await chat.get_member(target_user.id)
@@ -230,7 +230,7 @@ async def tmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await send_safe_reply(update, context, text="Nuh uh... I can't tmute myself."); return
 
     if target_user.id == user_who_mutes.id:
-        await send_safe_reply(update, context, text="Nuh uh... I can't tmute yourself."); return
+        await send_safe_reply(update, context, text="Nuh uh... You can't tmute yourself."); return
 
     try:
         member = await chat.get_member(target_user.id)
