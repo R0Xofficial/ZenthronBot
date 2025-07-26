@@ -286,8 +286,8 @@ async def enforce_gban_command(update: Update, context: ContextTypes.DEFAULT_TYP
         logger.error(f"Could not verify creator status for /enforcegban: {e}")
         return
 
-    if not context.args or len(context.args) != 1 or context.args[0].lower() not in ['yes', 'no']:
-        await update.message.reply_text("Usage: /enforcegban <yes/no>")
+    if not context.args or len(context.args) != 1 or context.args[0].lower() not in ['yes', 'on', 'off', 'no']:
+        await update.message.reply_text("Usage: /enforcegban <yes/on/off/no>")
         return
     
     choice = context.args[0].lower()
