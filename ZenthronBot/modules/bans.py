@@ -76,7 +76,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await send_safe_reply(update, context, text="Nuh uh... I can't ban myself."); return
 
     if target_entity.id == user_who_bans.id:
-        await send_safe_reply(update, context, text="Nuh uh... I can't ban yourself."); return
+        await send_safe_reply(update, context, text="Nuh uh... You can't ban yourself."); return
 
     if is_entity_a_user(target_entity):
         try:
@@ -145,7 +145,7 @@ async def dban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await send_safe_reply(update, context, text="Nuh uh... I can't dban myself."); return
 
     if target_entity.id == user_who_bans.id:
-        await send_safe_reply(update, context, text="Nuh uh... I can't dban yourself."); return
+        await send_safe_reply(update, context, text="Nuh uh... You can't dban yourself."); return
 
     if is_entity_a_user(target_entity):
         try:
