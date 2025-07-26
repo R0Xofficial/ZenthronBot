@@ -123,7 +123,7 @@ async def dkick_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await send_safe_reply(update, context, text="Nuh uh... I can't dkick myself."); return
 
     if target_user.id == user_who_kicks.id:
-        await send_safe_reply(update, context, text="Nuh uh... I can't dkick yourself."); return
+        await send_safe_reply(update, context, text="Nuh uh... You can't dkick yourself."); return
 
     try:
         member = await chat.get_member(target_user.id)
