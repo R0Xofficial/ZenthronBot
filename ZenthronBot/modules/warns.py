@@ -60,7 +60,7 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await send_safe_reply(update, context, text="Nuh uh... I can't warn myself."); return
 
     if target_user.id == warner.id:
-        await send_safe_reply(update, context, text="Nuh uh... I can't warn yourself."); return
+        await send_safe_reply(update, context, text="Nuh uh... You can't warn yourself."); return
         
     reason = " ".join(reason_parts) or "No reason provided."
 
@@ -136,7 +136,7 @@ async def dwarn_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await send_safe_reply(update, context, text="Nuh uh... I can't warn myself."); return
 
     if target_user.id == warner.id:
-        await send_safe_reply(update, context, text="Nuh uh... I can't warn yourself."); return
+        await send_safe_reply(update, context, text="Nuh uh... You can't warn yourself."); return
         
     try:
         target_member = await context.bot.get_chat_member(chat.id, target_user.id)
