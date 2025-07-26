@@ -293,7 +293,7 @@ async def enforce_gban_command(update: Update, context: ContextTypes.DEFAULT_TYP
     choice = context.args[0].lower()
     current_status_bool = is_gban_enforced(chat.id)
 
-    if choice == 'yes':
+    if choice == 'yes' or choice == 'on':
         permission_notice = ""
         try:
             bot_member = await context.bot.get_chat_member(chat.id, context.bot.id)
@@ -333,7 +333,7 @@ async def enforce_gban_command(update: Update, context: ContextTypes.DEFAULT_TYP
         )
         return
 
-    if choice == 'no':
+    if choice == 'no' or choice == 'off':
         if not current_status_bool:
             await update.message.reply_html("ℹ️ Global Ban enforcement is already <b>DISABLED</b> for this chat.")
             return
