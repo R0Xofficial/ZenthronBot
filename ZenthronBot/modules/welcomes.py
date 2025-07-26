@@ -33,8 +33,8 @@ async def welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if not await _can_user_perform_action(update, context, 'can_change_info', "Why should I listen to a person with no privileges for this? You need 'can_change_info' permission.", allow_bot_privileged_override=False):
         return
 
-    if context.args and context.args[0].lower() in ['on', 'off']:
-        is_on = context.args[0].lower() == 'on'
+    if context.args and context.args[0].lower() in ['yes', 'on', 'off', 'no']:
+        is_on = context.args[0].lower() == 'on' or context.args[0].lower() == 'yes'
         try:
             with sqlite3.connect(DB_NAME) as conn:
                  conn.execute("UPDATE bot_chats SET welcome_enabled = ? WHERE chat_id = ?", (1 if is_on else 0, chat.id))
@@ -119,8 +119,8 @@ async def goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if not await _can_user_perform_action(update, context, 'can_change_info', "Why should I listen to a person with no privileges for this? You need 'can_change_info' permission.", allow_bot_privileged_override=False):
         return
 
-    if context.args and context.args[0].lower() in ['on', 'off']:
-        is_on = context.args[0].lower() == 'on'
+    if context.args and context.args[0].lower() in ['yes', 'on', 'off', 'no']:
+        is_on = context.args[0].lower() == 'on' or context.args[0].lower() == 'yes'
         set_goodbye_setting(chat.id, enabled=is_on)
         status_text = "ENABLED" if is_on else "DISABLED"
         await update.message.reply_html(f"✅ Goodbye messages have been <b>{status_text}</b>.")
