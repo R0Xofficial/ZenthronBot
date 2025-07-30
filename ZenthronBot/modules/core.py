@@ -1695,7 +1695,7 @@ async def whitelist_user_command(update: Update, context: ContextTypes.DEFAULT_T
         await message.reply_text("Failed to add user to whitelist (they might be already on it).")
 
 @check_module_enabled("core")
-@custom_handler(["whitelist", "wlist"])
+@custom_handler(["unwhitelist", "unwlist"])
 async def unwhitelist_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     message = update.message
